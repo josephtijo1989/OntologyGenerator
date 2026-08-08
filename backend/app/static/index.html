@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick-Pasteur Enterprise Graph & Ontology Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+  <link rel="stylesheet" href="/static/css/styles.css?v=3.1">
+</head>
+<body class="light-theme">
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="brand">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">Quick-Pasteur</span>
+      <span class="badge">v1.0 Enterprise</span>
+      <span style="font-size: 12px; color: var(--text-secondary); margin-left: 8px;">Active Project:</span>
+      <select id="projectSelect" class="project-selector" onchange="onProjectChanged(this.value)">
+        <!-- Dynamically Populated Projects -->
+      </select>
+      <button class="btn-primary" style="font-size: 11px; padding: 4px 10px; margin-left: 6px;" onclick="openModal('projectModal')">➕ New Project</button>
+    </div>
+  </header>
+
+  <!-- Main Body -->
+  <div class="app-body">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="nav-title">PLATFORM NAVIGATOR</div>
+      <button class="nav-btn active" data-view="connectors">🔌 Database Connectors</button>
+      <button class="nav-btn" data-view="metadata">🔍 Metadata Discovery</button>
+      <button class="nav-btn" data-view="profiling">📈 Data Profiling & Quality</button>
+      <button class="nav-btn" data-view="rules">⚙️ Business Rules Engine</button>
+      <button class="nav-btn" data-view="ontology">🧠 OWL Ontology Editor</button>
+      <button class="nav-btn" data-view="ontology-graph">🌐 Graphical Ontology</button>
+      <button class="nav-btn" data-view="graph">🕸️ Knowledge Graph</button>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- 1. Database Connectors & Topology Panel -->
+      <section id="panel-connectors" class="view-panel active">
+        <div class="flex-between">
+          <div>
+            <h2>Multi-Source Data Ingestion & Target Knowledge Graph Topology</h2>
+            <p style="color: var(--text-secondary); font-size: 14px;">Ingest from multiple relational databases into a single unified enterprise target Knowledge Graph</p>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn-primary" onclick="openAddConnectorModal()">➕ Add Source Database</button>
+            <button class="btn-secondary" onclick="openModal('graphModal')">🎯 Configure Target Graph DB</button>
+          </div>
+        </div>
+
+        <!-- Visual Source-to-Target Topology Flow Container (Equal 1fr Source & 1fr Target Columns) -->
+        <div style="display: grid; grid-template-columns: 1fr 140px 1fr; gap: 16px; align-items: stretch; margin-top: 14px;">
+          <!-- Left Column: Multiple Source Relational Databases -->
+          <div class="glass-card" style="display: flex; flex-direction: column; gap: 12px; border-top: 4px solid var(--accent-cyan);">
+            <div class="flex-between" style="border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
+              <div>
+                <h3 style="margin: 0; font-size: 15px; color: var(--accent-cyan);">Multiple Source Relational Databases</h3>
+                <p style="margin: 2px 0 0 0; font-size: 11px; color: var(--text-secondary);">SQL Server, PostgreSQL, MySQL, Oracle, Snowflake</p>
+              </div>
+              <span class="badge" id="source-count-badge" style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan);">0 Sources</span>
+            </div>
+            <div id="source-conns-list" style="display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; max-height: 480px;">
+              <!-- Dynamically Populated Source Connectors -->
+            </div>
+          </div>
+
+          <!-- Middle Column: Pipeline Transformation Engine Visual Bridge -->
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px 14px; background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 50%, #f0fdf4 100%); border: 2px dashed #0284c7; border-radius: 10px; text-align: center; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.06);">
+            <div style="width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #0284c7, #4f46e5); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3); border: 2px solid #ffffff;">⚡</div>
+            <div>
+              <div style="font-size: 12px; font-weight: 800; color: #1e1b4b; letter-spacing: 0.8px; text-transform: uppercase;">ONTOLOGY ENGINE</div>
+              <div style="font-size: 11px; color: #475569; font-weight: 500; margin-top: 4px; line-height: 1.4;">Consolidate Multi-Source Schemas ➔ Graph Lineage</div>
+            </div>
+            <div style="font-size: 26px; color: #0284c7; font-weight: 700;">➔</div>
+          </div>
+
+          <!-- Right Column: Single Unified Target Knowledge Graph Database -->
+          <div class="glass-card" style="display: flex; flex-direction: column; justify-content: space-between; border-top: 4px solid var(--accent-emerald);">
+            <div>
+              <div class="flex-between" style="border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
+                <div>
+                  <h3 style="margin: 0; font-size: 15px; color: var(--accent-emerald);">Single Target Knowledge Graph</h3>
+                  <p style="margin: 2px 0 0 0; font-size: 11px; color: var(--text-secondary);">Unified Enterprise Graph Destination</p>
+                </div>
+                <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); font-weight: 700;">🎯 UNIFIED TARGET</span>
+              </div>
+
+              <div style="margin-top: 14px; padding: 16px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px;">
+                <div class="flex-between">
+                  <span class="font-bold" id="tg-name" style="font-size: 16px; color: var(--text-primary);">Enterprise Neo4j Cluster</span>
+                  <span class="badge" id="tg-type" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald);">NEO4J</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary);" id="tg-host">Host: bolt://localhost:7687</div>
+                <div style="font-size: 11px; color: var(--accent-violet); font-family: var(--font-mono);" id="tg-status-detail">Direct Sync Protocol: Bolt / Cypher DDL</div>
+                <div style="display: flex; align-items: center; gap: 6px; color: var(--accent-emerald); font-size: 12px; font-weight: 600; margin-top: 4px;">
+                  <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-emerald); box-shadow: 0 0 8px var(--accent-emerald); display: inline-block;"></span>
+                  <span>Target Status: ONLINE & READY</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 11px; color: var(--text-secondary);">Single Target instance per project</span>
+              <button class="btn-primary" style="font-size: 11px; padding: 6px 12px;" onclick="openModal('graphModal')">⚙️ Configure Target Graph</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Metadata Discovery Panel -->
+      <section id="panel-metadata" class="view-panel">
+        <div class="flex-between">
+          <div>
+            <h2>Relational Database Metadata Catalog</h2>
+            <p style="color: var(--text-secondary); font-size: 14px;">Discovered schemas, primary keys, and domain classifications</p>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <select id="metadataConnSelect" class="project-selector" style="font-size: 12px; padding: 6px 10px;">
+              <option value="ALL">All Mapped Source Connectors</option>
+            </select>
+            <button class="btn-primary" onclick="triggerDiscovery()">⚡ Run Auto Discovery</button>
+            <button class="btn-secondary" onclick="switchToTab('profiling')">📈 Run Data Profiling &rarr;</button>
+          </div>
+        </div>
+        <div class="glass-card" style="padding: 0; overflow: hidden;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Schema</th>
+                <th>Table Name</th>
+                <th>Object Type</th>
+                <th>Inferred Domain</th>
+                <th>Column Count</th>
+                <th>Primary Keys</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="metadata-tbody">
+              <!-- Dynamically Populated Metadata -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 5. Data Profiling & Quality Panel -->
+      <section id="panel-profiling" class="view-panel">
+        <div class="flex-between">
+          <div>
+            <h2>Data Profiling, Null Analysis & PII Tagging</h2>
+            <p style="color: var(--text-secondary); font-size: 14px;">Statistical column metrics, null percentage ratios, and automated PII privacy classification</p>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn-primary" onclick="triggerProfiling()">⚡ Run Data Profiling</button>
+            <button class="btn-secondary" onclick="switchToTab('rules')">⚙️ Configure Rules and Validations &rarr;</button>
+          </div>
+        </div>
+        <div class="grid-cards" id="profiling-grid">
+          <!-- Dynamically Populated Profiling Cards -->
+        </div>
+      </section>
+
+      <!-- 6. OWL Ontology Editor Panel -->
+      <section id="panel-ontology" class="view-panel">
+        <div class="flex-between">
+          <div>
+            <h2>Enterprise OWL 2.0 W3C Ontology Editor</h2>
+            <p style="color: var(--text-secondary); font-size: 14px;">Edit generated OWL classes, superclass taxonomy hierarchy, RDFS comments, Datatype & Object Properties</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-secondary" onclick="exportOntologyTurtle()">📥 Export Turtle (.ttl)</button>
+            <button class="btn-secondary" onclick="exportOntologyOWL()">📥 Export OWL/XML (.owl)</button>
+            <button class="btn-primary" onclick="loadOntology()">🔄 Re-Generate Ontology</button>
+            <button class="btn-secondary" onclick="switchToTab('ontology-graph')">🌐 View Graphical Ontology &rarr;</button>
+          </div>
+        </div>
+        <div id="ontology-list" style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- Dynamically Populated Ontology Classes -->
+        </div>
+      </section>
+
+      <!-- 6b. Graphical Ontology Visualizer Panel -->
+      <section id="panel-ontology-graph" class="view-panel">
+        <div class="flex-between">
+          <div>
+            <h2>Visual W3C OWL 2.0 Class Hierarchy & Schema Graph</h2>
+            <p style="color: var(--text-secondary); font-size: 14px;">Interactive taxonomy visualization displaying OWL classes, rdfs:subClassOf hierarchy, object property relations, and datatype properties</p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn-secondary" onclick="exportOntologyTurtle()">📥 Export Turtle (.ttl)</button>
+            <button class="btn-secondary" onclick="exportOntologyOWL()">📥 Export OWL/XML (.owl)</button>
+            <button class="btn-primary" onclick="initOntologyGraph()">🔄 Re-Build Ontology Graph</button>
+          </div>
+        </div>
+
+        <!-- Toolbar with Multi-Class Selector -->
+        <div class="glass-card" style="padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 8px;">
+
+
+          <!-- Multi-Class Selector Dropdown -->
+          <div style="position: relative;" class="custom-combobox">
+            <button id="ontoClassFilterBtn" class="btn-secondary" style="font-size: 12px; padding: 5px 12px; display: flex; align-items: center; gap: 6px; font-weight: 600;" onclick="toggleOntologyClassFilterDropdown()">
+              🧠 Select Classes to Root (All Selected) ▾
+            </button>
+            <div id="ontoClassFilterDropdown" class="combobox-options-dropdown" style="display: none; width: 320px; padding: 12px; z-index: 100000; left: 0;">
+              <div class="flex-between" style="margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                <span style="font-size: 12px; font-weight: 700; color: var(--text-primary);">Filter Classes & Root Path</span>
+                <div>
+                  <button style="font-size: 10px; padding: 2px 6px; background: rgba(2, 132, 199, 0.1); color: #0284c7; border: 1px solid #bae6fd; border-radius: 4px; cursor: pointer;" onclick="selectAllOntologyClassesFilter(true)">Select All</button>
+                  <button style="font-size: 10px; padding: 2px 6px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid #fca5a5; border-radius: 4px; cursor: pointer; margin-left: 4px;" onclick="selectAllOntologyClassesFilter(false)">Clear</button>
+                </div>
+              </div>
+              <input type="text" id="ontoClassSearchInput" placeholder="🔍 Search classes..." style="width: 100%; padding: 6px 10px; font-size: 12px; margin-bottom: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-surface); color: var(--text-primary);" oninput="filterOntologyClassCheckboxList(this.value)">
+              <div id="ontoClassCheckboxList" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+                <!-- Dynamically populated class checkboxes -->
+              </div>
+              <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border-color); text-align: right;">
+                <button class="btn-primary" style="font-size: 11px; padding: 4px 12px;" onclick="applyOntologyClassFilter()">Apply Filter to Root ➔</button>
+              </div>
+            </div>
+          </div>
+
+
+
+          <div style="display: flex; gap: 6px;">
+            <button class="btn-sm" onclick="resetOntologyGraphView()" title="Fit View to Screen">🎯 Reset View</button>
+          </div>
+        </div>
+
+        <!-- Cytoscape Container & Floating Class Inspector -->
+        <div style="position: relative; width: 100%;">
+          <div id="cy-ontology" class="glass-card" style="height: 540px;"></div>
+
+          <!-- Floating Timbr.ai Explorer Graph Legend Overlay -->
+          <div class="glass-card" style="position: absolute; bottom: 20px; right: 20px; z-index: 100; padding: 10px 14px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: #1e293b;">
+              <span style="width: 12px; height: 12px; border-radius: 50%; background: #ffffff; border: 2px solid #475569; display: inline-block;"></span> Thing (Root)
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: #1e293b;">
+              <span style="width: 12px; height: 12px; border-radius: 50%; background: #1e1b4b; display: inline-block;"></span> Class
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: #1e293b;">
+              <span style="width: 12px; height: 12px; border-radius: 50%; background: #f97316; display: inline-block;"></span> Person / Concept
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: #1e293b;">
+              <span style="width: 12px; height: 12px; transform: rotate(45deg); background: #059669; display: inline-block;"></span> Relationship
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: #1e293b;">
+              <span style="width: 10px; height: 10px; background: #047857; display: inline-block;"></span> Property
+            </div>
+          </div>
+
+          <!-- Floating Glassmorphism Node Inspector Overlay -->
+          <div id="ontoNodeCard" class="glass-card" style="display: none; position: absolute; top: 16px; right: 16px; width: 320px; z-index: 100; border-top: 4px solid var(--accent-violet); box-shadow: 0 12px 36px rgba(0,0,0,0.15);">
+            <div class="flex-between">
+              <span class="badge" id="onc-domain" style="background: rgba(139, 92, 246, 0.2); color: var(--accent-violet);">Dimension</span>
+              <button style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 16px;" onclick="document.getElementById('ontoNodeCard').style.display='none'">&times;</button>
+            </div>
+            <h3 id="onc-label" style="font-size: 18px; margin-top: 6px; color: var(--accent-violet);">Customers</h3>
+            <div id="onc-subclass" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; font-family: var(--font-mono);">rdfs:subClassOf owl:Thing</div>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 6px;">🔑 Primary Key: <strong id="onc-pk" style="color: var(--accent-amber);">Customer_ID</strong></div>
+            <div id="onc-comment" style="font-size: 11px; color: var(--text-secondary); margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 8px;">
+              Comment text
+            </div>
+            <div style="margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 8px;">
+              <span style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">Incorporated Governance Rules:</span>
+              <div id="onc-rules" style="margin-top: 4px;"></div>
+            </div>
+            <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+              <button class="btn-primary" style="font-size: 11px; padding: 4px 10px;" onclick="switchToTab('ontology')">🧠 Edit in Class Editor</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. Knowledge Graph Panel -->
+      <section id="panel-graph" class="view-panel">
+        <div class="flex-between">
+          <div>
+            <h2>Interactive Enterprise Knowledge Graph Lineage</h2>
+            <p style="color: var(--text-secondary); font-size: 14px;">Interactive architectural visualization with clean node labels, domain color coding, and semantic relationships</p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn-secondary" onclick="exportGraphCypher()">⚡ Export Cypher (.cypher)</button>
+            <button class="btn-secondary" onclick="exportGraphML()">📊 Export GraphML (.graphml)</button>
+            <button class="btn-primary" onclick="syncGraphToTarget()">🚀 Export & Sync to Target DB</button>
+            <button class="btn-secondary" onclick="initCytoscapeGraph()">🔄 Re-build Graph</button>
+          </div>
+        </div>
+
+        <!-- Knowledge Graph Interactive Toolbar -->
+        <div class="glass-card" style="padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 8px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Layout Engine:</span>
+            <select id="graphLayoutSelect" class="project-selector" style="font-size: 12px; padding: 4px 8px;" onchange="changeGraphLayout(this.value)">
+              <option value="cose">🌐 CoSE (Physics Force-Directed)</option>
+              <option value="breadthfirst">🌲 Hierarchical Lineage Tree</option>
+              <option value="concentric">🎯 Concentric Radial Clusters</option>
+              <option value="circle">⭕ Circle Ring Layout</option>
+              <option value="grid">🧱 Grid Alignment</option>
+            </select>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; flex: 1; max-width: 360px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">🔍</span>
+            <input type="text" id="graphSearchInput" placeholder="Filter graph nodes by entity name..." style="width: 100%; padding: 4px 10px; font-size: 12px; background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px;" oninput="searchGraphNodes(this.value)">
+          </div>
+
+          <div style="display: flex; gap: 6px;">
+            <button class="btn-sm" onclick="zoomGraph(1.2)" title="Zoom In">➕</button>
+            <button class="btn-sm" onclick="zoomGraph(0.8)" title="Zoom Out">➖</button>
+            <button class="btn-sm" onclick="resetGraphView()" title="Fit View to Screen">🎯 Fit View</button>
+          </div>
+        </div>
+
+        <!-- Cytoscape Container & Floating Inspector Card -->
+        <div style="position: relative; width: 100%;">
+          <div id="cy" class="glass-card" style="height: 540px;"></div>
+
+          <!-- Floating Glassmorphism Node Inspector Overlay -->
+          <div id="graphNodeCard" class="glass-card" style="display: none; position: absolute; top: 16px; right: 16px; width: 320px; z-index: 100; border-top: 4px solid var(--accent-cyan); box-shadow: 0 12px 36px rgba(0,0,0,0.4);">
+            <div class="flex-between">
+              <span class="badge" id="gnc-domain" style="background: rgba(6, 182, 212, 0.2); color: var(--accent-cyan);">Transactional</span>
+              <button style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 16px;" onclick="document.getElementById('graphNodeCard').style.display='none'">&times;</button>
+            </div>
+            <h3 id="gnc-label" style="font-size: 18px; margin-top: 6px; color: var(--accent-cyan);">Customers</h3>
+            <div id="gnc-schema" style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Source Table: dbo.Customers</div>
+            <div id="gnc-subclass" style="font-size: 12px; color: var(--accent-violet); margin-top: 4px; font-family: var(--font-mono);">rdfs:subClassOf eonto:MasterData</div>
+            <div id="gnc-lineage" style="font-size: 12px; color: var(--text-secondary); margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 8px;">
+              Lineage Edges: <strong>0</strong> connected
+            </div>
+            <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+              <button id="gnc-edit-btn" class="btn-primary" style="font-size: 11px; padding: 4px 10px;">🧠 Edit Class in Ontology</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Business Rules Engine Panel (Before Ontology Creation) -->
+      <section id="panel-rules" class="view-panel">
+        <div class="flex-between">
+          <div>
+            <h2>Business & Governance Rules Engine</h2>
+            <p style="color: var(--text-secondary); font-size: 14px;">Define enterprise compliance, validation, masking, and transformation rules before ontology generation</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-primary" onclick="openRuleModal()">➕ Add Business Rule</button>
+            <button class="btn-secondary" onclick="switchToTab('ontology')">🧠 Incorporate Rules into W3C Ontology &rarr;</button>
+          </div>
+        </div>
+        <div class="glass-card" style="padding: 0; overflow: hidden;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Rule Name</th>
+                <th>Target Entity & Attribute</th>
+                <th>Plain English Rule Definition</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="rules-tbody">
+              <!-- Dynamically Populated Rules -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modals -->
+  <!-- 1. Create Project Modal -->
+  <div id="projectModal" class="modal-overlay">
+    <div class="glass-card modal-box">
+      <div class="flex-between">
+        <h3>Create New Enterprise Project</h3>
+        <button class="modal-close" onclick="closeModal('projectModal')" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 18px;">&times;</button>
+      </div>
+      <div class="form-group">
+        <label>Project Name</label>
+        <input type="text" id="np-name" placeholder="e.g. Enterprise ERP Transformation">
+      </div>
+      <div class="form-group">
+        <label>Project Code</label>
+        <input type="text" id="np-code" placeholder="e.g. ERP_2026">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="np-desc" placeholder="High-level objectives for this data graph initiative..."></textarea>
+      </div>
+      <div class="flex-between" style="margin-top: 12px;">
+        <button class="btn-secondary" onclick="closeModal('projectModal')">Cancel</button>
+        <button class="btn-primary" onclick="submitCreateProject()">Create Project</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Edit Project Modal -->
+  <div id="editProjectModal" class="modal-overlay">
+    <div class="glass-card modal-box">
+      <div class="flex-between">
+        <h3>Edit Project Settings</h3>
+        <button class="modal-close" onclick="closeModal('editProjectModal')" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 18px;">&times;</button>
+      </div>
+      <input type="hidden" id="ep-id">
+      <div class="form-group">
+        <label>Project Name</label>
+        <input type="text" id="ep-name">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="ep-status">
+          <option value="ACTIVE">ACTIVE</option>
+          <option value="PAUSED">PAUSED</option>
+          <option value="ARCHIVED">ARCHIVED</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="ep-desc" rows="3" style="width: 100%; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px; border-radius: 6px;"></textarea>
+      </div>
+      <div class="flex-between" style="margin-top: 12px;">
+        <button class="btn-secondary" onclick="closeModal('editProjectModal')">Cancel</button>
+        <button class="btn-primary" onclick="submitUpdateProject()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Source Connector Modal -->
+  <div id="connModal" class="modal-overlay">
+    <div class="glass-card modal-box">
+      <div class="flex-between">
+        <h3 id="connModalTitle">Map Source Relational Database</h3>
+        <button class="modal-close" onclick="closeModal('connModal')" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 18px;">&times;</button>
+      </div>
+      <div class="form-group">
+        <label>Connector Display Name</label>
+        <input type="text" id="nc-name" placeholder="e.g. Core ERP SQL Server DB">
+      </div>
+      <div class="form-row">
+        <div class="form-group half">
+          <label>Connector Type</label>
+          <select id="nc-type">
+            <option value="SQLSERVER">SQL Server</option>
+            <option value="POSTGRESQL">PostgreSQL</option>
+            <option value="MYSQL">MySQL</option>
+            <option value="ORACLE">Oracle</option>
+          </select>
+        </div>
+        <div class="form-group half">
+          <label>Database Port</label>
+          <input type="number" id="nc-port" value="1433">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group half">
+          <label>Host Name / IP</label>
+          <input type="text" id="nc-host" value="localhost">
+        </div>
+        <div class="form-group half">
+          <label>Database Name</label>
+          <input type="text" id="nc-dbname" value="ERP_DB">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group half">
+          <label>Username</label>
+          <input type="text" id="nc-user" value="sa">
+        </div>
+        <div class="form-group half">
+          <label>Password</label>
+          <input type="password" id="nc-pass" value="******">
+        </div>
+      </div>
+      <div class="flex-between" style="margin-top: 12px;">
+        <button class="btn-secondary" onclick="closeModal('connModal')">Cancel</button>
+        <button class="btn-primary" onclick="submitCreateConnector()">Save Connection</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Target Graph DB Modal -->
+  <div id="graphModal" class="modal-overlay">
+    <div class="glass-card modal-box">
+      <div class="flex-between">
+        <h3>Configure Target Graph Database</h3>
+        <button class="modal-close" onclick="closeModal('graphModal')" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 18px;">&times;</button>
+      </div>
+      <div class="form-group">
+        <label>Graph Config Name</label>
+        <input type="text" id="ng-name" value="Production Neo4j Instance">
+      </div>
+      <div class="form-row">
+        <div class="form-group half">
+          <label>Target Type</label>
+          <select id="ng-type">
+            <option value="NEO4J">Neo4j</option>
+            <option value="MEMGRAPH">Memgraph</option>
+            <option value="NEPTUNE">AWS Neptune</option>
+          </select>
+        </div>
+        <div class="form-group half">
+          <label>Bolt / HTTP Port</label>
+          <input type="number" id="ng-port" value="7687">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Host Name / URI</label>
+        <input type="text" id="ng-host" value="bolt://localhost:7687">
+      </div>
+      <div class="form-row">
+        <div class="form-group half">
+          <label>Username / Auth User</label>
+          <input type="text" id="ng-user" value="neo4j" placeholder="e.g. neo4j">
+        </div>
+        <div class="form-group half">
+          <label>Password</label>
+          <input type="password" id="ng-pass" value="password" placeholder="••••••••">
+        </div>
+      </div>
+      <div class="flex-between" style="margin-top: 12px;">
+        <button class="btn-secondary" onclick="closeModal('graphModal')">Cancel</button>
+        <button class="btn-primary" onclick="submitTargetGraph()">Save Graph Config</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Business Rule Modal -->
+  <div id="ruleModal" class="modal-overlay">
+    <div class="glass-card modal-box" style="width: 720px; max-width: 92vw; padding: 28px 32px;">
+      <input type="hidden" id="editing-rule-id" value="">
+      <div class="flex-between" style="margin-bottom: 20px;">
+        <h3 id="ruleModalTitle" style="font-size: 20px; font-weight: 700; color: var(--text-primary);">Create Business Rule</h3>
+        <button class="modal-close" onclick="closeModal('ruleModal')" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 22px;">&times;</button>
+      </div>
+      <div class="form-group" style="margin-bottom: 18px;">
+        <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block;">Rule Name</label>
+        <input type="text" id="nr-name" placeholder="e.g. Mask Customer Email & SSN" style="padding: 10px 14px; font-size: 14px; width: 100%;">
+      </div>
+      <div class="form-row" style="margin-bottom: 18px; display: flex; gap: 16px;">
+        <!-- Searchable Target Entity Combobox -->
+        <div class="form-group half" style="flex: 1; position: relative;">
+          <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block;">Target Entity (Table)</label>
+          <div class="custom-combobox">
+            <input type="text" id="nr-entity-search" placeholder="🔍 Search or select entity (table)..." style="padding: 10px 14px; font-size: 14px; width: 100%; cursor: pointer;" onfocus="openCombobox('nr-entity-list')" oninput="filterEntityCombobox(this.value)">
+            <input type="hidden" id="nr-entity" value="">
+            <div id="nr-entity-list" class="combobox-options-dropdown" style="display: none;"></div>
+          </div>
+        </div>
+
+        <!-- Searchable Target Attribute Combobox -->
+        <div class="form-group half" style="flex: 1; position: relative;">
+          <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block;">Target Attribute (Column)</label>
+          <div class="custom-combobox">
+            <input type="text" id="nr-attribute-search" placeholder="🔍 Search or select attribute (column)..." style="padding: 10px 14px; font-size: 14px; width: 100%; cursor: pointer;" onfocus="openCombobox('nr-attribute-list')" oninput="filterAttributeCombobox(this.value)">
+            <input type="hidden" id="nr-attribute" value="">
+            <div id="nr-attribute-list" class="combobox-options-dropdown" style="display: none;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block;">Rule Definition (Plain English)</label>
+        <textarea id="nr-def" style="width: 100%; height: 120px; padding: 12px 14px; font-size: 14px; line-height: 1.5; background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; resize: vertical;" placeholder="e.g. Customer email addresses must be hashed and masked for PII compliance"></textarea>
+      </div>
+      <div class="flex-between" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+        <button class="btn-secondary" onclick="closeModal('ruleModal')" style="padding: 10px 22px; font-size: 14px;">Cancel</button>
+        <button class="btn-primary" onclick="submitCreateRule()" style="padding: 10px 24px; font-size: 14px; font-weight: 600;">Save Rule</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Table Profiling Detail Drawer Modal -->
+  <div id="profileDetailModal" class="modal-overlay">
+    <div class="glass-card modal-box" style="width: 860px; max-width: 95vw; max-height: 88vh; display: flex; flex-direction: column;">
+      <div class="flex-between">
+        <div>
+          <h3 id="pdm-title" style="color: var(--accent-cyan);">Table Profiling Details</h3>
+          <p id="pdm-subtitle" style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Catalog ID & Time</p>
+        </div>
+        <button class="modal-close" onclick="closeModal('profileDetailModal')" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 20px;">&times;</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 14px;">
+        <div style="background: var(--bg-surface); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+          <div style="font-size: 11px; color: var(--text-secondary);">Quality Score</div>
+          <div id="pdm-score" style="font-size: 18px; font-weight: 700; color: var(--accent-emerald);">98%</div>
+        </div>
+        <div style="background: var(--bg-surface); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+          <div style="font-size: 11px; color: var(--text-secondary);">Primary Key(s)</div>
+          <div id="pdm-pk" style="font-size: 13px; font-weight: 700; font-family: var(--font-mono); color: var(--accent-amber); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Primary Key">-</div>
+        </div>
+        <div style="background: var(--bg-surface); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+          <div style="font-size: 11px; color: var(--text-secondary);">Total Rows</div>
+          <div id="pdm-rows" style="font-size: 18px; font-weight: 700; font-family: var(--font-mono); color: var(--accent-cyan);">0</div>
+        </div>
+        <div style="background: var(--bg-surface); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+          <div style="font-size: 11px; color: var(--text-secondary);">Columns Profiled</div>
+          <div id="pdm-cols" style="font-size: 18px; font-weight: 700; font-family: var(--font-mono); color: var(--accent-violet);">0</div>
+        </div>
+        <div style="background: var(--bg-surface); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+          <div style="font-size: 11px; color: var(--text-secondary);">PII Columns Tagged</div>
+          <div id="pdm-pii" style="font-size: 18px; font-weight: 700; font-family: var(--font-mono); color: var(--accent-rose);">0</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 14px; flex: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Column Name</th>
+              <th>Key / Constraints</th>
+              <th>Data Type</th>
+              <th>Null %</th>
+              <th>Distinct Count</th>
+              <th>PII Privacy Classification</th>
+            </tr>
+          </thead>
+          <tbody id="pdm-tbody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex-between" style="margin-top: 14px;">
+        <span style="font-size: 11px; color: var(--text-secondary);">Toggle PII checkbox or select category to update sensitivity classifications</span>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-secondary" onclick="closeModal('profileDetailModal')">Cancel</button>
+          <button class="btn-primary" onclick="submitSavePII()">💾 Save PII Classifications</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Full OWL Ontology Class & Properties Editor Modal -->
+  <div id="ontologyClassModal" class="modal-overlay">
+    <div class="glass-card modal-box" style="width: 760px; max-width: 92vw; max-height: 90vh; display: flex; flex-direction: column;">
+      <div class="flex-between">
+        <div>
+          <h3>Full OWL Ontology Class & Attributes Editor</h3>
+          <p style="font-size: 12px; color: var(--text-secondary);">Edit class taxonomy, RDFS comments, and associated Datatype/Object properties</p>
+        </div>
+        <button class="modal-close" onclick="closeModal('ontologyClassModal')" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 20px;">&times;</button>
+      </div>
+
+      <input type="hidden" id="ocm-old-label">
+
+      <div class="form-row" style="margin-top: 12px;">
+        <div class="form-group half">
+          <label>OWL Class Label Name</label>
+          <input type="text" id="ocm-label" placeholder="e.g. CustomerMaster">
+        </div>
+        <div class="form-group half">
+          <label>Superclass Taxonomy / Parent Class (rdfs:subClassOf)</label>
+          <input type="text" id="ocm-subclass" list="global-parent-class-datalist" placeholder="e.g. owl:Thing or eonto:MasterData">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Domain Classification</label>
+        <select id="ocm-domain">
+          <option value="Lookup">Lookup Entity (Reference Code Table)</option>
+          <option value="Fact">Fact Entity (Metrics & Transactional Measure)</option>
+          <option value="Dimension">Dimension Entity (Master Data Context)</option>
+          <option value="SCD">SCD Entity (Slowly Changing Dimension)</option>
+          <option value="Transactional">Transactional Entity</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Description / RDFS Comment</label>
+        <textarea id="ocm-comment" rows="2" style="width: 100%; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px;" placeholder="Semantic comment describing this OWL Class"></textarea>
+      </div>
+
+      <div class="flex-between" style="margin-top: 14px;">
+        <h4 style="font-size: 14px; margin: 0;">Associated OWL Properties (Attributes & Relationships)</h4>
+        <button class="btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="addPropertyRowToModal()">➕ Add Property</button>
+      </div>
+      <div style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 6px;">
+        <table class="data-table" style="font-size: 12px;">
+          <thead>
+            <tr>
+              <th>Property Name</th>
+              <th>Property Type</th>
+              <th>Range / Datatype</th>
+              <th style="width: 50px; text-align: center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="ocm-props-tbody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex-between" style="margin-top: 16px;">
+        <button class="btn-secondary" onclick="closeModal('ontologyClassModal')">Cancel</button>
+        <button class="btn-primary" onclick="submitUpdateOntologyClass()">Save Ontology Class & Properties</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. In-App Custom Confirmation Modal -->
+  <div id="confirmModal" class="modal-overlay">
+    <div class="glass-card modal-content" style="max-width: 440px; border-top: 4px solid var(--accent-rose); padding: 20px;">
+      <div class="flex-between">
+        <h3 id="confirmModalTitle" style="color: var(--accent-rose); font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
+          <span>⚠️</span> <span>Confirm Action</span>
+        </h3>
+        <button class="modal-close" onclick="closeConfirmModal(false)" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 18px;">&times;</button>
+      </div>
+      <p id="confirmModalMessage" style="margin-top: 14px; font-size: 13px; color: var(--text-secondary); line-height: 1.5;"></p>
+      <div class="flex-between" style="margin-top: 20px;">
+        <button class="btn-secondary" onclick="closeConfirmModal(false)">Cancel</button>
+        <button id="confirmModalSubmitBtn" class="btn-danger">Confirm Delete</button>
+      </div>
+    </div>
+  <!-- 9. Auto Discovery Progress Modal -->
+  <div id="discoveryProgressModal" class="modal-overlay" style="z-index: 99999;">
+    <div class="glass-card modal-content" style="max-width: 520px; border-top: 4px solid var(--accent-blue); padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+      <div class="flex-between" style="align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 17px; margin: 0; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+          <span style="display: inline-block;">⚡</span>
+          <span>Auto Discovery in Progress</span>
+        </h3>
+        <span id="discoveryProgressPercent" style="font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--accent-cyan);">0%</span>
+      </div>
+      
+      <p id="discoveryProgressStatus" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; min-height: 20px; display: flex; align-items: center; gap: 6px;">
+        <span>Connecting to database source...</span>
+      </p>
+
+      <!-- Progress Bar Track & Fill -->
+      <div style="width: 100%; height: 10px; background: var(--bg-tertiary); border-radius: 999px; overflow: hidden; position: relative; border: 1px solid var(--border-color);">
+        <div id="discoveryProgressBarFill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #2563eb, #06b6d4, #10b981); border-radius: 999px; transition: width 0.3s ease; box-shadow: 0 0 12px rgba(6, 182, 212, 0.6);"></div>
+      </div>
+
+      <div style="margin-top: 14px; display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary);">
+        <span id="discoveryProgressSubtext">Phase 1 of 4: Introspecting Database Schemas</span>
+        <span style="font-family: var(--font-mono);">Live Engine Analysis</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. Data Profiling Progress Modal -->
+  <div id="profilingProgressModal" class="modal-overlay" style="z-index: 99999;">
+    <div class="glass-card modal-content" style="max-width: 520px; border-top: 4px solid var(--accent-violet); padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+      <div class="flex-between" style="align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 17px; margin: 0; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+          <span style="display: inline-block;">📈</span>
+          <span>Data Profiling & Quality Scan</span>
+        </h3>
+        <span id="profilingProgressPercent" style="font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--accent-violet);">0%</span>
+      </div>
+      
+      <p id="profilingProgressStatus" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; min-height: 20px; display: flex; align-items: center; gap: 6px;">
+        <span>Initializing Data Profiling Engine...</span>
+      </p>
+
+      <!-- Progress Bar Track & Fill -->
+      <div style="width: 100%; height: 10px; background: var(--bg-tertiary); border-radius: 999px; overflow: hidden; position: relative; border: 1px solid var(--border-color);">
+        <div id="profilingProgressBarFill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #8b5cf6, #ec4899, #10b981); border-radius: 999px; transition: width 0.3s ease; box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);"></div>
+      </div>
+
+      <div style="margin-top: 14px; display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary);">
+        <span id="profilingProgressSubtext">Phase 1 of 4: Computing Statistical Column Ratios</span>
+        <span style="font-family: var(--font-mono);">Quality Engine</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container (Bottom Right) -->
+  <div id="toast-container" style="position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 10px; z-index: 999999; pointer-events: none;"></div>
+
+  <!-- Modularized Application Scripts -->
+  <script src="/static/js/toast.js?v=3.5"></script>
+  <script src="/static/js/confirm.js?v=3.5"></script>
+  <script src="/static/js/app.js?v=3.5"></script>
+  <script src="/static/js/dashboard.js?v=3.5"></script>
+  <script src="/static/js/connectors.js?v=3.5"></script>
+  <script src="/static/js/metadata.js?v=3.5"></script>
+  <script src="/static/js/profiling.js?v=3.5"></script>
+  <script src="/static/js/rules.js?v=3.5"></script>
+  <script src="/static/js/ontology.js?v=3.5"></script>
+  <script src="/static/js/ontology_graph.js?v=3.5"></script>
+  <script src="/static/js/graph.js?v=3.5"></script>
+  <script src="/static/js/projects.js?v=3.5"></script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: quickpasteur_mssql
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=YourStrongPass123!
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+
+  redis:
+    image: redis:7-alpine
+    container_name: quickpasteur_redis
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: quickpasteur_backend
+    environment:
+      - DB_SERVER=sqlserver
+      - DB_PORT=1433
+      - DB_USER=sa
+      - DB_PASSWORD=YourStrongPass123!
+      - REDIS_HOST=redis
+    ports:
+      - "8000:8000"
+    depends_on:
+      - sqlserver
+      - redis
+
+  celery_worker:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: quickpasteur_celery
+    command: celery -A app.jobs.celery_app worker --loglevel=info
+    environment:
+      - DB_SERVER=sqlserver
+      - REDIS_HOST=redis
+    depends_on:
+      - backend
+      - redis
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: quickpasteur_frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+
+volumes:
+  mssql_data:
