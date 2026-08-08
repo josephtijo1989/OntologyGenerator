@@ -2,13 +2,14 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.configuration.config import settings
-from app.configuration.database import engine, Base, SessionLocal
+from app.configuration.database import engine, Base, SessionLocal, sync_sqlite_schema
 from app.api.v1.router import api_router
 from app.models.domain import User, Role
 from app.utilities.logger import logger
 
 # Auto-create all tables in target application database on startup
 Base.metadata.create_all(bind=engine)
+sync_sqlite_schema()
 
 
 def seed_initial_data():

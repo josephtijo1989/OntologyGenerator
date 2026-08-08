@@ -256,6 +256,11 @@ class OntologyAttribute(Base):
     property_type = Column(String(50), default="DatatypeProperty", nullable=False)  # DatatypeProperty or ObjectProperty
     range_datatype = Column(String(100), default="xsd:string", nullable=False)
     is_primary_key = Column(Boolean, default=False, nullable=False)
+    parent_class_name = Column(String(100), nullable=True)
+    target_class_name = Column(String(100), nullable=True)
+    relationship_name = Column(String(100), nullable=True)
+    inverse_property_name = Column(String(100), nullable=True)
+    is_inverse = Column(Boolean, default=False, nullable=False)
     comment = Column(Text, nullable=True)
 
     ontology_class = relationship('OntologyClass', foreign_keys=[class_id], back_populates='attributes')

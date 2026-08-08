@@ -678,16 +678,22 @@
 
       <div class="flex-between" style="margin-top: 14px;">
         <h4 style="font-size: 14px; margin: 0;">Associated OWL Properties (Attributes & Relationships)</h4>
-        <button class="btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="addPropertyRowToModal()">➕ Add Property</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="addPropertyRowToModal('DatatypeProperty')">➕ Add Attribute (Datatype)</button>
+          <button class="btn-primary" style="font-size: 11px; padding: 4px 10px;" onclick="addPropertyRowToModal('ObjectProperty')">🔗 Add Relationship (Object)</button>
+        </div>
       </div>
-      <div style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 6px;">
-        <table class="data-table" style="font-size: 12px;">
+      <div style="max-height: 260px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 6px;">
+        <table class="data-table" style="font-size: 11px;">
           <thead>
             <tr>
-              <th>Property Name</th>
-              <th>Property Type</th>
-              <th>Range / Datatype</th>
-              <th style="width: 50px; text-align: center;">Action</th>
+              <th style="min-width: 140px;">Property / Rel Name</th>
+              <th style="min-width: 130px;">Property Type</th>
+              <th style="min-width: 130px;">Range / Target Class</th>
+              <th style="min-width: 110px;">Parent Class</th>
+              <th style="min-width: 130px;">Inverse Relationship</th>
+              <th style="width: 45px; text-align: center;">🔑 PK</th>
+              <th style="width: 40px; text-align: center;">Action</th>
             </tr>
           </thead>
           <tbody id="ocm-props-tbody">

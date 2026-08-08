@@ -47,7 +47,11 @@ class OntologyPropertySchema(BaseModel):
     range: Optional[str] = None
     parent_class: Optional[str] = None
     target_class: Optional[str] = None
+    relationship_name: Optional[str] = None
+    inverse_property: Optional[str] = None
+    is_inverse: Optional[bool] = False
     is_primary_key: Optional[bool] = False
+    table_name: Optional[str] = None
     comment: Optional[str] = None
 
 

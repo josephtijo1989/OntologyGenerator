@@ -133,7 +133,62 @@ class MetadataService:
             self.db.commit()
             saved_tables.append(meta_table)
 
-        logger.info(f"Discovered and saved {len(saved_tables)} physical tables and mapped ontology classes for project {project_id}")
+        # 4. Create Forward & Inverse ObjectProperty Relationships from Foreign Keys
+        for cat in raw_catalogs:
+            s_tbl = cat.get("table_name", "")
+            s_onto = class_map.get(s_tbl.lower())
+            if not s_onto:
+                continue
+            s_cap = "".join([p.capitalize() for p in s_tbl.split("_")])
+
+            for fk in cat.get("foreign_keys", []):
+                t_tbl = fk.get("foreign_table") if isinstance(fk, dict) else None
+                if not t_tbl:
+                    continue
+                t_onto = class_map.get(t_tbl.lower())
+                if not t_onto:
+                    continue
+                t_cap = "".join([p.capitalize() for p in t_tbl.split("_")])
+
+                fwd_name = f"relatesTo{t_cap}"
+                inv_name = f"has{s_cap}List"
+
+                # Forward relationship attribute
+                fwd_attr = OntologyAttribute(
+                    class_id=s_onto.id,
+                    target_class_id=t_onto.id,
+                    attribute_name=fwd_name,
+                    property_type="ObjectProperty",
+                    range_datatype=t_onto.class_name,
+                    is_primary_key=False,
+                    parent_class_name=s_onto.class_name,
+                    target_class_name=t_onto.class_name,
+                    relationship_name=fwd_name,
+                    inverse_property_name=inv_name,
+                    is_inverse=False,
+                    comment=f"Object relationship property linking {s_onto.class_name} to {t_onto.class_name}"
+                )
+                self.db.add(fwd_attr)
+
+                # Inverse relationship attribute
+                inv_attr = OntologyAttribute(
+                    class_id=t_onto.id,
+                    target_class_id=s_onto.id,
+                    attribute_name=inv_name,
+                    property_type="ObjectProperty",
+                    range_datatype=s_onto.class_name,
+                    is_primary_key=False,
+                    parent_class_name=t_onto.class_name,
+                    target_class_name=s_onto.class_name,
+                    relationship_name=inv_name,
+                    inverse_property_name=fwd_name,
+                    is_inverse=True,
+                    comment=f"Inverse object relationship property linking {t_onto.class_name} back to {s_onto.class_name}"
+                )
+                self.db.add(inv_attr)
+
+        self.db.commit()
+        logger.info(f"Discovered and saved {len(saved_tables)} physical tables, mapped ontology classes, and FK relationships for project {project_id}")
         return raw_catalogs
 
     def get_project_metadata(self, project_id: str) -> List[MetadataTable]:

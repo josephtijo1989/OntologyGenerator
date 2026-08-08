@@ -124,20 +124,24 @@ async function initOntologyGraph() {
         }
       });
 
-      // Datatype Property Nodes (Green Squares)
-      const classProps = properties.filter(p => p.domain === c.iri || p.table_name === c.annotations?.table_name);
+      // Datatype Property Nodes (Green / Gold Squares)
+      const classProps = properties.filter(p => p.domain === c.iri || p.parent_class === c.label || p.table_name === c.annotations?.table_name);
       classProps.forEach(p => {
         if (p.property_type === 'DatatypeProperty') {
           const propName = (p.label || p.name || '').toLowerCase();
+          const isPk = Boolean(p.is_primary_key || (pKeys && pKeys.some(pk => pk.toLowerCase() === propName.replace('has', '').toLowerCase())));
           const propNodeId = `prop_${c.iri}_${propName}`;
 
           cyElements.push({
             data: {
               id: propNodeId,
-              label: propName,
+              label: isPk ? `🔑 ${propName} (PK)` : propName,
+              rawName: propName,
               nodeType: 'property',
               parentClass: c.iri,
-              datatype: p.range || 'xsd:string'
+              parentLabel: rawLabel,
+              datatype: p.range || 'xsd:string',
+              isPk: isPk
             },
             grabbable: true
           });
@@ -155,22 +159,27 @@ async function initOntologyGraph() {
       });
     });
 
-    // 4. Build Relationship Nodes (Green Diamonds) & Edges (Timbr Style)
+    // 4. Build Relationship Nodes (Green Diamonds) & Edges (Timbr Style) with Forward & Inverse Details
     properties.forEach(p => {
       if (p.property_type === 'ObjectProperty') {
         const sourceIri = p.domain;
-        const targetLabel = p.range ? String(p.range).split('#').pop() : '';
-        const targetIri = validClassMap.get(targetLabel) || validClassMap.get(p.range);
-        const relLabel = (p.label || 'relatesTo').toLowerCase();
+        const targetLabel = p.target_class || (p.range ? String(p.range).split('#').pop() : '');
+        const targetIri = validClassMap.get(targetLabel) || validClassMap.get(targetLabel.toLowerCase()) || validClassMap.get(p.range);
+        const relLabel = (p.relationship_name || p.label || 'relatesTo').trim();
+        const invLabel = (p.inverse_property || '').trim();
 
         if (sourceIri && targetIri) {
           const relNodeId = `rel_${relLabel}_${sourceIri}_${targetIri}`;
 
-          // Green Diamond Node (Relationship name mentioned ONCE here)
+          // Diamond Node showing relationship name (and inverse if present)
+          const displayRelLabel = invLabel ? `${relLabel} ⇄ ${invLabel}` : relLabel;
           cyElements.push({
             data: {
               id: relNodeId,
-              label: relLabel,
+              label: displayRelLabel,
+              relName: relLabel,
+              invName: invLabel,
+              isInverse: Boolean(p.is_inverse),
               nodeType: 'relationship',
               sourceClass: sourceIri,
               targetClass: targetIri
@@ -178,7 +187,7 @@ async function initOntologyGraph() {
             grabbable: true
           });
 
-          // Edge Source -> Relationship Diamond (No duplicate label on edge line)
+          // Edge Source -> Relationship Diamond
           cyElements.push({
             data: {
               id: `edge1_${relNodeId}`,
@@ -280,18 +289,31 @@ async function initOntologyGraph() {
           }
         },
         {
+          selector: 'node[isPk = true]',
+          style: {
+            'shape': 'rectangle',
+            'width': '12px',
+            'height': '12px',
+            'background-color': '#d97706',
+            'border-width': 1.5,
+            'border-color': '#fbbf24',
+            'color': '#b45309',
+            'font-weight': '600'
+          }
+        },
+        {
           selector: 'node[nodeType = "relationship"]',
           style: {
             'shape': 'diamond',
-            'width': '14px',
-            'height': '14px',
+            'width': '16px',
+            'height': '16px',
             'background-color': '#059669',
-            'border-width': 1,
-            'border-color': '#ffffff',
+            'border-width': 1.5,
+            'border-color': '#a7f3d0',
             'label': 'data(label)',
-            'color': '#334155',
+            'color': '#1e293b',
             'font-size': '11px',
-            'font-weight': '400',
+            'font-weight': '500',
             'text-valign': 'bottom',
             'text-margin-y': '4px',
             'overlay-padding': '4px',
@@ -376,25 +398,35 @@ async function initOntologyGraph() {
       neighborhood.removeClass('faded').addClass('highlighted');
 
       const card = document.getElementById('ontoNodeCard');
-      if (card && nData.nodeType === 'class') {
-        document.getElementById('onc-label').innerText = nData.rawLabel || nData.label;
-        document.getElementById('onc-domain').innerText = nData.domain;
-        document.getElementById('onc-subclass').innerText = `rdfs:subClassOf ${nData.subClass || 'owl:Thing'}`;
-        document.getElementById('onc-pk').innerText = nData.primaryKey || 'None';
-        document.getElementById('onc-comment').innerText = nData.comment || 'No comment';
+      if (card) {
+        if (nData.nodeType === 'class') {
+          document.getElementById('onc-label').innerText = nData.rawLabel || nData.label;
+          document.getElementById('onc-domain').innerText = nData.domain;
+          document.getElementById('onc-subclass').innerText = `rdfs:subClassOf ${nData.subClass || 'owl:Thing'}`;
+          document.getElementById('onc-pk').innerText = nData.primaryKey || 'None';
+          document.getElementById('onc-comment').innerText = nData.comment || 'No comment';
 
-        const rulesContainer = document.getElementById('onc-rules');
-        if (rulesContainer) {
-          const rules = nData.businessRules || [];
-          if (rules.length > 0) {
-            rulesContainer.innerHTML = rules.map(r => `<div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #0284c7; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-top: 4px;"><strong>⚙️ ${r.name}</strong></div>`).join('');
-            rulesContainer.style.display = 'block';
-          } else {
-            rulesContainer.innerHTML = '<div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">No governance rules applied</div>';
-            rulesContainer.style.display = 'block';
+          const rulesContainer = document.getElementById('onc-rules');
+          if (rulesContainer) {
+            const rules = nData.businessRules || [];
+            if (rules.length > 0) {
+              rulesContainer.innerHTML = rules.map(r => `<div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #0284c7; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-top: 4px;"><strong>⚙️ ${r.name}</strong></div>`).join('');
+              rulesContainer.style.display = 'block';
+            } else {
+              rulesContainer.innerHTML = '<div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">No governance rules applied</div>';
+              rulesContainer.style.display = 'block';
+            }
           }
+          card.style.display = 'block';
+        } else if (nData.nodeType === 'relationship') {
+          document.getElementById('onc-label').innerText = `🔗 ${nData.relName || nData.label}`;
+          document.getElementById('onc-domain').innerText = 'ObjectProperty';
+          const invText = nData.invName ? ` ⇄ Inverse: ${nData.invName}` : '';
+          document.getElementById('onc-subclass').innerText = `Relationship Linking Classes${invText}`;
+          document.getElementById('onc-pk').innerText = `Source: ${String(nData.sourceClass).split('#').pop()} ➔ Target: ${String(nData.targetClass).split('#').pop()}`;
+          document.getElementById('onc-comment').innerText = nData.invName ? `Bidirectional ObjectProperty with W3C owl:inverseOf axiom between ${String(nData.sourceClass).split('#').pop()} and ${String(nData.targetClass).split('#').pop()}` : `Unidirectional ObjectProperty`;
+          card.style.display = 'block';
         }
-        card.style.display = 'block';
       }
     });
 

@@ -2,6 +2,90 @@
 let currentOntologyModel = null;
 let selectedOntologyClassIdx = null;
 
+function renderPropertyRowHtml(p, idxOrPrefix, isModal = false) {
+  const pLabel = (p.relationship_name || p.label || p.name || '').trim();
+  const pType = p.property_type || 'DatatypeProperty';
+  const rawRange = p.range ? String(p.range) : (pType === 'ObjectProperty' ? (p.target_class || 'TargetClass') : 'xsd:string');
+  const rangeTarget = rawRange.includes('#') ? rawRange.split('#').pop() : rawRange;
+  const parentCls = p.parent_class || '';
+  const targetCls = p.target_class || (pType === 'ObjectProperty' ? rangeTarget : '');
+  const invName = p.inverse_property || p.inverse_property_name || '';
+  const isPk = Boolean(p.is_primary_key);
+
+  const availableClasses = (currentOntologyModel && currentOntologyModel.classes) 
+    ? currentOntologyModel.classes.map(c => c.label) 
+    : [];
+
+  let rangeOptions = '';
+  if (pType === 'ObjectProperty') {
+    rangeOptions = availableClasses.map(cName => `<option value="${cName}" ${cName.toLowerCase() === targetCls.toLowerCase() ? 'selected' : ''}>${cName}</option>`).join('');
+    if (!availableClasses.some(cName => cName.toLowerCase() === targetCls.toLowerCase()) && targetCls) {
+      rangeOptions += `<option value="${targetCls}" selected>${targetCls}</option>`;
+    }
+  }
+
+  return `
+    <tr class="prop-row-item" data-type="${pType}">
+      <td>
+        <input type="text" class="prop-label-input" value="${pLabel}" placeholder="${pType === 'ObjectProperty' ? 'e.g. relatesToCustomer' : 'e.g. hasEmail'}" style="padding: 4px 8px; font-size: 11px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;">
+      </td>
+      <td>
+        <select class="prop-type-select" onchange="onPropTypeChanged(this)" style="padding: 4px 6px; font-size: 11px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px; width: 100%;">
+          <option value="DatatypeProperty" ${pType === 'DatatypeProperty' ? 'selected' : ''}>📊 Datatype (Attribute)</option>
+          <option value="ObjectProperty" ${pType === 'ObjectProperty' ? 'selected' : ''}>🔗 Object (Relationship)</option>
+        </select>
+      </td>
+      <td>
+        <input type="text" class="prop-range-input" value="${rangeTarget}" placeholder="${pType === 'ObjectProperty' ? 'TargetClass' : 'xsd:string'}" style="padding: 4px 8px; font-size: 11px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;">
+      </td>
+      <td>
+        <input type="text" class="prop-parent-input" value="${parentCls}" placeholder="Parent/Domain Class" style="padding: 4px 8px; font-size: 11px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;">
+      </td>
+      <td>
+        <input type="text" class="prop-inverse-input" value="${invName}" placeholder="${pType === 'ObjectProperty' ? 'e.g. hasOrdersList' : 'N/A'}" ${pType !== 'ObjectProperty' ? 'disabled style="opacity: 0.5; padding: 4px 8px; font-size: 11px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-secondary); border-radius: 4px;"' : 'style="padding: 4px 8px; font-size: 11px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;"'}>
+      </td>
+      <td style="text-align: center;">
+        <input type="checkbox" class="prop-pk-input" ${isPk ? 'checked' : ''} ${pType === 'ObjectProperty' ? 'disabled' : ''} title="Primary Key" style="cursor: pointer; transform: scale(1.1);">
+      </td>
+      <td style="text-align: center;">
+        <button class="btn-danger" style="padding: 2px 6px; font-size: 11px;" onclick="this.closest('tr').remove()" title="Delete Property">🗑️</button>
+      </td>
+    </tr>
+  `;
+}
+
+function onPropTypeChanged(selectEl) {
+  const row = selectEl.closest('tr');
+  if (!row) return;
+  const isObj = selectEl.value === 'ObjectProperty';
+  const rangeInput = row.querySelector('.prop-range-input');
+  const invInput = row.querySelector('.prop-inverse-input');
+  const pkInput = row.querySelector('.prop-pk-input');
+
+  if (isObj) {
+    if (rangeInput && rangeInput.value.startsWith('xsd:')) rangeInput.value = 'TargetClass';
+    if (invInput) {
+      invInput.disabled = false;
+      invInput.style.opacity = '1';
+      invInput.placeholder = 'e.g. hasInverseRelationship';
+    }
+    if (pkInput) {
+      pkInput.checked = false;
+      pkInput.disabled = true;
+    }
+  } else {
+    if (rangeInput && !rangeInput.value.startsWith('xsd:')) rangeInput.value = 'xsd:string';
+    if (invInput) {
+      invInput.disabled = true;
+      invInput.style.opacity = '0.5';
+      invInput.placeholder = 'N/A';
+    }
+    if (pkInput) {
+      pkInput.disabled = false;
+    }
+  }
+}
+
 async function loadOntology() {
   if (!currentProjectId) return;
   const list = document.getElementById('ontology-list');
@@ -18,6 +102,7 @@ async function loadOntology() {
         list.innerHTML = '<div style="color: var(--text-secondary); padding: 20px; text-align: center;">No ontology classes generated yet. Run Auto Discovery first under Metadata Discovery tab.</div>';
         return;
       }
+
       currentOntologyModel.classes.forEach((c, idx) => {
         const domainType = c.annotations ? (c.annotations.domain_type || 'Transactional') : 'Transactional';
         const subClass = c.subclass_of ? (c.subclass_of[0] || 'owl:Thing') : 'owl:Thing';
@@ -26,35 +111,20 @@ async function loadOntology() {
         const tblName = c.annotations ? (c.annotations.table_name || '') : '';
         const matchingProps = currentOntologyModel.properties ? currentOntologyModel.properties.filter(p =>
           p && (p.domain === c.iri ||
+          p.parent_class === c.label ||
           (tblName && p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase()) ||
           (p.domain && p.domain.toLowerCase() === (c.iri || '').toLowerCase()))
         ) : [];
 
-        const dataPropsCount = matchingProps.filter(p => p.property_type === 'DatatypeProperty').length;
-        const objPropsCount = matchingProps.filter(p => p.property_type === 'ObjectProperty').length;
+        const dataProps = matchingProps.filter(p => p.property_type === 'DatatypeProperty');
+        const objProps = matchingProps.filter(p => p.property_type === 'ObjectProperty');
+        const pkProps = dataProps.filter(p => p.is_primary_key);
 
         let propRowsHtml = '';
         if (matchingProps && matchingProps.length > 0) {
           matchingProps.forEach(p => {
             try {
-              if (!p) return;
-              const pLabel = p.label || '';
-              const pType = p.property_type || 'DatatypeProperty';
-              const rawRange = p.range ? String(p.range) : 'xsd:string';
-              const rangeTarget = rawRange.includes('#') ? rawRange.split('#').pop() : rawRange;
-              propRowsHtml += `
-                <tr>
-                  <td><input type="text" class="prop-label-input" value="${pLabel}" placeholder="e.g. hasAttributeName" style="padding: 4px 8px; font-size: 12px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;"></td>
-                  <td>
-                    <select class="prop-type-select" style="padding: 4px 8px; font-size: 12px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;">
-                      <option value="DatatypeProperty" ${pType === 'DatatypeProperty' ? 'selected' : ''}>📊 DatatypeProperty (Attribute)</option>
-                      <option value="ObjectProperty" ${pType === 'ObjectProperty' ? 'selected' : ''}>🔗 ObjectProperty (Relationship)</option>
-                    </select>
-                  </td>
-                  <td><input type="text" class="prop-range-input" value="${rangeTarget}" placeholder="e.g. xsd:string or TargetClass" style="padding: 4px 8px; font-size: 12px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;"></td>
-                  <td style="text-align: center;"><button class="btn-danger" style="padding: 2px 8px; font-size: 11px;" onclick="this.closest('tr').remove()">🗑️</button></td>
-                </tr>
-              `;
+              if (p) propRowsHtml += renderPropertyRowHtml(p, idx, false);
             } catch (eProp) {}
           });
         }
@@ -69,7 +139,9 @@ async function loadOntology() {
         div.style.gap = '8px';
 
         const pKeys = c.primary_keys || (c.annotations ? c.annotations.primary_keys : []) || [];
-        const pkBadge = (pKeys.length > 0) ? `<span class="badge" style="background: rgba(245, 158, 11, 0.2); color: var(--accent-amber); font-size: 11px;">🔑 Primary Key: ${pKeys.join(', ')}</span>` : '';
+        const pkBadge = (pKeys.length > 0 || pkProps.length > 0) 
+          ? `<span class="badge" style="background: rgba(245, 158, 11, 0.2); color: var(--accent-amber); font-size: 11px; font-weight: 700;">🔑 Primary Key: ${pKeys.join(', ') || pkProps.map(p => p.label).join(', ')}</span>` 
+          : '';
 
         const bRules = c.business_rules || [];
         let rulesBadgeHtml = '';
@@ -85,9 +157,21 @@ async function loadOntology() {
           rulesBadgeHtml = `<div style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px;"><span style="font-size: 11px; color: var(--text-secondary); font-weight: 700;">Incorporated Business Rules:</span> <div style="display: flex; flex-wrap: wrap; gap: 6px;">${ruleTags}</div></div>`;
         }
 
+        // Relationships badges summary
+        let relsBadgeHtml = '';
+        if (objProps.length > 0) {
+          const relTags = objProps.map(op => {
+            const relName = op.relationship_name || op.label;
+            const tgt = op.target_class || (op.range ? String(op.range).split('#').pop() : 'Class');
+            const inv = op.inverse_property ? ` ⇄ <span style="color: #4338ca; font-weight: 600;">${op.inverse_property}</span>` : '';
+            return `<span style="background: rgba(16, 185, 129, 0.15); color: #047857; font-size: 11px; padding: 3px 8px; border-radius: 6px; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 4px;">🔗 <strong>${relName}</strong> ➔ ${tgt}${inv}</span>`;
+          }).join(' ');
+          relsBadgeHtml = `<div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px;"><span style="font-size: 11px; color: var(--text-secondary); font-weight: 700;">Relationships & Inverse:</span> ${relTags}</div>`;
+        }
+
         div.innerHTML = `
           <div class="flex-between">
-            <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
               <strong style="color: var(--accent-cyan); font-size: 17px;">${c.label}</strong>
               <span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); font-size: 11px;">${domainType}</span>
               <span class="badge" style="background: rgba(100, 116, 139, 0.15); color: var(--text-secondary); font-size: 11px;">📦 Mapped Table: ${c.mapped_table_name || c.label}</span>
@@ -108,6 +192,7 @@ async function loadOntology() {
             Comment: <em>${comment}</em>
           </div>
 
+          ${relsBadgeHtml}
           ${rulesBadgeHtml}
 
           <!-- Inline Quick Edit Form -->
@@ -118,7 +203,7 @@ async function loadOntology() {
                 <input type="text" id="inline-label-${idx}" value="${c.label}" style="padding: 4px 8px; font-size: 12px;">
               </div>
               <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 11px;">Superclass Taxonomy</label>
+                <label style="font-size: 11px;">Superclass Taxonomy / Parent</label>
                 <input type="text" id="inline-subclass-${idx}" value="${subClass}" style="padding: 4px 8px; font-size: 12px;">
               </div>
               <div class="form-group" style="margin-bottom: 0;">
@@ -138,16 +223,22 @@ async function loadOntology() {
             </div>
 
             <div class="flex-between" style="margin-top: 10px;">
-              <span style="font-size: 12px; font-weight: 600; color: var(--text-primary);">Associated Attributes & Properties</span>
-              <button class="btn-secondary" style="font-size: 11px; padding: 2px 8px;" onclick="addInlinePropRow(${idx})">➕ Add Property</button>
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-primary);">Associated Attributes, Relationships & Inverse</span>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn-secondary" style="font-size: 11px; padding: 2px 8px;" onclick="addInlinePropRow(${idx}, 'DatatypeProperty')">➕ Add Datatype</button>
+                <button class="btn-primary" style="font-size: 11px; padding: 2px 8px;" onclick="addInlinePropRow(${idx}, 'ObjectProperty')">🔗 Add Relationship</button>
+              </div>
             </div>
-            <div style="max-height: 180px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 6px;">
+            <div style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 6px;">
               <table class="data-table" style="font-size: 11px;">
                 <thead>
                   <tr>
-                    <th>Property Name</th>
+                    <th>Property / Rel Name</th>
                     <th>Type</th>
-                    <th>Range / Datatype</th>
+                    <th>Range / Target Class</th>
+                    <th>Parent Class</th>
+                    <th>Inverse Relationship</th>
+                    <th style="width: 45px; text-align: center;">🔑 PK</th>
                     <th style="width: 40px; text-align: center;">Action</th>
                   </tr>
                 </thead>
@@ -164,8 +255,9 @@ async function loadOntology() {
           </div>
 
           <div style="display: flex; gap: 16px; margin-top: 6px; font-size: 11px; color: var(--accent-cyan); border-top: 1px dashed var(--border-color); padding-top: 6px;">
-            <span>📊 Data Properties: <strong>${dataPropsCount}</strong></span>
-            <span>🔗 Object Properties: <strong>${objPropsCount}</strong></span>
+            <span>📊 Data Properties: <strong>${dataProps.length}</strong></span>
+            <span>🔗 Object Properties (Relationships): <strong>${objProps.length}</strong></span>
+            <span>🔑 Primary Keys: <strong>${pKeys.length || pkProps.length}</strong></span>
           </div>
         `;
         list.appendChild(div);
@@ -189,21 +281,25 @@ function toggleInlineEdit(idx) {
   if (el) el.style.display = (el.style.display === 'none') ? 'block' : 'none';
 }
 
-function addInlinePropRow(idx) {
+function addInlinePropRow(idx, propType = 'DatatypeProperty') {
   const tbody = document.getElementById(`inline-props-tbody-${idx}`);
   if (!tbody) return;
+  const currentClass = currentOntologyModel && currentOntologyModel.classes[idx] ? currentOntologyModel.classes[idx].label : 'CurrentClass';
+  const newProp = {
+    label: propType === 'ObjectProperty' ? 'relatesToTarget' : 'hasNewAttribute',
+    relationship_name: propType === 'ObjectProperty' ? 'relatesToTarget' : 'hasNewAttribute',
+    property_type: propType,
+    range: propType === 'ObjectProperty' ? 'TargetClass' : 'xsd:string',
+    parent_class: currentClass,
+    target_class: propType === 'ObjectProperty' ? 'TargetClass' : '',
+    inverse_property: propType === 'ObjectProperty' ? `has${currentClass}List` : '',
+    is_inverse: false,
+    is_primary_key: false
+  };
   const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td><input type="text" class="prop-label-input" value="hasNewAttribute" placeholder="e.g. hasAttributeName" style="padding: 4px 8px; font-size: 12px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;"></td>
-    <td>
-      <select class="prop-type-select" style="padding: 4px 8px; font-size: 12px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;">
-        <option value="DatatypeProperty">📊 DatatypeProperty (Attribute)</option>
-        <option value="ObjectProperty">🔗 ObjectProperty (Relationship)</option>
-      </select>
-    </td>
-    <td><input type="text" class="prop-range-input" value="xsd:string" placeholder="e.g. xsd:string or TargetClass" style="padding: 4px 8px; font-size: 12px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;"></td>
-    <td style="text-align: center;"><button class="btn-danger" style="padding: 2px 8px; font-size: 11px;" onclick="this.closest('tr').remove()">🗑️</button></td>
-  `;
+  tr.className = 'prop-row-item';
+  tr.setAttribute('data-type', propType);
+  tr.innerHTML = renderPropertyRowHtml(newProp, idx, false).replace(/<tr[^>]*>|<\/tr>/g, '');
   tbody.appendChild(tr);
 }
 
@@ -213,10 +309,10 @@ async function submitInlineUpdate(idx) {
   const oldLabel = targetClass.label;
   const origTableName = targetClass.annotations ? (targetClass.annotations.table_name || targetClass.label) : targetClass.label;
 
-  const newLabel = document.getElementById(`inline-label-${idx}`).value;
-  const newSubclass = document.getElementById(`inline-subclass-${idx}`).value;
+  const newLabel = document.getElementById(`inline-label-${idx}`).value.trim();
+  const newSubclass = document.getElementById(`inline-subclass-${idx}`).value.trim();
   const newDomain = document.getElementById(`inline-domain-${idx}`).value;
-  const newComment = document.getElementById(`inline-comment-${idx}`).value;
+  const newComment = document.getElementById(`inline-comment-${idx}`).value.trim();
 
   const propRows = document.querySelectorAll(`#inline-props-tbody-${idx} tr`);
   const updatedProps = [];
@@ -224,12 +320,24 @@ async function submitInlineUpdate(idx) {
     const lIn = row.querySelector('.prop-label-input');
     const tSel = row.querySelector('.prop-type-select');
     const rIn = row.querySelector('.prop-range-input');
+    const pIn = row.querySelector('.prop-parent-input');
+    const invIn = row.querySelector('.prop-inverse-input');
+    const pkIn = row.querySelector('.prop-pk-input');
+
     if (lIn && tSel && rIn) {
+      const pType = tSel.value;
+      const isObj = pType === 'ObjectProperty';
       updatedProps.push({
-        label: lIn.value,
-        property_type: tSel.value,
-        range: rIn.value,
+        label: lIn.value.trim(),
+        relationship_name: lIn.value.trim(),
+        property_type: pType,
+        range: rIn.value.trim(),
         domain: `http://enterprise.org/ontology#${newLabel}`,
+        parent_class: pIn ? pIn.value.trim() : newLabel,
+        target_class: isObj ? rIn.value.trim() : null,
+        inverse_property: (isObj && invIn) ? invIn.value.trim() : null,
+        is_inverse: false,
+        is_primary_key: pkIn ? pkIn.checked : false,
         table_name: origTableName
       });
     }
@@ -292,6 +400,7 @@ function openOntologyClassModal(target) {
   const tblName = c.annotations ? (c.annotations.table_name || '') : '';
   const matchingProps = currentOntologyModel.properties ? currentOntologyModel.properties.filter(p =>
     p && (p.domain === c.iri ||
+    p.parent_class === c.label ||
     (tblName && p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase()) ||
     (p.domain && p.domain.toLowerCase() === (c.iri || '').toLowerCase()))
   ) : [];
@@ -301,53 +410,41 @@ function openOntologyClassModal(target) {
   if (matchingProps && matchingProps.length > 0) {
     matchingProps.forEach(p => {
       if (!p) return;
-      const tr = document.createElement('tr');
-      const pLabel = p.label || '';
-      const pType = p.property_type || 'DatatypeProperty';
-      const rawRange = p.range ? String(p.range) : 'xsd:string';
-      const rangeTarget = rawRange.includes('#') ? rawRange.split('#').pop() : rawRange;
-      tr.innerHTML = `
-        <td><input type="text" class="prop-label-input" value="${pLabel}" placeholder="e.g. hasAttributeName" style="padding: 4px 8px; font-size: 12px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;"></td>
-        <td>
-          <select class="prop-type-select" style="padding: 4px 8px; font-size: 12px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;">
-            <option value="DatatypeProperty" ${pType === 'DatatypeProperty' ? 'selected' : ''}>📊 DatatypeProperty (Attribute)</option>
-            <option value="ObjectProperty" ${pType === 'ObjectProperty' ? 'selected' : ''}>🔗 ObjectProperty (Relationship)</option>
-          </select>
-        </td>
-        <td><input type="text" class="prop-range-input" value="${rangeTarget}" placeholder="e.g. xsd:string or TargetClass" style="padding: 4px 8px; font-size: 12px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;"></td>
-        <td style="text-align: center;"><button class="btn-danger" style="padding: 2px 8px; font-size: 11px;" onclick="this.closest('tr').remove()">🗑️</button></td>
-      `;
-      tbody.appendChild(tr);
+      tbody.innerHTML += renderPropertyRowHtml(p, 'modal', true);
     });
   }
 
   openModal('ontologyClassModal');
 }
 
-function addPropertyRowToModal() {
+function addPropertyRowToModal(propType = 'DatatypeProperty') {
   const tbody = document.getElementById('ocm-props-tbody');
   if (!tbody) return;
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td><input type="text" class="prop-label-input" value="hasNewAttribute" placeholder="e.g. hasAttributeName" style="padding: 4px 8px; font-size: 12px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;"></td>
-    <td>
-      <select class="prop-type-select" style="padding: 4px 8px; font-size: 12px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;">
-        <option value="DatatypeProperty">📊 DatatypeProperty (Attribute)</option>
-        <option value="ObjectProperty">🔗 ObjectProperty (Relationship)</option>
-      </select>
-    </td>
-    <td><input type="text" class="prop-range-input" value="xsd:string" placeholder="e.g. xsd:string or TargetClass" style="padding: 4px 8px; font-size: 12px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;"></td>
-    <td style="text-align: center;"><button class="btn-danger" style="padding: 2px 8px; font-size: 11px;" onclick="this.closest('tr').remove()">🗑️</button></td>
-  `;
-  tbody.appendChild(tr);
+  const currentClass = (currentOntologyModel && currentOntologyModel.classes[selectedOntologyClassIdx]) 
+    ? currentOntologyModel.classes[selectedOntologyClassIdx].label 
+    : 'CurrentClass';
+
+  const newProp = {
+    label: propType === 'ObjectProperty' ? 'relatesToTarget' : 'hasNewAttribute',
+    relationship_name: propType === 'ObjectProperty' ? 'relatesToTarget' : 'hasNewAttribute',
+    property_type: propType,
+    range: propType === 'ObjectProperty' ? 'TargetClass' : 'xsd:string',
+    parent_class: currentClass,
+    target_class: propType === 'ObjectProperty' ? 'TargetClass' : '',
+    inverse_property: propType === 'ObjectProperty' ? `has${currentClass}List` : '',
+    is_inverse: false,
+    is_primary_key: false
+  };
+
+  tbody.innerHTML += renderPropertyRowHtml(newProp, 'modal', true);
 }
 
 async function submitUpdateOntologyClass() {
-  const oldLabel = document.getElementById('ocm-old-label').value;
-  const newLabel = document.getElementById('ocm-label').value;
-  const subclass = document.getElementById('ocm-subclass').value;
+  const oldLabel = document.getElementById('ocm-old-label').value.trim();
+  const newLabel = document.getElementById('ocm-label').value.trim();
+  const subclass = document.getElementById('ocm-subclass').value.trim();
   const domain = document.getElementById('ocm-domain').value;
-  const comment = document.getElementById('ocm-comment').value;
+  const comment = document.getElementById('ocm-comment').value.trim();
 
   const targetClass = currentOntologyModel.classes[selectedOntologyClassIdx];
   const origTableName = targetClass.annotations ? (targetClass.annotations.table_name || targetClass.label) : targetClass.label;
@@ -358,12 +455,24 @@ async function submitUpdateOntologyClass() {
     const lIn = row.querySelector('.prop-label-input');
     const tSel = row.querySelector('.prop-type-select');
     const rIn = row.querySelector('.prop-range-input');
+    const pIn = row.querySelector('.prop-parent-input');
+    const invIn = row.querySelector('.prop-inverse-input');
+    const pkIn = row.querySelector('.prop-pk-input');
+
     if (lIn && tSel && rIn) {
+      const pType = tSel.value;
+      const isObj = pType === 'ObjectProperty';
       updatedProps.push({
-        label: lIn.value,
-        property_type: tSel.value,
-        range: rIn.value,
+        label: lIn.value.trim(),
+        relationship_name: lIn.value.trim(),
+        property_type: pType,
+        range: rIn.value.trim(),
         domain: `http://enterprise.org/ontology#${newLabel}`,
+        parent_class: pIn ? pIn.value.trim() : newLabel,
+        target_class: isObj ? rIn.value.trim() : null,
+        inverse_property: (isObj && invIn) ? invIn.value.trim() : null,
+        is_inverse: false,
+        is_primary_key: pkIn ? pkIn.checked : false,
         table_name: origTableName
       });
     }

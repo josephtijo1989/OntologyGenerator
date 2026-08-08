@@ -69,6 +69,11 @@ class OntologyService:
                         "label": attr.attribute_name,
                         "property_type": attr.property_type,
                         "range": attr.range_datatype,
+                        "parent_class": attr.parent_class_name or c.class_name,
+                        "target_class": attr.target_class_name,
+                        "relationship_name": attr.relationship_name or attr.attribute_name,
+                        "inverse_property": attr.inverse_property_name,
+                        "is_inverse": attr.is_inverse,
                         "is_primary_key": attr.is_primary_key,
                         "comment": attr.comment
                     })
@@ -95,10 +100,24 @@ class OntologyService:
                 cls_schema["mapped_table_name"] = matched_c.mapped_table.table_name if matched_c.mapped_table else None
 
         for prop_schema in onto_result["properties"]:
-            matched_attr = self.db.query(OntologyAttribute).filter(func.lower(OntologyAttribute.attribute_name) == prop_schema["label"].lower()).first()
-            if matched_attr and matched_attr.mapped_column:
+            matched_attr = self.db.query(OntologyAttribute).filter(
+                (func.lower(OntologyAttribute.attribute_name) == prop_schema["label"].lower()) |
+                (func.lower(OntologyAttribute.relationship_name) == prop_schema["label"].lower())
+            ).first()
+            if matched_attr:
                 prop_schema["id"] = matched_attr.id
-                prop_schema["mapped_column_name"] = matched_attr.mapped_column.column_name
+                if matched_attr.mapped_column:
+                    prop_schema["mapped_column_name"] = matched_attr.mapped_column.column_name
+                if matched_attr.parent_class_name:
+                    prop_schema["parent_class"] = matched_attr.parent_class_name
+                if matched_attr.target_class_name:
+                    prop_schema["target_class"] = matched_attr.target_class_name
+                if matched_attr.relationship_name:
+                    prop_schema["relationship_name"] = matched_attr.relationship_name
+                if matched_attr.inverse_property_name:
+                    prop_schema["inverse_property"] = matched_attr.inverse_property_name
+                prop_schema["is_inverse"] = matched_attr.is_inverse
+                prop_schema["is_primary_key"] = matched_attr.is_primary_key
 
         return OntologyModelResponse(
             ontology_name=onto_name,
@@ -141,6 +160,11 @@ class OntologyService:
                     p_range = p.get("range") or "xsd:string"
                     is_pk = bool(p.get("is_primary_key", False))
                     p_comment = p.get("comment") or f"{p_type} for {p_name}"
+                    rel_name = p.get("relationship_name") or p_name
+                    parent_cls = p.get("parent_class") or matched_c.class_name
+                    target_cls = p.get("target_class") or (p_range.split("#")[-1] if "#" in str(p_range) else str(p_range))
+                    inv_name = p.get("inverse_property") or p.get("inverse_property_name")
+                    is_inv = bool(p.get("is_inverse", False))
 
                     mapped_col_id = None
                     if matched_c.mapped_table:
@@ -152,17 +176,54 @@ class OntologyService:
                         if m_col:
                             mapped_col_id = m_col.id
 
+                    target_class_obj = None
+                    if p_type == "ObjectProperty" and target_cls:
+                        target_class_obj = self.db.query(OntologyClass).filter(
+                            OntologyClass.project_id == project_id,
+                            func.lower(OntologyClass.class_name) == target_cls.lower()
+                        ).first()
+
                     attr_obj = OntologyAttribute(
                         class_id=matched_c.id,
+                        target_class_id=target_class_obj.id if target_class_obj else None,
                         attribute_name=p_name,
                         attribute_iri=f"{base_iri}{p_name}",
                         property_type=p_type,
                         range_datatype=p_range,
                         is_primary_key=is_pk,
+                        parent_class_name=parent_cls,
+                        target_class_name=target_cls,
+                        relationship_name=rel_name,
+                        inverse_property_name=inv_name,
+                        is_inverse=is_inv,
                         mapped_column_id=mapped_col_id,
                         comment=p_comment
                     )
                     self.db.add(attr_obj)
+
+                    # If inverse relationship is specified and target class exists, create/update inverse on target class if not already there
+                    if p_type == "ObjectProperty" and target_class_obj and inv_name:
+                        existing_inv = self.db.query(OntologyAttribute).filter(
+                            OntologyAttribute.class_id == target_class_obj.id,
+                            func.lower(OntologyAttribute.attribute_name) == inv_name.lower()
+                        ).first()
+                        if not existing_inv:
+                            inv_attr = OntologyAttribute(
+                                class_id=target_class_obj.id,
+                                target_class_id=matched_c.id,
+                                attribute_name=inv_name,
+                                attribute_iri=f"{base_iri}{inv_name}",
+                                property_type="ObjectProperty",
+                                range_datatype=matched_c.class_name,
+                                is_primary_key=False,
+                                parent_class_name=target_class_obj.class_name,
+                                target_class_name=matched_c.class_name,
+                                relationship_name=inv_name,
+                                inverse_property_name=rel_name,
+                                is_inverse=True,
+                                comment=f"Inverse relationship linking {target_class_obj.class_name} back to {matched_c.class_name}"
+                            )
+                            self.db.add(inv_attr)
 
             self.db.commit()
             self.db.refresh(matched_c)
@@ -171,22 +232,68 @@ class OntologyService:
         return self.generate_ontology(project_id)
 
     def export_ontology(self, project_id: str, format_str: str) -> str:
-        res = self.generate_ontology(project_id)
         onto_config = self.onto_config_repo.get_by_project(project_id)
         base_iri = onto_config.base_iri if onto_config else "http://enterprise.org/ontology#"
         prefix = onto_config.prefix if onto_config else "eonto"
 
+        classes = self.db.query(OntologyClass).filter(OntologyClass.project_id == project_id).all()
+        from app.repositories.rule_repository import BusinessRuleRepository
+        rule_repo = BusinessRuleRepository(self.db)
+        rules = rule_repo.get_by_project(project_id)
+        raw_rules = []
+        for r in rules:
+            if r.is_active:
+                raw_rules.append({
+                    "id": r.id,
+                    "name": r.name,
+                    "rule_type": r.rule_type.value if hasattr(r.rule_type, "value") else str(r.rule_type or "BUSINESS"),
+                    "rule_definition": r.rule_definition or "",
+                    "target_entity": r.target_entity or "",
+                    "target_attribute": r.target_attribute or "",
+                    "definition_json": r.definition_json
+                })
+
         raw_catalogs = []
-        for c in res.classes:
+        for c in classes:
+            mapped_tbl_name = c.mapped_table.table_name if c.mapped_table else c.class_name
+            schema_name = c.mapped_table.schema_name if c.mapped_table else "dbo"
+
+            cols = []
+            pks = []
+            if c.mapped_table:
+                for col in c.mapped_table.columns:
+                    cols.append({"name": col.column_name, "type": col.data_type, "nullable": col.is_nullable})
+                    if col.is_primary_key:
+                        pks.append(col.column_name)
+
+            custom_props = []
+            if c.attributes:
+                for attr in c.attributes:
+                    custom_props.append({
+                        "name": attr.attribute_name,
+                        "label": attr.attribute_name,
+                        "property_type": attr.property_type,
+                        "range": attr.range_datatype,
+                        "parent_class": attr.parent_class_name or c.class_name,
+                        "target_class": attr.target_class_name,
+                        "relationship_name": attr.relationship_name or attr.attribute_name,
+                        "inverse_property": attr.inverse_property_name,
+                        "is_inverse": attr.is_inverse,
+                        "is_primary_key": attr.is_primary_key,
+                        "comment": attr.comment
+                    })
+
             raw_catalogs.append({
-                "schema_name": "dbo",
-                "table_name": c.mapped_table_name or c.label,
-                "columns_json": [],
-                "inferred_domain_type": c.annotations.get("domain_type", "Transactional"),
-                "custom_class_label": c.label,
-                "custom_subclass_of": c.subclass_of[0] if c.subclass_of else "owl:Thing",
-                "custom_comment": c.comment
+                "schema_name": schema_name,
+                "table_name": mapped_tbl_name,
+                "columns_json": cols,
+                "primary_keys_json": pks,
+                "inferred_domain_type": c.domain_type,
+                "custom_class_label": c.class_name,
+                "custom_subclass_of": c.subclass_of,
+                "custom_comment": c.comment,
+                "custom_properties_json": custom_props if custom_props else None
             })
 
-        onto_result = self.generator.generate_ontology(raw_catalogs, base_iri=base_iri, prefix=prefix)
+        onto_result = self.generator.generate_ontology(raw_catalogs, rules=raw_rules, base_iri=base_iri, prefix=prefix)
         return self.exporter.export(onto_result["graph"], format_str=format_str)
