@@ -71,18 +71,19 @@ async function loadMetadata() {
   }
 }
 
-function deleteTable(tableId, tableName) {
-  if (typeof showConfirmModal === 'function') {
-    showConfirmModal(
+async function deleteTable(tableId, tableName) {
+  let confirmed = false;
+  if (typeof showConfirm === 'function') {
+    confirmed = await showConfirm(
+      `Are you sure you want to delete table "${tableName}" from the catalog? This will also remove mapped OWL ontology classes and profiling stats.`,
       'Delete Metadata Table',
-      `Are you sure you want to delete table "<strong>${tableName}</strong>" from the catalog? This will also remove mapped OWL ontology classes and profiling stats.`,
-      () => performDeleteTable(tableId, tableName)
+      '🗑️ Delete Table'
     );
   } else {
-    if (confirm(`Are you sure you want to delete table "${tableName}"?`)) {
-      performDeleteTable(tableId, tableName);
-    }
+    confirmed = confirm(`Are you sure you want to delete table "${tableName}"?`);
   }
+  if (!confirmed) return;
+  await performDeleteTable(tableId, tableName);
 }
 
 async function performDeleteTable(tableId, tableName) {

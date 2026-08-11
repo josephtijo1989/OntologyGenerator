@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from app.models.domain import ProjectStatus
 
@@ -22,6 +22,8 @@ class ProjectClone(BaseModel):
 
 
 class ProjectResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     name: str
     code: str
@@ -30,6 +32,3 @@ class ProjectResponse(BaseModel):
     owner_id: str
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True

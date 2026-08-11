@@ -3,25 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quick-Pasteur Enterprise Graph & Ontology Platform</title>
+  <title>OntoForge - Transform source metadata into semantic knowledge</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
-  <link rel="stylesheet" href="/static/css/styles.css?v=3.1">
+  <link rel="stylesheet" href="/static/css/styles.css?v=7.0">
 </head>
 <body class="light-theme">
   <!-- Navbar -->
   <header class="navbar">
-    <div class="brand">
-      <span class="logo-icon">⚡</span>
-      <span class="logo-text">Quick-Pasteur</span>
-      <span class="badge">v1.0 Enterprise</span>
-      <span style="font-size: 12px; color: var(--text-secondary); margin-left: 8px;">Active Project:</span>
-      <select id="projectSelect" class="project-selector" onchange="onProjectChanged(this.value)">
+    <!-- Left: Branding & Tagline -->
+    <div class="brand" style="display: flex; align-items: center; gap: 10px;">
+      <span class="logo-icon" style="font-size: 22px;">⚡</span>
+      <div style="display: flex; flex-direction: column; line-height: 1.2;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="logo-text" style="font-size: 18px; font-weight: 700; background: linear-gradient(135deg, #0284c7, #4f46e5); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">OntoForge</span>
+          <span class="badge" style="font-size: 10px; padding: 2px 7px;">v1.0 Enterprise</span>
+        </div>
+        <span style="font-size: 11px; color: var(--text-secondary); font-weight: 500; letter-spacing: 0.1px;">Transform source metadata into semantic knowledge</span>
+      </div>
+    </div>
+
+    <!-- Right: Active Project Selector & Creation -->
+    <div class="navbar-right" style="display: flex; align-items: center; gap: 10px;">
+      <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Active Project:</span>
+      <select id="projectSelect" class="project-selector" onchange="onProjectChanged(this.value)" style="min-width: 240px; height: 36px; font-size: 13px; font-weight: 600;">
         <!-- Dynamically Populated Projects -->
       </select>
-      <button class="btn-primary" style="font-size: 11px; padding: 4px 10px; margin-left: 6px;" onclick="openModal('projectModal')">➕ New Project</button>
+      <button class="btn-primary" style="font-size: 12px; height: 36px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;" onclick="openModal('projectModal')">➕ New Project</button>
     </div>
   </header>
 
@@ -36,6 +46,7 @@
       <button class="nav-btn" data-view="rules">⚙️ Business Rules Engine</button>
       <button class="nav-btn" data-view="ontology">🧠 OWL Ontology Editor</button>
       <button class="nav-btn" data-view="ontology-graph">🌐 Graphical Ontology</button>
+      <button class="nav-btn" data-view="ontology-viewer">📤 Upload & View Ontology</button>
       <button class="nav-btn" data-view="graph">🕸️ Knowledge Graph</button>
     </aside>
 
@@ -186,93 +197,448 @@
 
       <!-- 6b. Graphical Ontology Visualizer Panel -->
       <section id="panel-ontology-graph" class="view-panel">
-        <div class="flex-between">
+        <div class="flex-between" style="flex-wrap: wrap; gap: 12px;">
           <div>
-            <h2>Visual W3C OWL 2.0 Class Hierarchy & Schema Graph</h2>
-            <p style="color: var(--text-secondary); font-size: 14px;">Interactive taxonomy visualization displaying OWL classes, rdfs:subClassOf hierarchy, object property relations, and datatype properties</p>
+            <h2>Enterprise Semantic Ontology & Metadata Architecture</h2>
+            <p style="color: var(--text-secondary); font-size: 14px;">Semantic knowledge graph generated from multi-source metadata with hierarchical taxonomy, relationship inference, and source mapping</p>
           </div>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <button class="btn-secondary" onclick="exportOntologyTurtle()">📥 Export Turtle (.ttl)</button>
-            <button class="btn-secondary" onclick="exportOntologyOWL()">📥 Export OWL/XML (.owl)</button>
-            <button class="btn-primary" onclick="initOntologyGraph()">🔄 Re-Build Ontology Graph</button>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <!-- Mode Toggle Switcher -->
+            <div class="onto-mode-toggle" id="ontoModeToggleGroup">
+              <button class="onto-mode-btn" data-mode="metadata" onclick="switchOntologyMode('metadata')">
+                <span>📦</span> Source Metadata
+              </button>
+              <button class="onto-mode-btn active" data-mode="ontology" onclick="switchOntologyMode('ontology')">
+                <span>🧠</span> Semantic Ontology
+              </button>
+              <button class="onto-mode-btn" data-mode="mapping" onclick="switchOntologyMode('mapping')">
+                <span>🔄</span> Mapping View
+              </button>
+            </div>
+            <button class="btn-secondary" onclick="exportOntologyTurtle()" title="Export Turtle (.ttl)">📥 Turtle (.ttl)</button>
+            <button class="btn-secondary" onclick="exportOntologyOWL()" title="Export OWL/XML (.owl)">📥 OWL/XML</button>
+            <button class="btn-primary" onclick="initOntologyGraph()">🔄 Refresh Model</button>
           </div>
         </div>
 
-        <!-- Toolbar with Multi-Class Selector -->
-        <div class="glass-card" style="padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 8px;">
+        <!-- Toolbar with Filters, Search, and Controls -->
+        <div class="onto-toolbar" id="ontoGraphToolbar">
+          <!-- Search input -->
+          <div class="onto-search-box">
+            <span class="onto-search-icon">🔍</span>
+            <input type="text" id="ontoSearchInput" class="onto-search-input" placeholder="Search concepts, classes, properties..." oninput="onOntoSearchChange(this.value)">
+          </div>
 
+          <!-- Concept Type Filter Chips -->
+          <div class="onto-chip-group" id="ontoTypeFilterChips">
+            <button class="onto-chip-btn active" data-filter="all" onclick="setOntoConceptFilter('all')">All</button>
+            <button class="onto-chip-btn" data-filter="classes" onclick="setOntoConceptFilter('classes')">Classes</button>
+            <button class="onto-chip-btn" data-filter="properties" onclick="setOntoConceptFilter('properties')">Properties</button>
+            <button class="onto-chip-btn" data-filter="relationships" onclick="setOntoConceptFilter('relationships')">Relationships</button>
+          </div>
 
-          <!-- Multi-Class Selector Dropdown -->
-          <div style="position: relative;" class="custom-combobox">
-            <button id="ontoClassFilterBtn" class="btn-secondary" style="font-size: 12px; padding: 5px 12px; display: flex; align-items: center; gap: 6px; font-weight: 600;" onclick="toggleOntologyClassFilterDropdown()">
-              🧠 Select Classes to Root (All Selected) ▾
-            </button>
-            <div id="ontoClassFilterDropdown" class="combobox-options-dropdown" style="display: none; width: 320px; padding: 12px; z-index: 100000; left: 0;">
-              <div class="flex-between" style="margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                <span style="font-size: 12px; font-weight: 700; color: var(--text-primary);">Filter Classes & Root Path</span>
-                <div>
-                  <button style="font-size: 10px; padding: 2px 6px; background: rgba(2, 132, 199, 0.1); color: #0284c7; border: 1px solid #bae6fd; border-radius: 4px; cursor: pointer;" onclick="selectAllOntologyClassesFilter(true)">Select All</button>
-                  <button style="font-size: 10px; padding: 2px 6px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid #fca5a5; border-radius: 4px; cursor: pointer; margin-left: 4px;" onclick="selectAllOntologyClassesFilter(false)">Clear</button>
+          <!-- Filter Dropdowns -->
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <select id="ontoSourceFilterSelect" class="project-selector" style="font-size: 11px; padding: 5px 8px; height: 32px;" onchange="applyOntoGraphFilters()">
+              <option value="ALL">All Source Systems</option>
+            </select>
+
+            <select id="ontoDomainFilterSelect" class="project-selector" style="font-size: 11px; padding: 5px 8px; height: 32px;" onchange="applyOntoGraphFilters()">
+              <option value="ALL">All Domains</option>
+              <option value="Dimension">Dimension</option>
+              <option value="Fact">Fact</option>
+              <option value="Lookup">Lookup</option>
+              <option value="SCD">SCD</option>
+              <option value="Transactional">Transactional</option>
+            </select>
+          </div>
+
+          <!-- Action & Zoom Controls -->
+          <div style="display: flex; gap: 4px; align-items: center;">
+            <button class="btn-sm" id="ontoExpandAllBtn" onclick="toggleExpandAllNodes()" title="Expand or Collapse All Classes">📦 Expand All</button>
+            <button class="btn-sm" onclick="zoomOntoGraph(1.2)" title="Zoom In">➕</button>
+            <button class="btn-sm" onclick="zoomOntoGraph(0.8)" title="Zoom Out">➖</button>
+            <button class="btn-sm" onclick="fitOntoGraphView()" title="Fit View to Screen">🎯 Fit</button>
+            <button class="btn-sm" onclick="resetOntologyGraphView()" title="Restore Layout">🔄 Reset</button>
+          </div>
+        </div>
+
+        <!-- Graph Workspace: Graph Canvas + Dynamic Right Details Drawer -->
+        <div class="onto-workspace-wrapper" id="ontoWorkspaceWrapper">
+          <!-- Graph Canvas Container -->
+          <div class="onto-canvas-box" id="ontoCanvasBox">
+            <div id="cy-ontology" style="width: 100%; height: 100%;"></div>
+
+            <!-- Collapsible Graph Legend Overlay -->
+            <div class="onto-legend" id="ontoGraphLegend">
+              <div class="onto-legend-header" onclick="toggleOntoLegend()">
+                <span>Graph Legend</span>
+                <span id="ontoLegendToggleIcon" style="font-size: 9px; margin-left: 6px;">▲</span>
+              </div>
+              <div class="onto-legend-items" id="ontoLegendItems">
+                <div class="onto-legend-row"><span style="font-size: 10px;">🏛️</span> Base Class / SuperClass</div>
+                <div class="onto-legend-row"><span style="width: 10px; height: 10px; border-radius: 3px; background: #0284c7; display: inline-block;"></span> Ontology Class</div>
+                <div class="onto-legend-row"><span style="color: #4f46e5; font-weight: bold;">➔</span> Object Property</div>
+                <div class="onto-legend-row"><span style="width: 8px; height: 8px; background: #059669; display: inline-block;"></span> Data Property</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Right-Side Details Panel Drawer -->
+          <aside class="onto-details-drawer" id="ontoDetailsDrawer">
+            <!-- Header -->
+            <div class="onto-details-header">
+              <div class="flex-between">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span class="badge" id="odd-type-badge" style="background: rgba(2, 132, 199, 0.15); color: var(--accent-cyan);">owl:Class</span>
+                </div>
+                <button style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 20px; line-height: 1;" onclick="closeOntoDetailsPanel()">&times;</button>
+              </div>
+              <h3 id="odd-title" style="font-size: 18px; margin: 0; color: var(--text-primary); font-weight: 700; word-break: break-all;">Protein</h3>
+              <div id="odd-subtitle" style="font-size: 11px; color: var(--text-secondary); font-family: var(--font-mono); word-break: break-all;">http://enterprise.org/ontology#Protein</div>
+            </div>
+
+            <!-- Body -->
+            <div class="onto-details-body">
+              <!-- Summary Metrics Block -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                <div class="onto-details-card-block" style="text-align: center;">
+                  <span style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase;">Properties</span>
+                  <strong id="odd-prop-count" style="font-size: 16px; color: var(--accent-emerald);">3</strong>
+                </div>
+                <div class="onto-details-card-block" style="text-align: center;">
+                  <span style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase;">Relations</span>
+                  <strong id="odd-rel-count" style="font-size: 16px; color: var(--accent-violet);">2</strong>
+                </div>
+                <div class="onto-details-card-block" style="text-align: center;">
+                  <span style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase;">Sources</span>
+                  <strong id="odd-source-count" style="font-size: 16px; color: var(--accent-cyan);">1</strong>
                 </div>
               </div>
-              <input type="text" id="ontoClassSearchInput" placeholder="🔍 Search classes..." style="width: 100%; padding: 6px 10px; font-size: 12px; margin-bottom: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-surface); color: var(--text-primary);" oninput="filterOntologyClassCheckboxList(this.value)">
-              <div id="ontoClassCheckboxList" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
-                <!-- Dynamically populated class checkboxes -->
+
+              <!-- Physical Lineage Section -->
+              <div class="onto-details-card-block">
+                <div class="onto-details-section-title">Physical Lineage & Mapping</div>
+                <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
+                  <div><span style="color: var(--text-secondary);">Source System:</span> <strong id="odd-source-system">SQL Server (Production)</strong></div>
+                  <div><span style="color: var(--text-secondary);">Source Table:</span> <strong id="odd-source-table" class="font-mono">dbo.protein</strong></div>
+                  <div><span style="color: var(--text-secondary);">Superclass:</span> <span id="odd-subclass" class="font-mono" style="color: var(--accent-violet);">owl:Thing</span></div>
+                  <div><span style="color: var(--text-secondary);">Domain Classification:</span> <span id="odd-domain-tag" class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan);">Dimension</span></div>
+                </div>
               </div>
-              <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border-color); text-align: right;">
-                <button class="btn-primary" style="font-size: 11px; padding: 4px 12px;" onclick="applyOntologyClassFilter()">Apply Filter to Root ➔</button>
+
+              <!-- Data Properties Section -->
+              <div>
+                <div class="onto-details-section-title">
+                  <span>Data Properties (Attributes)</span>
+                  <span id="odd-props-header-badge" class="badge" style="font-size: 9px;">0</span>
+                </div>
+                <div id="odd-props-list" style="display: flex; flex-direction: column; gap: 6px;">
+                  <!-- Dynamically populated -->
+                </div>
               </div>
+
+              <!-- Object Properties Section -->
+              <div>
+                <div class="onto-details-section-title">
+                  <span>Object Properties (Relationships)</span>
+                  <span id="odd-rels-header-badge" class="badge" style="font-size: 9px;">0</span>
+                </div>
+                <div id="odd-rels-list" style="display: flex; flex-direction: column; gap: 6px;">
+                  <!-- Dynamically populated -->
+                </div>
+              </div>
+
+              <!-- Business Rules Section -->
+              <div id="odd-rules-section" style="display: none;">
+                <div class="onto-details-section-title">Governance Rules</div>
+                <div id="odd-rules-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
+              </div>
+
+              <!-- Actions -->
+              <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; padding-top: 12px; border-top: 1px dashed var(--border-color);">
+                <button class="btn-primary" style="font-size: 11px; padding: 6px 12px; width: 100%;" id="odd-edit-class-btn">🧠 Open in Full Class Editor ➔</button>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <!-- Mode 3: Source-to-Ontology Mapping View Container -->
+        <div class="onto-mapping-container" id="ontoMappingContainer">
+          <div class="flex-between">
+            <div>
+              <h3 style="font-size: 16px; margin: 0; color: var(--text-primary);">Source-to-Ontology Semantic Mapping Flow</h3>
+              <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Visual end-to-end lineage connecting multi-database schemas and columns to unified target ontology concepts</p>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <select id="mappingSourceFilter" class="project-selector" style="font-size: 11px; padding: 4px 8px;" onchange="filterMappingView()">
+                <option value="ALL">All Source Connectors</option>
+              </select>
+              <input type="text" id="mappingSearchInput" placeholder="Filter mapping items..." style="padding: 5px 10px; font-size: 11px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-surface); color: var(--text-primary);" oninput="filterMappingView()">
             </div>
           </div>
 
+          <div class="onto-mapping-grid">
+            <!-- Left Column: Source Database Systems & Tables -->
+            <div class="onto-mapping-col">
+              <div class="onto-mapping-col-header">
+                <span>📁 Source Relational Databases</span>
+                <span class="badge" id="map-source-badge" style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan);">0 Tables</span>
+              </div>
+              <div id="mapping-sources-list" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+
+            <!-- Middle Column: Mapping Engine Bridge -->
+            <div class="onto-mapping-middle">
+              <div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #0284c7, #4f46e5); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);">⚡</div>
+              <div>
+                <div style="font-size: 11px; font-weight: 800; color: #1e1b4b; text-transform: uppercase;">Semantic Mapping</div>
+                <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Multi-Source Consolidation</div>
+              </div>
+              <div style="font-size: 20px; color: var(--accent-cyan); font-weight: bold;">➔</div>
+              <div style="font-size: 10px; background: #e0f2fe; color: #0284c7; padding: 4px 8px; border-radius: 6px; font-weight: 600;">
+                <span id="map-total-links">0 Mappings Active</span>
+              </div>
+            </div>
+
+            <!-- Right Column: Target Unified Semantic Ontology -->
+            <div class="onto-mapping-col">
+              <div class="onto-mapping-col-header">
+                <span>🧠 Target Semantic Ontology</span>
+                <span class="badge" id="map-target-badge" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald);">0 Concepts</span>
+              </div>
+              <div id="mapping-targets-list" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
 
-          <div style="display: flex; gap: 6px;">
-            <button class="btn-sm" onclick="resetOntologyGraphView()" title="Fit View to Screen">🎯 Reset View</button>
+      <!-- 6c. Upload & View Ontology (Stateless Sandbox) Panel -->
+      <section id="panel-ontology-viewer" class="view-panel">
+        <div class="flex-between">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <h2>OWL / RDF Ontology Viewer & Sandbox</h2>
+              <span class="badge" style="background: rgba(5, 150, 105, 0.15); color: var(--accent-emerald); font-weight: 700; border: 1px solid rgba(5, 150, 105, 0.3);">🔒 STATELESS SANDBOX (READ-ONLY)</span>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 14px;">Upload, inspect, and visually explore Semantic Web ontologies (Turtle, OWL/XML, JSON-LD, N-Triples) in real time without persisting to database</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-primary" onclick="openViewerSubclassModal()">➕ Create Subclass</button>
+            <button class="btn-secondary" onclick="resetOntologyViewer()">🗑️ Reset Sandbox</button>
+            <button class="btn-secondary" onclick="downloadViewerTurtle()">📥 Export Turtle (.ttl)</button>
           </div>
         </div>
 
-        <!-- Cytoscape Container & Floating Class Inspector -->
-        <div style="position: relative; width: 100%;">
-          <div id="cy-ontology" class="glass-card" style="height: 540px;"></div>
+        <!-- Ingestion / Upload Box -->
+        <div class="glass-card" style="padding: 16px 20px; display: flex; flex-direction: column; gap: 14px;">
+          <div class="flex-between" style="cursor: pointer;" onclick="toggleViewerUploadCollapse()">
+            <h3 style="font-size: 15px; margin: 0; display: flex; align-items: center; gap: 8px; color: var(--text-primary);">
+              <span>📥 Ingest Ontology File or Raw Source</span>
+            </h3>
+            <button class="btn-sm" id="viewer-collapse-btn" onclick="event.stopPropagation(); toggleViewerUploadCollapse()">▲ Collapse</button>
+          </div>
 
-          <!-- Floating Timbr.ai Explorer Graph Legend Overlay -->
-          <div class="glass-card" style="position: absolute; bottom: 20px; right: 20px; z-index: 100; padding: 10px 14px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
-            <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: #1e293b;">
-              <span style="width: 12px; height: 12px; border-radius: 50%; background: #ffffff; border: 2px solid #475569; display: inline-block;"></span> Thing (Root)
+          <div id="viewer-upload-body" style="display: flex; flex-direction: column; gap: 14px; margin-top: 4px;">
+            <!-- Presets Bar -->
+            <div style="display: flex; align-items: center; gap: 10px; background: var(--bg-surface); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap;">
+              <span style="font-size: 12px; font-weight: 700; color: var(--accent-cyan);">⚡ Quick Samples:</span>
+              <div id="viewer-preset-chips" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <button type="button" class="preset-chip" onclick="loadViewerPreset(0)" title="Proteins, Targets, Assays, Chemical Entities, and Inverse Binding Relationships">🦠 Pasteur Biological & Assay Graph</button>
+                <button type="button" class="preset-chip" onclick="loadViewerPreset(1)" title="Customers, Orders, OrderItems, Products, and Inverted Lineage">🛒 E-Commerce & Order Knowledge Model</button>
+              </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: #1e293b;">
-              <span style="width: 12px; height: 12px; border-radius: 50%; background: #1e1b4b; display: inline-block;"></span> Class
+
+            <!-- Ingestion Grid -->
+            <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 16px;">
+              <!-- Dropzone -->
+              <input type="file" id="viewer-file-input" accept=".ttl,.owl,.rdf,.xml,.jsonld,.json,.nt,.n3" style="display: none;" onchange="if(this.files && this.files.length > 0) handleViewerFile(this.files[0])">
+              <div id="viewer-dropzone" class="dropzone" style="border: 2px dashed var(--accent-cyan); background: #ffffff; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 180px; transition: all 0.2s ease;" onclick="triggerViewerFilePicker(event)">
+                <span style="font-size: 32px;">📁</span>
+                <strong style="font-size: 14px; color: var(--text-primary);">Drag & Drop Ontology File Here</strong>
+                <span style="font-size: 12px; color: var(--text-secondary);">or click to browse (.ttl, .owl, .rdf, .xml, .jsonld, .nt)</span>
+                <button type="button" class="btn-primary" style="font-size: 12px; height: 32px; padding: 0 14px; margin-top: 4px;" onclick="triggerViewerFilePicker(event)">📂 Browse Ontology File</button>
+                <div id="viewer-file-name-display" style="display: none; font-size: 12px; font-weight: 600; background: #e0f2fe; color: #0284c7; padding: 4px 10px; border-radius: 6px; margin-top: 6px;"></div>
+              </div>
+
+              <!-- Raw Text Area -->
+              <div style="display: flex; flex-direction: column; gap: 6px; background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+                <div class="flex-between">
+                  <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Or Paste Raw RDF / Turtle Code:</span>
+                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+                    <label style="color: var(--text-secondary);">Format:</label>
+                    <select id="viewer-format-hint" class="project-selector" style="font-size: 11px; padding: 3px 8px; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-color);">
+                      <option value="auto">Auto-Detect</option>
+                      <option value="turtle">Turtle (.ttl)</option>
+                      <option value="xml">OWL/XML (.owl, .xml)</option>
+                      <option value="json-ld">JSON-LD (.jsonld)</option>
+                      <option value="nt">N-Triples (.nt)</option>
+                    </select>
+                  </div>
+                </div>
+                <textarea id="viewer-raw-text" class="font-mono" style="width: 100%; height: 130px; padding: 8px; font-size: 11px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-surface); color: var(--text-primary); resize: vertical;" placeholder="@prefix owl: <http://www.w3.org/2002/07/owl#> ..."></textarea>
+              </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: #1e293b;">
-              <span style="width: 12px; height: 12px; border-radius: 50%; background: #f97316; display: inline-block;"></span> Person / Concept
+
+            <!-- Action Bar -->
+            <div class="flex-between" style="padding-top: 8px; border-top: 1px solid var(--border-color);">
+              <span style="font-size: 12px; color: var(--accent-emerald);">✓ Read-only in-memory parsing. Zero database persistence.</span>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn-secondary" onclick="clearViewerInputs()">Clear</button>
+                <button class="btn-primary" id="viewer-parse-btn" onclick="parseAndVisualizeOntology()">⚡ Parse & Visualize Ontology</button>
+              </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: #1e293b;">
-              <span style="width: 12px; height: 12px; transform: rotate(45deg); background: #059669; display: inline-block;"></span> Relationship
+          </div>
+        </div>
+
+        <!-- Results Area -->
+        <div id="viewer-results-container" style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- Metrics Summary Cards -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+            <div class="glass-card" style="padding: 12px 16px;">
+              <span style="font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Ontology Name</span>
+              <div id="v-stat-name" style="font-size: 16px; font-weight: 700; color: var(--accent-cyan); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px;">—</div>
+              <div id="v-stat-iri" style="font-size: 10px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;">—</div>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: #1e293b;">
-              <span style="width: 10px; height: 10px; background: #047857; display: inline-block;"></span> Property
+            <div class="glass-card" style="padding: 12px 16px;">
+              <span style="font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">OWL Classes</span>
+              <div id="v-stat-classes" style="font-size: 24px; font-weight: 700; font-family: var(--font-mono); color: var(--accent-violet); margin-top: 4px;">0</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Entities mapped</div>
+            </div>
+            <div class="glass-card" style="padding: 12px 16px;">
+              <span style="font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Datatype Attributes</span>
+              <div id="v-stat-datatype" style="font-size: 24px; font-weight: 700; font-family: var(--font-mono); color: var(--accent-emerald); margin-top: 4px;">0</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Scalar fields</div>
+            </div>
+            <div class="glass-card" style="padding: 12px 16px;">
+              <span style="font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Object Relationships</span>
+              <div id="v-stat-object" style="font-size: 24px; font-weight: 700; font-family: var(--font-mono); color: var(--accent-amber); margin-top: 4px;">0</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Domain &rarr; Range edges</div>
+            </div>
+            <div class="glass-card" style="padding: 12px 16px;">
+              <span style="font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">RDF Triples & Format</span>
+              <div id="v-stat-triples" style="font-size: 24px; font-weight: 700; font-family: var(--font-mono); color: var(--accent-rose); margin-top: 4px;">0</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Format: <strong id="v-stat-format" style="color: var(--accent-rose);">TURTLE</strong></div>
             </div>
           </div>
 
-          <!-- Floating Glassmorphism Node Inspector Overlay -->
-          <div id="ontoNodeCard" class="glass-card" style="display: none; position: absolute; top: 16px; right: 16px; width: 320px; z-index: 100; border-top: 4px solid var(--accent-violet); box-shadow: 0 12px 36px rgba(0,0,0,0.15);">
-            <div class="flex-between">
-              <span class="badge" id="onc-domain" style="background: rgba(139, 92, 246, 0.2); color: var(--accent-violet);">Dimension</span>
-              <button style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 16px;" onclick="document.getElementById('ontoNodeCard').style.display='none'">&times;</button>
+          <!-- View Switcher Tabs -->
+          <div class="glass-card" style="padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <div style="display: flex; gap: 6px;">
+              <button class="btn-secondary viewer-tab-btn active" data-subtab="graph" onclick="switchViewerSubTab('graph')">🕸️ Knowledge Graph View</button>
+              <button class="btn-secondary viewer-tab-btn" data-subtab="classes" onclick="switchViewerSubTab('classes')">🏛️ OWL Classes</button>
+              <button class="btn-secondary viewer-tab-btn" data-subtab="properties" onclick="switchViewerSubTab('properties')">🔗 Properties & Relationships</button>
+              <button class="btn-secondary viewer-tab-btn" data-subtab="source" onclick="switchViewerSubTab('source')">📜 Raw Turtle Source</button>
             </div>
-            <h3 id="onc-label" style="font-size: 18px; margin-top: 6px; color: var(--accent-violet);">Customers</h3>
-            <div id="onc-subclass" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; font-family: var(--font-mono);">rdfs:subClassOf owl:Thing</div>
-            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 6px;">🔑 Primary Key: <strong id="onc-pk" style="color: var(--accent-amber);">Customer_ID</strong></div>
-            <div id="onc-comment" style="font-size: 11px; color: var(--text-secondary); margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 8px;">
-              Comment text
+            <div id="viewer-search-box" style="display: none; position: relative;">
+              <input type="text" id="viewer-search-input" placeholder="🔍 Search classes or properties..." style="padding: 6px 12px; font-size: 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-surface); color: var(--text-primary); width: 220px;" oninput="onViewerSearchChange(this.value)">
             </div>
-            <div style="margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 8px;">
-              <span style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">Incorporated Governance Rules:</span>
-              <div id="onc-rules" style="margin-top: 4px;"></div>
+          </div>
+
+          <!-- Sub-Tab 1: Graph View -->
+          <div id="v-pane-graph" style="position: relative; width: 100%;">
+            <!-- Graph Toolbar -->
+            <div class="glass-card" style="padding: 8px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Layout:</span>
+                <select id="viewerLayoutSelect" class="project-selector" style="font-size: 11px; padding: 4px 8px; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-color);" onchange="changeViewerLayout(this.value)">
+                  <option value="cose">🌐 CoSE (Force-Directed Physics)</option>
+                  <option value="circle">⭕ Circle Layout</option>
+                  <option value="breadthfirst">🌲 Breadth-First Hierarchy</option>
+                  <option value="grid">🧱 Orthogonal Grid</option>
+                  <option value="concentric">🎯 Concentric Rings</option>
+                </select>
+              </div>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <button class="btn-primary" style="font-size: 11px; padding: 4px 10px;" onclick="openViewerSubclassModal()">➕ Add Subclass</button>
+                <button class="btn-sm" onclick="zoomViewerGraph(1.2)" title="Zoom In">➕</button>
+                <button class="btn-sm" onclick="zoomViewerGraph(0.8)" title="Zoom Out">➖</button>
+                <button class="btn-sm" onclick="resetViewerGraphView()" title="Fit View">🎯 Fit</button>
+              </div>
             </div>
-            <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
-              <button class="btn-primary" style="font-size: 11px; padding: 4px 10px;" onclick="switchToTab('ontology')">🧠 Edit in Class Editor</button>
+
+            <!-- Cytoscape Canvas -->
+            <div style="position: relative; width: 100%;">
+              <div id="cy-ontology-viewer" class="glass-card" style="height: 520px;"></div>
+
+              <!-- Node Inspector Card -->
+              <div id="viewerNodeCard" class="glass-card" style="display: none; position: absolute; top: 16px; right: 16px; width: 310px; z-index: 100; border-top: 4px solid var(--accent-cyan); box-shadow: 0 12px 36px rgba(0,0,0,0.15); max-height: 480px; overflow-y: auto;">
+                <div class="flex-between">
+                  <span class="badge" id="vnc-domain" style="background: rgba(2, 132, 199, 0.15); color: var(--accent-cyan);">Class</span>
+                  <button style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 18px;" onclick="document.getElementById('viewerNodeCard').style.display='none'">&times;</button>
+                </div>
+                <h3 id="vnc-label" style="font-size: 17px; margin-top: 6px; color: var(--text-primary);">Protein</h3>
+                <div id="vnc-iri" style="font-size: 10px; color: var(--text-secondary); font-family: var(--font-mono); word-break: break-all; margin-top: 2px;"></div>
+                <div id="vnc-pks" style="font-size: 11px; color: var(--accent-amber); margin-top: 6px; display: none;"></div>
+                <p id="vnc-comment" style="font-size: 11px; color: var(--text-secondary); margin-top: 6px; line-height: 1.4; border-top: 1px dashed var(--border-color); padding-top: 6px;"></p>
+
+                <div style="margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 8px;">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">Datatype Attributes:</span>
+                  <div id="vnc-attributes-list" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;"></div>
+                </div>
+
+                <div style="margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 8px;">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">Connected Relationships:</span>
+                  <div id="vnc-relations-list" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;"></div>
+                </div>
+
+                <div style="margin-top: 12px; border-top: 1px dashed var(--border-color); padding-top: 10px;">
+                  <button class="btn-primary" style="width: 100%; font-size: 11px; padding: 6px 10px;" id="vnc-create-subclass-btn" onclick="openViewerSubclassModal(document.getElementById('vnc-label').innerText)">➕ Create Subclass</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sub-Tab 2: Classes Grid -->
+          <div id="v-pane-classes" style="display: none;">
+            <div class="grid-cards" id="v-classes-grid"></div>
+          </div>
+
+          <!-- Sub-Tab 3: Properties Table -->
+          <div id="v-pane-props" style="display: none;">
+            <div class="glass-card" style="padding: 16px;">
+              <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+                <button class="btn-sm v-prop-filter-btn active" data-pfilter="all" onclick="filterViewerPropertyType('all')">All Properties</button>
+                <button class="btn-sm v-prop-filter-btn" data-pfilter="datatype" onclick="filterViewerPropertyType('datatype')">📊 Datatype Properties</button>
+                <button class="btn-sm v-prop-filter-btn" data-pfilter="object" onclick="filterViewerPropertyType('object')">🔗 Object Properties</button>
+              </div>
+              <div style="overflow-x: auto;">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Property Name / IRI</th>
+                      <th>Type</th>
+                      <th>Domain (Source Class)</th>
+                      <th>Range (Type / Target Class)</th>
+                      <th>Inverse Relationship</th>
+                      <th>Comment</th>
+                    </tr>
+                  </thead>
+                  <tbody id="v-props-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sub-Tab 4: Raw Turtle Source Preview -->
+          <div id="v-pane-source" style="display: none;">
+            <div class="glass-card" style="padding: 16px;">
+              <div class="flex-between" style="margin-bottom: 10px;">
+                <div>
+                  <h4 style="font-size: 14px; margin: 0; color: var(--accent-cyan);">W3C Turtle Serialization (.ttl)</h4>
+                  <span style="font-size: 11px; color: var(--text-secondary);">Synthesized RDF graph source code</span>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                  <button class="btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="copyViewerSource()">📋 Copy Source</button>
+                  <button class="btn-primary" style="font-size: 11px; padding: 4px 10px;" onclick="downloadViewerTurtle()">📥 Download File</button>
+                </div>
+              </div>
+              <pre class="font-mono" style="background: #0f172a; color: #7dd3fc; padding: 14px; border-radius: 6px; font-size: 11px; line-height: 1.5; max-height: 480px; overflow-y: auto; border: 1px solid #1e293b;"><code id="viewer-turtle-code"># Source will appear here</code></pre>
             </div>
           </div>
         </div>
@@ -446,10 +812,13 @@
         <div class="form-group half">
           <label>Connector Type</label>
           <select id="nc-type">
-            <option value="SQLSERVER">SQL Server</option>
-            <option value="POSTGRESQL">PostgreSQL</option>
-            <option value="MYSQL">MySQL</option>
-            <option value="ORACLE">Oracle</option>
+            <option value="MSSQL">SQL Server (MSSQL / Synapse)</option>
+            <option value="POSTGRESQL">PostgreSQL / Redshift</option>
+            <option value="MYSQL">MySQL / MariaDB</option>
+            <option value="ORACLE">Oracle Database</option>
+            <option value="SQLITE">SQLite Database</option>
+            <option value="SNOWFLAKE">Snowflake Data Cloud</option>
+            <option value="DATABRICKS">Databricks Lakehouse</option>
           </select>
         </div>
         <div class="form-group half">
@@ -656,7 +1025,9 @@
         </div>
         <div class="form-group half">
           <label>Superclass Taxonomy / Parent Class (rdfs:subClassOf)</label>
-          <input type="text" id="ocm-subclass" list="global-parent-class-datalist" placeholder="e.g. owl:Thing or eonto:MasterData">
+          <select id="ocm-subclass" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); font-size: 13px;">
+            <option value="owl:Thing">owl:Thing</option>
+          </select>
         </div>
       </div>
 
@@ -709,6 +1080,82 @@
     </div>
   </div>
 
+  <!-- 7b. Create Subclass in Ontology Viewer Sandbox Modal -->
+  <div id="viewerSubclassModal" class="modal-overlay">
+    <div class="glass-card modal-box" style="width: 740px; max-width: 92vw; max-height: 90vh; display: flex; flex-direction: column;">
+      <div class="flex-between">
+        <div>
+          <h3 style="font-size: 17px; margin: 0; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+            <span>✨</span> <span>Create Subclass in Ontology Sandbox</span>
+          </h3>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Define a new semantic subclass, its parent superclass hierarchy, and optional attributes/relationships</p>
+        </div>
+        <button class="modal-close" onclick="closeModal('viewerSubclassModal')" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 20px;">&times;</button>
+      </div>
+
+      <div class="form-row" style="margin-top: 12px;">
+        <div class="form-group half">
+          <label style="font-size: 12px; font-weight: 600;">Subclass Name / Label <span style="color: var(--accent-rose);">*</span></label>
+          <input type="text" id="vsc-label" placeholder="e.g. HumanProtein or VIPCustomer" style="font-size: 12px;">
+        </div>
+        <div class="form-group half">
+          <label style="font-size: 12px; font-weight: 600;">Parent SuperClass (rdfs:subClassOf) <span style="color: var(--accent-rose);">*</span></label>
+          <select id="vsc-parent" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--bg-surface); color: var(--text-primary); font-size: 12px; outline: none;">
+            <option value="owl:Thing">owl:Thing</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group half">
+          <label style="font-size: 12px; font-weight: 600;">Domain Classification</label>
+          <select id="vsc-domain" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--bg-surface); color: var(--text-primary); font-size: 12px; outline: none;">
+            <option value="Dimension">Dimension Entity (Master Data Context)</option>
+            <option value="Fact">Fact Entity (Metrics & Transactional Measure)</option>
+            <option value="Lookup">Lookup Entity (Reference Code Table)</option>
+            <option value="Transactional">Transactional Entity</option>
+            <option value="SCD">SCD Entity (Slowly Changing Dimension)</option>
+          </select>
+        </div>
+        <div class="form-group half">
+          <label style="font-size: 12px; font-weight: 600;">Description / RDFS Comment</label>
+          <input type="text" id="vsc-comment" placeholder="e.g. Specialized biological protein macromolecule" style="font-size: 12px;">
+        </div>
+      </div>
+
+      <div class="flex-between" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+        <h4 style="font-size: 13px; margin: 0; color: var(--text-primary); font-weight: 700;">Initial Subclass Properties (Optional)</h4>
+        <div style="display: flex; gap: 6px;">
+          <button type="button" class="btn-secondary" style="font-size: 11px; padding: 3px 8px;" onclick="addViewerSubclassPropRow('DatatypeProperty')">➕ Add Datatype</button>
+          <button type="button" class="btn-primary" style="font-size: 11px; padding: 3px 8px;" onclick="addViewerSubclassPropRow('ObjectProperty')">🔗 Add Relationship</button>
+        </div>
+      </div>
+
+      <div style="max-height: 180px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 6px;">
+        <table class="data-table" style="font-size: 11px;">
+          <thead>
+            <tr>
+              <th style="min-width: 130px;">Property Name</th>
+              <th style="min-width: 120px;">Type</th>
+              <th style="min-width: 120px;">Range / Target</th>
+              <th style="min-width: 120px;">Inverse Property</th>
+              <th style="width: 45px; text-align: center;">🔑 PK</th>
+              <th style="width: 40px; text-align: center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="vsc-props-tbody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex-between" style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+        <button type="button" class="btn-secondary" onclick="closeModal('viewerSubclassModal')">Cancel</button>
+        <button type="button" class="btn-primary" style="background: linear-gradient(135deg, #0284c7, #4f46e5);" onclick="submitViewerCreateSubclass()">✨ Create Subclass</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 8. In-App Custom Confirmation Modal -->
   <div id="confirmModal" class="modal-overlay">
     <div class="glass-card modal-content" style="max-width: 440px; border-top: 4px solid var(--accent-rose); padding: 20px;">
@@ -724,6 +1171,8 @@
         <button id="confirmModalSubmitBtn" class="btn-danger">Confirm Delete</button>
       </div>
     </div>
+  </div>
+
   <!-- 9. Auto Discovery Progress Modal -->
   <div id="discoveryProgressModal" class="modal-overlay" style="z-index: 99999;">
     <div class="glass-card modal-content" style="max-width: 520px; border-top: 4px solid var(--accent-blue); padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
@@ -782,17 +1231,18 @@
   <div id="toast-container" style="position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 10px; z-index: 999999; pointer-events: none;"></div>
 
   <!-- Modularized Application Scripts -->
-  <script src="/static/js/toast.js?v=3.5"></script>
-  <script src="/static/js/confirm.js?v=3.5"></script>
-  <script src="/static/js/app.js?v=3.5"></script>
-  <script src="/static/js/dashboard.js?v=3.5"></script>
-  <script src="/static/js/connectors.js?v=3.5"></script>
-  <script src="/static/js/metadata.js?v=3.5"></script>
-  <script src="/static/js/profiling.js?v=3.5"></script>
-  <script src="/static/js/rules.js?v=3.5"></script>
-  <script src="/static/js/ontology.js?v=3.5"></script>
-  <script src="/static/js/ontology_graph.js?v=3.5"></script>
-  <script src="/static/js/graph.js?v=3.5"></script>
-  <script src="/static/js/projects.js?v=3.5"></script>
+  <script src="/static/js/toast.js?v=8.5"></script>
+  <script src="/static/js/confirm.js?v=8.5"></script>
+  <script src="/static/js/app.js?v=8.5"></script>
+  <script src="/static/js/dashboard.js?v=8.5"></script>
+  <script src="/static/js/connectors.js?v=8.5"></script>
+  <script src="/static/js/metadata.js?v=8.5"></script>
+  <script src="/static/js/profiling.js?v=8.5"></script>
+  <script src="/static/js/rules.js?v=8.5"></script>
+  <script src="/static/js/ontology.js?v=8.5"></script>
+  <script src="/static/js/ontology_graph.js?v=8.5"></script>
+  <script src="/static/js/ontology_viewer.js?v=8.5"></script>
+  <script src="/static/js/graph.js?v=8.5"></script>
+  <script src="/static/js/projects.js?v=8.5"></script>
 </body>
 </html>

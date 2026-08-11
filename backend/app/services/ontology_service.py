@@ -231,6 +231,108 @@ class OntologyService:
 
         return self.generate_ontology(project_id)
 
+    def create_class(self, project_id: str, create_data: Dict[str, Any]) -> OntologyModelResponse:
+        class_name = (create_data.get("class_name") or create_data.get("label") or "").strip()
+        if not class_name:
+            raise ValueError("Class name / label is required.")
+
+        # Check for existing class with this name in this project
+        existing = self.db.query(OntologyClass).filter(
+            OntologyClass.project_id == project_id,
+            func.lower(OntologyClass.class_name) == class_name.lower()
+        ).first()
+        if existing:
+            raise ValueError(f"Ontology class with name '{class_name}' already exists in this project.")
+
+        subclass_of = create_data.get("subclass_of", "owl:Thing")
+        if isinstance(subclass_of, list):
+            subclass_of = subclass_of[0] if len(subclass_of) > 0 else "owl:Thing"
+
+        domain_type = create_data.get("domain_type", "Dimension")
+        comment = create_data.get("comment") or f"Class representing {class_name}"
+
+        onto_config = self.onto_config_repo.get_by_project(project_id)
+        base_iri = onto_config.base_iri if onto_config else "http://enterprise.org/ontology#"
+
+        new_class = OntologyClass(
+            project_id=project_id,
+            class_name=class_name,
+            class_iri=f"{base_iri}{class_name}",
+            subclass_of=str(subclass_of),
+            domain_type=domain_type,
+            comment=comment
+        )
+        self.db.add(new_class)
+        self.db.flush()
+
+        # Add initial properties if provided
+        properties = create_data.get("properties") or []
+        for p in properties:
+            p_name = p.get("label") or p.get("name")
+            if not p_name:
+                continue
+            p_type = p.get("property_type") or "DatatypeProperty"
+            p_range = p.get("range") or "xsd:string"
+            is_pk = bool(p.get("is_primary_key", False))
+            p_comment = p.get("comment") or f"{p_type} for {p_name}"
+            rel_name = p.get("relationship_name") or p_name
+            parent_cls = p.get("parent_class") or class_name
+            target_cls = p.get("target_class") or (p_range.split("#")[-1] if "#" in str(p_range) else str(p_range))
+            inv_name = p.get("inverse_property") or p.get("inverse_property_name")
+            is_inv = bool(p.get("is_inverse", False))
+
+            target_class_obj = None
+            if p_type == "ObjectProperty" and target_cls:
+                target_class_obj = self.db.query(OntologyClass).filter(
+                    OntologyClass.project_id == project_id,
+                    func.lower(OntologyClass.class_name) == target_cls.lower()
+                ).first()
+
+            attr_obj = OntologyAttribute(
+                class_id=new_class.id,
+                target_class_id=target_class_obj.id if target_class_obj else None,
+                attribute_name=p_name,
+                attribute_iri=f"{base_iri}{p_name}",
+                property_type=p_type,
+                range_datatype=p_range,
+                is_primary_key=is_pk,
+                parent_class_name=parent_cls,
+                target_class_name=target_cls,
+                relationship_name=rel_name,
+                inverse_property_name=inv_name,
+                is_inverse=is_inv,
+                comment=p_comment
+            )
+            self.db.add(attr_obj)
+
+            if p_type == "ObjectProperty" and target_class_obj and inv_name:
+                existing_inv = self.db.query(OntologyAttribute).filter(
+                    OntologyAttribute.class_id == target_class_obj.id,
+                    func.lower(OntologyAttribute.attribute_name) == inv_name.lower()
+                ).first()
+                if not existing_inv:
+                    inv_attr = OntologyAttribute(
+                        class_id=target_class_obj.id,
+                        target_class_id=new_class.id,
+                        attribute_name=inv_name,
+                        attribute_iri=f"{base_iri}{inv_name}",
+                        property_type="ObjectProperty",
+                        range_datatype=new_class.class_name,
+                        is_primary_key=False,
+                        parent_class_name=target_class_obj.class_name,
+                        target_class_name=new_class.class_name,
+                        relationship_name=inv_name,
+                        inverse_property_name=rel_name,
+                        is_inverse=True,
+                        comment=f"Inverse relationship linking {target_class_obj.class_name} back to {new_class.class_name}"
+                    )
+                    self.db.add(inv_attr)
+
+        self.db.commit()
+        self.db.refresh(new_class)
+        logger.info(f"Created new OntologyClass '{class_name}' with parent '{subclass_of}' in project {project_id}.")
+        return self.generate_ontology(project_id)
+
     def export_ontology(self, project_id: str, format_str: str) -> str:
         onto_config = self.onto_config_repo.get_by_project(project_id)
         base_iri = onto_config.base_iri if onto_config else "http://enterprise.org/ontology#"

@@ -1,6 +1,49 @@
-// OWL Ontology Management Module
-let currentOntologyModel = null;
-let selectedOntologyClassIdx = null;
+// Helper to recursively find all descendant classes of a given class to prevent circular inheritance
+function getDescendantsOfClass(classLabel, classes) {
+  const descendants = new Set();
+  const queue = [(classLabel || '').toLowerCase().trim()];
+  
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) continue;
+    (classes || []).forEach(c => {
+      const cLabel = (c.label || '').trim();
+      const cLabelLower = cLabel.toLowerCase();
+      const parentList = (c.subclass_of || []).map(p => (p || '').toLowerCase().trim());
+      if (parentList.some(p => p === current || p.endsWith('#' + current) || p.endsWith(':' + current))) {
+        if (!descendants.has(cLabelLower)) {
+          descendants.add(cLabelLower);
+          queue.push(cLabelLower);
+        }
+      }
+    });
+  }
+  return descendants;
+}
+
+// Generates valid parent superclass options (excluding itself and all its descendants)
+function getValidSuperclassOptions(currentClassLabel, classes, currentSubclass = 'owl:Thing') {
+  const currentLabelLower = (currentClassLabel || '').toLowerCase().trim();
+  const descendants = getDescendantsOfClass(currentClassLabel, classes || []);
+  
+  const options = ['owl:Thing'];
+  
+  (classes || []).forEach(c => {
+    const cLabel = (c.label || '').trim();
+    const cLabelLower = cLabel.toLowerCase();
+    if (cLabelLower && cLabelLower !== currentLabelLower && !descendants.has(cLabelLower)) {
+      if (!options.includes(cLabel)) {
+        options.push(cLabel);
+      }
+    }
+  });
+
+  if (currentSubclass && !options.includes(currentSubclass)) {
+    options.push(currentSubclass);
+  }
+
+  return options;
+}
 
 function renderPropertyRowHtml(p, idxOrPrefix, isModal = false) {
   const pLabel = (p.relationship_name || p.label || p.name || '').trim();
@@ -204,7 +247,9 @@ async function loadOntology() {
               </div>
               <div class="form-group" style="margin-bottom: 0;">
                 <label style="font-size: 11px;">Superclass Taxonomy / Parent</label>
-                <input type="text" id="inline-subclass-${idx}" value="${subClass}" style="padding: 4px 8px; font-size: 12px;">
+                <select id="inline-subclass-${idx}" style="padding: 4px 8px; font-size: 12px; background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px; width: 100%;">
+                  ${getValidSuperclassOptions(c.label, currentOntologyModel.classes, subClass).map(opt => `<option value="${opt}" ${opt === subClass ? 'selected' : ''}>${opt}</option>`).join('')}
+                </select>
               </div>
               <div class="form-group" style="margin-bottom: 0;">
                 <label style="font-size: 11px;">Domain Classification</label>
@@ -393,7 +438,15 @@ function openOntologyClassModal(target) {
 
   document.getElementById('ocm-old-label').value = c.label;
   document.getElementById('ocm-label').value = c.label;
-  document.getElementById('ocm-subclass').value = c.subclass_of ? (c.subclass_of[0] || 'owl:Thing') : 'owl:Thing';
+  
+  const subClass = c.subclass_of ? (c.subclass_of[0] || 'owl:Thing') : 'owl:Thing';
+  const validParents = getValidSuperclassOptions(c.label, currentOntologyModel.classes, subClass);
+  const subclassSelect = document.getElementById('ocm-subclass');
+  if (subclassSelect) {
+    subclassSelect.innerHTML = validParents.map(opt => `<option value="${opt}" ${opt === subClass ? 'selected' : ''}>${opt}</option>`).join('');
+    subclassSelect.value = subClass;
+  }
+
   document.getElementById('ocm-domain').value = c.annotations ? (c.annotations.domain_type || 'Transactional') : 'Transactional';
   document.getElementById('ocm-comment').value = c.comment || `Class representing ${c.label}`;
 

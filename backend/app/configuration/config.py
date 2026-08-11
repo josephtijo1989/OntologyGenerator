@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     )
 
     # Application Info
-    APP_NAME: str = Field(default="Quick-Pasteur Enterprise Platform", description="Application Name")
+    APP_NAME: str = Field(default="OntoForge - Transform source metadata into semantic knowledge", description="Application Name")
     APP_VERSION: str = Field(default="1.0.0", description="Application Version")
     API_V1_STR: str = Field(default="/api/v1", description="API Version Prefix")
     ENVIRONMENT: str = Field(default="development", description="Execution Environment: development, qa, uat, production")

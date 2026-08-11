@@ -1,3 +1,4 @@
+import uuid
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
@@ -142,6 +143,30 @@ def test_projects_crud_and_ontology_relationships():
     assert matching_c is not None
     assert matching_c["subclass_of"] == ["eonto:CoreMasterData"]
 
+    # 10b. Test Create New Subclass in Project Ontology
+    subclass_name = f"PremiumCustomer_{uuid.uuid4().hex[:6]}"
+    create_subclass_payload = {
+        "class_name": subclass_name,
+        "subclass_of": class_label,
+        "domain_type": "Dimension",
+        "comment": "Subclass representing premium tier customers",
+        "properties": [
+            {
+                "label": "membershipTier",
+                "relationship_name": "membershipTier",
+                "property_type": "DatatypeProperty",
+                "range": "xsd:string",
+                "comment": "Premium tier level"
+            }
+        ]
+    }
+    create_class_resp = client.post(f"/api/v1/projects/{project_id}/ontology/classes", json=create_subclass_payload)
+    assert create_class_resp.status_code == 201, f"Failed with {create_class_resp.status_code}: {create_class_resp.text}"
+    created_onto = create_class_resp.json()
+    new_subclass = next((c for c in created_onto["classes"] if c["label"] == subclass_name), None)
+    assert new_subclass is not None
+    assert new_subclass["subclass_of"] == [class_label]
+
     # 11. Test Export Turtle (.ttl) containing owl:inverseOf and owl:hasKey
     export_ttl_resp = client.post(f"/api/v1/projects/{project_id}/ontology/export", json={"format": "Turtle"})
     assert export_ttl_resp.status_code == 200
@@ -158,3 +183,89 @@ def test_projects_crud_and_ontology_relationships():
     # 13. Audit Logs
     audit_resp = client.get("/api/v1/audit-logs")
     assert audit_resp.status_code == 200
+
+
+def test_stateless_ontology_parse_and_upload_preview():
+    sample_ttl = """@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix pasteur: <http://pasteur.bio/ontology#> .
+
+pasteur:BiologicalOntology a owl:Ontology ;
+    rdfs:label "Pasteur Biological System Ontology" .
+
+pasteur:Protein a owl:Class ;
+    rdfs:label "Protein" ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:comment "Biological protein macromolecule" .
+
+pasteur:TargetAssay a owl:Class ;
+    rdfs:label "TargetAssay" ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:comment "Experimental assay testing biochemical interactions" .
+
+pasteur:ChemicalCompound a owl:Class ;
+    rdfs:label "ChemicalCompound" ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:comment "Small molecule chemical entity" .
+
+pasteur:proteinSequence a owl:DatatypeProperty ;
+    rdfs:domain pasteur:Protein ;
+    rdfs:range xsd:string ;
+    rdfs:label "proteinSequence" ;
+    rdfs:comment "FASTA sequence representation" .
+
+pasteur:assayId a owl:DatatypeProperty ;
+    rdfs:domain pasteur:TargetAssay ;
+    rdfs:range xsd:string ;
+    rdfs:label "assayId" ;
+    rdfs:comment "[PRIMARY KEY] Assay identifier" .
+
+pasteur:targetsProtein a owl:ObjectProperty ;
+    rdfs:domain pasteur:TargetAssay ;
+    rdfs:range pasteur:Protein ;
+    owl:inverseOf pasteur:targetedByAssay ;
+    rdfs:label "targetsProtein" ;
+    rdfs:comment "Assay targets a specific biological protein" .
+
+pasteur:bindsCompound a owl:ObjectProperty ;
+    rdfs:domain pasteur:Protein ;
+    rdfs:range pasteur:ChemicalCompound ;
+    rdfs:label "bindsCompound" ;
+    rdfs:comment "Protein binds compound ligand" .
+"""
+
+    # 1. Test POST /api/v1/ontology/parse-preview (Raw content payload)
+    parse_resp = client.post("/api/v1/ontology/parse-preview", json={
+        "raw_content": sample_ttl,
+        "filename": "pasteur_sample.ttl",
+        "format_hint": "turtle"
+    })
+    assert parse_resp.status_code == 200
+    data = parse_resp.json()
+    assert data["status"] == "SUCCESS"
+    assert data["ontology_name"] == "Pasteur Biological System Ontology"
+    assert data["detected_format"] == "TURTLE"
+    assert len(data["classes"]) >= 3
+    assert len(data["properties"]) >= 4
+    assert data["stats"]["classes_count"] >= 3
+    assert data["stats"]["total_triples_count"] > 0
+    assert "graph" in data
+    assert len(data["graph"]["nodes"]) >= 3
+    assert len(data["graph"]["edges"]) >= 2
+
+    # 2. Test POST /api/v1/ontology/upload-preview (Multipart file upload)
+    files = {
+        "file": ("pasteur_sample.ttl", sample_ttl.encode("utf-8"), "text/turtle")
+    }
+    upload_resp = client.post("/api/v1/ontology/upload-preview", files=files, data={"format_hint": "auto"})
+    assert upload_resp.status_code == 200
+    upload_data = upload_resp.json()
+    assert upload_data["status"] == "SUCCESS"
+    assert len(upload_data["classes"]) >= 3
+    assert upload_data["stats"]["classes_count"] == data["stats"]["classes_count"]
+
+    # 3. Test Bad Request for empty payload
+    empty_resp = client.post("/api/v1/ontology/parse-preview", json={"raw_content": "   "})
+    assert empty_resp.status_code == 400
+

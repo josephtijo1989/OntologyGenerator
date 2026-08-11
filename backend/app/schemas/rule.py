@@ -1,5 +1,5 @@
 from typing import Optional, Dict, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from app.models.domain import BusinessRuleType
 
@@ -25,6 +25,8 @@ class BusinessRuleUpdate(BaseModel):
 
 
 class BusinessRuleResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     project_id: str
     name: str
@@ -37,6 +39,3 @@ class BusinessRuleResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True

@@ -1,5 +1,5 @@
 from typing import Optional, Dict, Any, List
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from app.models.domain import SourceConnectorType, TargetGraphType
 
@@ -16,6 +16,8 @@ class SourceConnectionCreate(BaseModel):
 
 
 class SourceConnectionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     project_id: str
     name: str
@@ -28,9 +30,6 @@ class SourceConnectionResponse(BaseModel):
     last_tested_at: Optional[datetime] = None
     last_status: Optional[str] = None
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class GraphConfigCreate(BaseModel):
@@ -45,6 +44,8 @@ class GraphConfigCreate(BaseModel):
 
 
 class GraphConfigResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     project_id: str
     name: str
@@ -55,11 +56,10 @@ class GraphConfigResponse(BaseModel):
     username: Optional[str] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class MetadataColumnResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     table_id: str
     column_name: str
@@ -72,11 +72,10 @@ class MetadataColumnResponse(BaseModel):
     pii_tag: str
     column_comment: Optional[str] = None
 
-    class Config:
-        from_attributes = True
-
 
 class MetadataTableResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     project_id: str
     schema_name: str
@@ -87,11 +86,10 @@ class MetadataTableResponse(BaseModel):
     columns: List[MetadataColumnResponse] = []
     discovered_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class ProfilingResultResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     metadata_catalog_id: str
     schema_name: Optional[str] = None
@@ -102,9 +100,6 @@ class ProfilingResultResponse(BaseModel):
     primary_keys: List[str] = []
     profiled_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class ColumnPIIItem(BaseModel):
     pii_tagged: bool
@@ -113,3 +108,4 @@ class ColumnPIIItem(BaseModel):
 
 class PIIUpdateRequest(BaseModel):
     column_pii_map: Dict[str, ColumnPIIItem]
+

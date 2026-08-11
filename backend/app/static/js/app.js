@@ -4,10 +4,11 @@ let currentProjectId = null;
 let currentProjectObj = null;
 let projectsList = [];
 
-// Initialize Navigation Listeners on DOM Ready
+// Initialize Navigation & Theme on DOM Ready
 document.addEventListener('DOMContentLoaded', () => {
-  // Enforce permanent Light Mode
+  document.body.classList.remove('dark-theme');
   document.body.classList.add('light-theme');
+  localStorage.setItem('ontoforge_theme', 'light-theme');
 
   // Navigation Switcher Listeners
   document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -21,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (viewId === 'graph') initCytoscapeGraph();
       if (viewId === 'ontology-graph') initOntologyGraph();
+      if (viewId === 'ontology-viewer') initOntologyViewer();
       if (viewId === 'metadata') loadMetadata();
       if (viewId === 'profiling') loadProfiling();
       if (viewId === 'ontology') loadOntology();

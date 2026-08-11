@@ -25,7 +25,7 @@ def export_graph(project_id: str, req: GraphExportRequest, db: Session = Depends
         fmt = req.format.upper()
         if fmt == "CYPHER":
             cypher_lines = [
-                "// Quick-Pasteur Enterprise Knowledge Graph Cypher Export",
+                "// OntoForge - Transform source metadata into semantic knowledge",
                 "// Generated for Neo4j / Memgraph Graph Databases",
                 "// Preserves Primary Key Constraints & Schema Properties",
                 ""

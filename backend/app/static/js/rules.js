@@ -325,15 +325,19 @@ async function submitCreateRule() {
 }
 
 async function deleteRule(ruleId) {
-  if (typeof openConfirmModal === 'function') {
-    const confirmed = await openConfirmModal('Delete Business Rule', 'Are you sure you want to delete this business rule?');
-    if (!confirmed) return;
+  let confirmed = false;
+  if (typeof showConfirm === 'function') {
+    confirmed = await showConfirm('Are you sure you want to delete this business rule?', 'Delete Business Rule', '🗑️ Delete Rule');
+  } else {
+    confirmed = confirm('Are you sure you want to delete this business rule?');
   }
+  if (!confirmed) return;
+
   try {
     const res = await fetch(`${API_BASE}/projects/${currentProjectId}/rules/${ruleId}`, { method: 'DELETE' });
     if (res.ok) {
       loadRules();
-      if (typeof showToast === 'function') showToast('Business Rule Deleted!', 'info');
+      if (typeof showToast === 'function') showToast('Business Rule Deleted Successfully!', 'info');
     }
   } catch (e) { console.log(e); }
 }

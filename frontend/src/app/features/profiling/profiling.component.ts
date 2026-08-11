@@ -29,11 +29,11 @@ import { ApiService } from '../../core/services/api.service';
             <div class="stat-item" *ngFor="let col of prof.column_stats_json | keyvalue">
               <div class="flex-between">
                 <span class="col-name font-mono">{{ col.key }}</span>
-                <span class="pii-tag" *ngIf="col.value.pii_tagged">🔒 PII: {{ col.value.pii_type }}</span>
+                <span class="pii-tag" *ngIf="$any(col.value)?.pii_tagged">🔒 PII: {{ $any(col.value)?.pii_type }}</span>
               </div>
               <div class="stat-meta">
-                <span>Nulls: {{ col.value.null_pct * 100 }}%</span>
-                <span *ngIf="col.value.distinct_count">Distinct: {{ col.value.distinct_count }}</span>
+                <span>Nulls: {{ ($any(col.value)?.null_pct || 0) * 100 }}%</span>
+                <span *ngIf="$any(col.value)?.distinct_count">Distinct: {{ $any(col.value)?.distinct_count }}</span>
               </div>
             </div>
           </div>

@@ -6,7 +6,8 @@ async function initCytoscapeGraph() {
   if (!currentProjectId) return;
   const cyContainer = document.getElementById('cy');
   if (cyInstance) {
-    cyInstance.destroy();
+    try { cyInstance.stop(); } catch(e){}
+    try { cyInstance.destroy(); } catch(e){}
     cyInstance = null;
   }
   if (cyContainer) {
@@ -100,6 +101,7 @@ async function initCytoscapeGraph() {
       boxSelectionEnabled: false,
       desktopTapThreshold: 4,
       touchTapThreshold: 4,
+      textureOnViewport: false,
       style: [
         {
           selector: 'node',
@@ -111,7 +113,7 @@ async function initCytoscapeGraph() {
             'label': 'data(label)',
             'color': '#0f172a',
             'font-size': '12px',
-            'font-weight': '500',
+            'font-weight': '400',
             'text-valign': 'bottom',
             'text-margin-y': '5px',
             'border-width': 2,

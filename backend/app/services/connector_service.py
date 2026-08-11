@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 
 class ConnectorService:
     def __init__(self, db: Session):
+        self.db = db
         self.conn_repo = SourceConnectionRepository(db)
         self.graph_repo = GraphConfigRepository(db)
         self.onto_repo = OntologyConfigRepository(db)
@@ -55,8 +56,10 @@ class ConnectorService:
     def delete_source_connection(self, connection_id: str) -> bool:
         conn = self.conn_repo.get_by_id(connection_id)
         if conn:
-            self.conn_repo.delete(conn)
-            return True
+            from app.models.domain import MetadataTable
+            self.db.query(MetadataTable).filter(MetadataTable.source_connection_id == conn.id).update({"source_connection_id": None})
+            self.db.commit()
+            return self.conn_repo.delete(conn)
         return False
 
     def test_source_connection(self, connection_id: str) -> bool:

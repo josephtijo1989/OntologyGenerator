@@ -81,7 +81,7 @@ function openAddConnectorModal() {
   if (title) title.innerText = 'Map Source Relational Database';
 
   document.getElementById('nc-name').value = '';
-  document.getElementById('nc-type').value = 'SQLSERVER';
+  document.getElementById('nc-type').value = 'MSSQL';
   document.getElementById('nc-host').value = 'localhost';
   document.getElementById('nc-port').value = '1433';
   document.getElementById('nc-dbname').value = 'ERP_DB';
@@ -109,7 +109,7 @@ async function openEditConnectorModal(connId) {
   if (title) title.innerText = 'Edit Source Relational Database';
 
   document.getElementById('nc-name').value = c.name || '';
-  document.getElementById('nc-type').value = c.connector_type || 'SQLSERVER';
+  document.getElementById('nc-type').value = c.connector_type || 'MSSQL';
   document.getElementById('nc-host').value = c.host || 'localhost';
   document.getElementById('nc-port').value = c.port || 1433;
   document.getElementById('nc-dbname').value = c.database_name || '';
@@ -171,18 +171,28 @@ async function testConn(connId) {
 }
 
 async function deleteConnector(connId, name) {
-  const confirmed = await showConfirm(`Are you sure you want to remove source connector "${name}"?`, 'Remove Source Database', '🗑️ Remove');
+  let confirmed = false;
+  if (typeof showConfirm === 'function') {
+    confirmed = await showConfirm(`Are you sure you want to remove source connector "${name}"?`, 'Remove Source Database', '🗑️ Remove');
+  } else {
+    confirmed = confirm(`Are you sure you want to remove source connector "${name}"?`);
+  }
   if (!confirmed) return;
 
   try {
     const res = await fetch(`${API_BASE}/projects/${currentProjectId}/source-connections/${connId}`, { method: 'DELETE' });
     if (res.ok || res.status === 204) {
       await loadConnectors();
-      alert(`Source Connector "${name}" Removed Successfully!`);
+      if (typeof showToast === 'function') showToast(`Source Connector "${name}" Removed Successfully!`, 'success');
+      else alert(`Source Connector "${name}" Removed Successfully!`);
     } else {
-      alert('Failed to remove connector');
+      if (typeof showToast === 'function') showToast('Failed to remove connector', 'error');
+      else alert('Failed to remove connector');
     }
-  } catch (e) { alert('Failed to remove connector'); }
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('Failed to remove connector', 'error');
+    else alert('Failed to remove connector');
+  }
 }
 
 async function submitTargetGraph() {

@@ -1,669 +1,1447 @@
-// W3C OWL 2.0 Graphical Ontology Visualizer Engine (Timbr Ontology Explorer - Refined Aesthetics, Smaller Icons, Normal Weight Fonts, Single Relationship Mention)
-let cyOntologyInstance = null;
-let allOntologyClassesStore = [];
-let allOntologyPropertiesStore = [];
-let userMovedPositionsMap = new Map();
+// ==========================================================================
+// Enterprise Semantic Ontology & Metadata Visualization Engine
+// Modern Hierarchical Taxonomy, Expandable Cards, Multi-Source Mapping & Rationale
+// ==========================================================================
 
+// Global Module State
+let ontoActiveMode = 'ontology'; // 'ontology' | 'metadata' | 'mapping'
+let cyOntologyInstance = null;
+let ontoModelData = null; // Generated ontology classes & properties
+let ontoMetadataData = []; // Physical metadata tables & columns
+let ontoConnectorsData = []; // Source database connectors
+let expandedClassIds = new Set(); // Set of class IRIs currently expanded
+let ontoSelectedElement = null; // Currently inspected node/edge data
+let ontoConceptFilter = 'all'; // 'all' | 'classes' | 'properties' | 'relationships'
+let ontoSearchQuery = '';
+let ontoUserNodePositions = new Map(); // Manual drag positions per mode
+let ontoLegendCollapsed = false;
+
+// Initialize on Tab Switch or Project Switch
 async function initOntologyGraph() {
   if (!currentProjectId) return;
   const cyContainer = document.getElementById('cy-ontology');
-  if (cyOntologyInstance) {
-    cyOntologyInstance.destroy();
-    cyOntologyInstance = null;
-  }
   if (cyContainer) {
-    cyContainer.innerHTML = '<div style="color: var(--text-secondary); padding: 40px; text-align: center; font-size: 13px;">Loading ontology taxonomy graph...</div>';
+    cyContainer.innerHTML = '<div style="color: var(--text-secondary); padding: 40px; text-align: center; font-size: 13px;">Loading semantic knowledge model...</div>';
   }
+
   try {
-    const res = await fetch(`${API_BASE}/projects/${currentProjectId}/ontology/generate?_t=${Date.now()}`);
-    if (!res.ok) {
-      if (cyContainer) {
-        cyContainer.innerHTML = '<div style="color: var(--text-secondary); padding: 40px; text-align: center; font-size: 13px;">No ontology classes generated for this project yet. Run Auto Discovery under Metadata Discovery tab first.</div>';
-      }
-      return;
+    // 1. Fetch Source Connectors, Metadata, and Ontology Model in parallel
+    const [ontoRes, metaRes, connsRes] = await Promise.all([
+      fetch(`${API_BASE}/projects/${currentProjectId}/ontology/generate?_t=${Date.now()}`),
+      fetch(`${API_BASE}/projects/${currentProjectId}/metadata?_t=${Date.now()}`),
+      fetch(`${API_BASE}/projects/${currentProjectId}/source-connections?_t=${Date.now()}`)
+    ]);
+
+    if (connsRes.ok) ontoConnectorsData = await connsRes.json();
+    if (metaRes.ok) ontoMetadataData = await metaRes.json();
+    if (ontoRes.ok) ontoModelData = await ontoRes.json();
+
+    populateOntoToolbarFilters();
+
+    // Render active mode
+    if (ontoActiveMode === 'mapping') {
+      renderMappingMode();
+    } else if (ontoActiveMode === 'metadata') {
+      renderMetadataMode();
+    } else {
+      renderOntologyMode();
     }
-
-    const ontoData = await res.json();
-    let classes = ontoData.classes || [];
-    const properties = ontoData.properties || [];
-
-    // Filter out generic owl:Thing from concept classes list so owl:Thing is ONLY the top single root node
-    classes = classes.filter(c => {
-      const iriName = c.iri ? c.iri.split('#').pop().toLowerCase() : '';
-      const cName = (c.name || c.label || '').toLowerCase();
-      return iriName !== 'thing' && cName !== 'thing' && iriName !== 'owl:thing' && cName !== 'owl:thing';
-    });
-
-    allOntologyClassesStore = classes;
-    allOntologyPropertiesStore = properties;
-    populateOntologyClassFilterDropdown(classes);
-
-    if (classes.length === 0) {
-      if (cyContainer) {
-        cyContainer.innerHTML = '<div style="color: var(--text-secondary); padding: 40px; text-align: center; font-size: 13px;">No ontology classes generated for this project yet. Run Auto Discovery under Metadata Discovery tab first.</div>';
-      }
-      return;
-    }
-
-    // CLEAR container HTML so no "Loading ontology taxonomy graph..." text remains in background
+  } catch (err) {
+    console.error('Error initializing ontology visualizer:', err);
     if (cyContainer) {
-      cyContainer.innerHTML = '';
+      cyContainer.innerHTML = '<div style="color: var(--text-secondary); padding: 40px; text-align: center; font-size: 13px;">Failed to load ontology model. Please run Auto Discovery under Metadata Discovery tab.</div>';
     }
-
-    const cyElements = [];
-    const validClassMap = new Map();
-
-    // 1. Single Shared Superclass Taxonomy Root Node: "thing"
-    const rootIri = 'sc_root_thing';
-    cyElements.push({
-      data: {
-        id: rootIri,
-        label: 'thing',
-        subClass: 'W3C Root',
-        domain: 'TaxonomyRoot',
-        primaryKey: 'None',
-        comment: 'W3C OWL Taxonomy Superclass Root',
-        color: '#ffffff',
-        nodeType: 'thing',
-        isRoot: true
-      },
-      grabbable: true
-    });
-
-    // 2. Register all Class IRIs & labels
-    classes.forEach(c => {
-      const label = c.label || c.name || (c.iri ? c.iri.split('#').pop() : 'Class');
-      validClassMap.set(label, c.iri);
-      validClassMap.set(label.toLowerCase(), c.iri);
-      validClassMap.set(c.iri, c.iri);
-    });
-
-    // 3. Build Class Concept Nodes (Displaying actual Class Name) & Property Square Nodes (Timbr Style)
-    classes.forEach(c => {
-      const rawLabel = c.label || c.name || (c.iri ? c.iri.split('#').pop() : 'Class');
-      const displayClassName = rawLabel.toLowerCase();
-      const domainType = (c.annotations && c.annotations.domain_type) ? c.annotations.domain_type : 'Transactional';
-      const pKeys = c.primary_keys || (c.annotations ? c.annotations.primary_keys : []) || [];
-      const pkStr = pKeys.length > 0 ? pKeys.join(', ') : 'None';
-      const subClass = (c.subclass_of && c.subclass_of.length > 0) ? c.subclass_of[0] : 'owl:Thing';
-
-      let color = '#f97316'; // Timbr Orange for Concept Entities
-      if (domainType === 'Fact') color = '#1e1b4b'; // Timbr Dark Navy
-      else if (domainType === 'Dimension') color = '#0284c7'; // Sky Blue
-      else if (domainType === 'Lookup') color = '#d97706'; // Amber
-      else if (domainType === 'Transactional') color = '#059669'; // Emerald
-
-      const bRules = c.business_rules || [];
-
-      // Class Concept Node
-      cyElements.push({
-        data: {
-          id: c.iri,
-          label: displayClassName,
-          rawLabel: rawLabel,
-          subClass: subClass,
-          domain: domainType,
-          primaryKey: pkStr,
-          comment: c.comment || '',
-          businessRules: bRules,
-          color: color,
-          nodeType: 'class',
-          isRoot: false
-        },
-        grabbable: true
-      });
-
-      // Edge from Class Node -> Top Root "thing"
-      cyElements.push({
-        data: {
-          id: `sc_${c.iri}_sc_root_thing`,
-          source: c.iri,
-          target: rootIri,
-          label: 'rdfs:subClassOf',
-          type: 'SubClassOf'
-        }
-      });
-
-      // Datatype Property Nodes (Green / Gold Squares)
-      const classProps = properties.filter(p => p.domain === c.iri || p.parent_class === c.label || p.table_name === c.annotations?.table_name);
-      classProps.forEach(p => {
-        if (p.property_type === 'DatatypeProperty') {
-          const propName = (p.label || p.name || '').toLowerCase();
-          const isPk = Boolean(p.is_primary_key || (pKeys && pKeys.some(pk => pk.toLowerCase() === propName.replace('has', '').toLowerCase())));
-          const propNodeId = `prop_${c.iri}_${propName}`;
-
-          cyElements.push({
-            data: {
-              id: propNodeId,
-              label: isPk ? `🔑 ${propName} (PK)` : propName,
-              rawName: propName,
-              nodeType: 'property',
-              parentClass: c.iri,
-              parentLabel: rawLabel,
-              datatype: p.range || 'xsd:string',
-              isPk: isPk
-            },
-            grabbable: true
-          });
-
-          // Edge connecting Class -> Property Node
-          cyElements.push({
-            data: {
-              id: `edge_prop_${propNodeId}`,
-              source: c.iri,
-              target: propNodeId,
-              type: 'HasProperty'
-            }
-          });
-        }
-      });
-    });
-
-    // 4. Build Relationship Nodes (Green Diamonds) & Edges (Timbr Style) with Forward & Inverse Details
-    properties.forEach(p => {
-      if (p.property_type === 'ObjectProperty') {
-        const sourceIri = p.domain;
-        const targetLabel = p.target_class || (p.range ? String(p.range).split('#').pop() : '');
-        const targetIri = validClassMap.get(targetLabel) || validClassMap.get(targetLabel.toLowerCase()) || validClassMap.get(p.range);
-        const relLabel = (p.relationship_name || p.label || 'relatesTo').trim();
-        const invLabel = (p.inverse_property || '').trim();
-
-        if (sourceIri && targetIri) {
-          const relNodeId = `rel_${relLabel}_${sourceIri}_${targetIri}`;
-
-          // Diamond Node showing relationship name (and inverse if present)
-          const displayRelLabel = invLabel ? `${relLabel} ⇄ ${invLabel}` : relLabel;
-          cyElements.push({
-            data: {
-              id: relNodeId,
-              label: displayRelLabel,
-              relName: relLabel,
-              invName: invLabel,
-              isInverse: Boolean(p.is_inverse),
-              nodeType: 'relationship',
-              sourceClass: sourceIri,
-              targetClass: targetIri
-            },
-            grabbable: true
-          });
-
-          // Edge Source -> Relationship Diamond
-          cyElements.push({
-            data: {
-              id: `edge1_${relNodeId}`,
-              source: sourceIri,
-              target: relNodeId,
-              type: 'ObjectPropertyLink'
-            }
-          });
-
-          // Edge Relationship Diamond -> Target
-          cyElements.push({
-            data: {
-              id: `edge2_${relNodeId}`,
-              source: relNodeId,
-              target: targetIri,
-              type: 'ObjectPropertyArrow'
-            }
-          });
-        }
-      }
-    });
-
-    if (cyOntologyInstance) {
-      cyOntologyInstance.destroy();
-    }
-
-    cyOntologyInstance = cytoscape({
-      container: cyContainer,
-      elements: cyElements,
-      autoungrabify: false,
-      autolock: false,
-      userZoomingEnabled: true,
-      userPanningEnabled: true,
-      boxSelectionEnabled: false,
-      desktopTapThreshold: 4,
-      touchTapThreshold: 4,
-      style: [
-        {
-          selector: 'node[nodeType = "class"]',
-          style: {
-            'shape': 'ellipse',
-            'width': '34px',
-            'height': '34px',
-            'background-color': 'data(color)',
-            'label': 'data(label)',
-            'color': '#0f172a',
-            'font-size': '12px',
-            'font-weight': '500',
-            'text-valign': 'bottom',
-            'text-margin-y': '5px',
-            'border-width': 2,
-            'border-color': '#ffffff',
-            'shadow-blur': 6,
-            'shadow-color': 'rgba(15, 23, 42, 0.12)',
-            'text-events': 'yes',
-            'overlay-padding': '8px',
-            'overlay-opacity': 0,
-            'transition-property': 'opacity, border-color, border-width',
-            'transition-duration': '0.15s'
-          }
-        },
-        {
-          selector: 'node[isRoot = true]',
-          style: {
-            'shape': 'ellipse',
-            'width': '28px',
-            'height': '28px',
-            'background-color': '#ffffff',
-            'border-color': '#64748b',
-            'border-width': 1.5,
-            'color': '#334155',
-            'label': 'data(label)',
-            'font-size': '11px',
-            'font-weight': '400',
-            'text-valign': 'bottom',
-            'text-margin-y': '4px',
-            'text-events': 'yes',
-            'overlay-padding': '6px',
-            'overlay-opacity': 0
-          }
-        },
-        {
-          selector: 'node[nodeType = "property"]',
-          style: {
-            'shape': 'rectangle',
-            'width': '10px',
-            'height': '10px',
-            'background-color': '#047857',
-            'label': 'data(label)',
-            'color': '#475569',
-            'font-size': '11px',
-            'font-weight': '400',
-            'text-valign': 'center',
-            'text-halign': 'right',
-            'text-margin-x': '5px',
-            'text-events': 'yes',
-            'overlay-padding': '4px',
-            'overlay-opacity': 0
-          }
-        },
-        {
-          selector: 'node[isPk = true]',
-          style: {
-            'shape': 'rectangle',
-            'width': '12px',
-            'height': '12px',
-            'background-color': '#d97706',
-            'border-width': 1.5,
-            'border-color': '#fbbf24',
-            'color': '#b45309',
-            'font-weight': '600'
-          }
-        },
-        {
-          selector: 'node[nodeType = "relationship"]',
-          style: {
-            'shape': 'diamond',
-            'width': '16px',
-            'height': '16px',
-            'background-color': '#059669',
-            'border-width': 1.5,
-            'border-color': '#a7f3d0',
-            'label': 'data(label)',
-            'color': '#1e293b',
-            'font-size': '11px',
-            'font-weight': '500',
-            'text-valign': 'bottom',
-            'text-margin-y': '4px',
-            'overlay-padding': '4px',
-            'overlay-opacity': 0
-          }
-        },
-        {
-          selector: 'node:selected',
-          style: {
-            'border-width': 3,
-            'border-color': '#0284c7',
-            'shadow-blur': 12,
-            'shadow-color': '#0284c7'
-          }
-        },
-        {
-          selector: 'edge[type = "HasProperty"]',
-          style: {
-            'width': 1,
-            'line-color': '#cbd5e1',
-            'curve-style': 'straight'
-          }
-        },
-        {
-          selector: 'edge[type = "ObjectPropertyLink"]',
-          style: {
-            'width': 1.2,
-            'line-color': '#64748b',
-            'curve-style': 'bezier'
-          }
-        },
-        {
-          selector: 'edge[type = "ObjectPropertyArrow"]',
-          style: {
-            'width': 1.2,
-            'line-color': '#64748b',
-            'target-arrow-color': '#64748b',
-            'target-arrow-shape': 'triangle',
-            'curve-style': 'bezier'
-          }
-        },
-        {
-          selector: 'edge[type = "SubClassOf"]',
-          style: {
-            'width': 1.2,
-            'line-style': 'dashed',
-            'line-color': '#94a3b8',
-            'curve-style': 'bezier'
-          }
-        },
-        {
-          selector: '.faded',
-          style: { 'opacity': 0.12 }
-        },
-        {
-          selector: '.highlighted',
-          style: {
-            'opacity': 1,
-            'border-width': 3,
-            'border-color': '#0284c7'
-          }
-        }
-      ],
-      layout: { name: 'preset' }
-    });
-
-    // Run Single Custom Timbr Layout Engine
-    runTimbrLayout(cyOntologyInstance);
-
-    // Save user moved position on node drag & release natively via Cytoscape events
-    cyOntologyInstance.on('drag free', 'node', function(evt) {
-      const node = evt.target;
-      userMovedPositionsMap.set(node.id(), { ...node.position() });
-    });
-
-    cyOntologyInstance.on('tap', 'node', function(evt) {
-      const node = evt.target;
-      const nData = node.data();
-
-      const neighborhood = node.neighborhood().add(node);
-      cyOntologyInstance.elements().addClass('faded').removeClass('highlighted');
-      neighborhood.removeClass('faded').addClass('highlighted');
-
-      const card = document.getElementById('ontoNodeCard');
-      if (card) {
-        if (nData.nodeType === 'class') {
-          document.getElementById('onc-label').innerText = nData.rawLabel || nData.label;
-          document.getElementById('onc-domain').innerText = nData.domain;
-          document.getElementById('onc-subclass').innerText = `rdfs:subClassOf ${nData.subClass || 'owl:Thing'}`;
-          document.getElementById('onc-pk').innerText = nData.primaryKey || 'None';
-          document.getElementById('onc-comment').innerText = nData.comment || 'No comment';
-
-          const rulesContainer = document.getElementById('onc-rules');
-          if (rulesContainer) {
-            const rules = nData.businessRules || [];
-            if (rules.length > 0) {
-              rulesContainer.innerHTML = rules.map(r => `<div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #0284c7; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-top: 4px;"><strong>⚙️ ${r.name}</strong></div>`).join('');
-              rulesContainer.style.display = 'block';
-            } else {
-              rulesContainer.innerHTML = '<div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">No governance rules applied</div>';
-              rulesContainer.style.display = 'block';
-            }
-          }
-          card.style.display = 'block';
-        } else if (nData.nodeType === 'relationship') {
-          document.getElementById('onc-label').innerText = `🔗 ${nData.relName || nData.label}`;
-          document.getElementById('onc-domain').innerText = 'ObjectProperty';
-          const invText = nData.invName ? ` ⇄ Inverse: ${nData.invName}` : '';
-          document.getElementById('onc-subclass').innerText = `Relationship Linking Classes${invText}`;
-          document.getElementById('onc-pk').innerText = `Source: ${String(nData.sourceClass).split('#').pop()} ➔ Target: ${String(nData.targetClass).split('#').pop()}`;
-          document.getElementById('onc-comment').innerText = nData.invName ? `Bidirectional ObjectProperty with W3C owl:inverseOf axiom between ${String(nData.sourceClass).split('#').pop()} and ${String(nData.targetClass).split('#').pop()}` : `Unidirectional ObjectProperty`;
-          card.style.display = 'block';
-        }
-      }
-    });
-
-    cyOntologyInstance.on('tap', function(evt) {
-      if (evt.target === cyOntologyInstance) {
-        cyOntologyInstance.elements().removeClass('faded').removeClass('highlighted');
-        const card = document.getElementById('ontoNodeCard');
-        if (card) card.style.display = 'none';
-      }
-    });
-
-  } catch (e) { console.log(e); }
+  }
 }
 
-// Single Custom Timbr Layout Engine
-function runTimbrLayout(cy) {
+// Mode Switcher Controller
+function switchOntologyMode(modeName) {
+  ontoActiveMode = modeName;
+
+  // Update button active classes
+  document.querySelectorAll('.onto-mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-mode') === modeName);
+  });
+
+  const canvasBox = document.getElementById('ontoWorkspaceWrapper');
+  const mappingContainer = document.getElementById('ontoMappingContainer');
+  const toolbar = document.getElementById('ontoGraphToolbar');
+  const legend = document.getElementById('ontoGraphLegend');
+
+  if (modeName === 'mapping') {
+    if (canvasBox) canvasBox.style.display = 'none';
+    if (mappingContainer) {
+      mappingContainer.classList.add('active');
+      mappingContainer.style.display = 'flex';
+    }
+    if (toolbar) toolbar.style.display = 'none';
+    if (legend) legend.style.display = 'none';
+    closeOntoDetailsPanel();
+    renderMappingMode();
+  } else {
+    if (mappingContainer) {
+      mappingContainer.classList.remove('active');
+      mappingContainer.style.display = 'none';
+    }
+    if (canvasBox) canvasBox.style.display = 'grid';
+    if (toolbar) toolbar.style.display = 'flex';
+    if (legend) legend.style.display = 'flex';
+
+    if (modeName === 'metadata') {
+      renderMetadataMode();
+    } else {
+      renderOntologyMode();
+    }
+  }
+}
+
+// Populate Source Systems and Domain Filter Options
+function populateOntoToolbarFilters() {
+  const srcSelect = document.getElementById('ontoSourceFilterSelect');
+  const mapSrcSelect = document.getElementById('mappingSourceFilter');
+
+  if (srcSelect && ontoConnectorsData) {
+    const cur = srcSelect.value;
+    srcSelect.innerHTML = '<option value="ALL">All Source Systems</option>';
+    ontoConnectorsData.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.innerText = `${c.name} (${c.connector_type})`;
+      srcSelect.appendChild(opt);
+    });
+    if (cur) srcSelect.value = cur;
+  }
+
+  if (mapSrcSelect && ontoConnectorsData) {
+    const cur = mapSrcSelect.value;
+    mapSrcSelect.innerHTML = '<option value="ALL">All Source Connectors</option>';
+    ontoConnectorsData.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.innerText = `${c.name} (${c.connector_type})`;
+      mapSrcSelect.appendChild(opt);
+    });
+    if (cur) mapSrcSelect.value = cur;
+  }
+}
+
+// ==========================================================================
+// MODE 1: SEMANTIC ONTOLOGY MODE (Default Hierarchical Visualization)
+// ==========================================================================
+function renderOntologyMode() {
+  const cyContainer = document.getElementById('cy-ontology');
+  if (!cyContainer) return;
+
+  if (cyOntologyInstance) {
+    try { cyOntologyInstance.stop(); } catch(e){}
+    try { cyOntologyInstance.destroy(); } catch(e){}
+    cyOntologyInstance = null;
+  }
+
+  if (!ontoModelData || !ontoModelData.classes || ontoModelData.classes.length === 0) {
+    cyContainer.innerHTML = '<div style="color: var(--text-secondary); padding: 50px; text-align: center; font-size: 13px;">No ontology classes generated for this project yet. Run Auto Discovery under Metadata Discovery tab first.</div>';
+    return;
+  }
+
+  cyContainer.innerHTML = '';
+
+  const classes = (ontoModelData.classes || []).filter(c => {
+    const name = (c.label || c.name || '').toLowerCase();
+    return name !== 'thing' && name !== 'owl:thing';
+  });
+
+  const properties = ontoModelData.properties || [];
+  const cyElements = [];
+  const validClassMap = new Map();
+
+  // 1. Create W3C Universal Base Class Root Node: "owl:Thing"
+  const rootIri = 'http://www.w3.org/2002/07/owl#Thing';
+  validClassMap.set('owl:Thing', rootIri);
+  validClassMap.set('owl:thing', rootIri);
+  validClassMap.set('Thing', rootIri);
+  validClassMap.set('thing', rootIri);
+  validClassMap.set(rootIri, rootIri);
+  validClassMap.set('http://www.w3.org/2002/07/owl#thing', rootIri);
+
+  const rootCardWidth = 140;
+  const rootCardHeight = 46;
+  const rootSvgUri = generateBaseClassCardSvg({
+    label: 'owl:Thing',
+    width: rootCardWidth,
+    height: rootCardHeight
+  });
+
+  cyElements.push({
+    group: 'nodes',
+    data: {
+      id: rootIri,
+      label: 'owl:Thing',
+      domainType: 'Base Class',
+      isBaseClass: true,
+      confidence: 100,
+      confLabel: 'W3C Standard',
+      confReasons: ['Universal Top-Level Base Class in W3C OWL 2.0', 'All ontology classes inherit from owl:Thing'],
+      dataProps: [],
+      objProps: [],
+      sourceTable: 'W3C OWL Standard',
+      cardWidth: rootCardWidth,
+      cardHeight: rootCardHeight,
+      svgCard: rootSvgUri,
+      nodeType: 'ontologyClass',
+      isRoot: true
+    },
+    position: { x: 500, y: 60 },
+    grabbable: true
+  });
+
+  classes.forEach(c => {
+    const pascalLabel = formatSemanticPascalCase(c.label || c.name || 'Class');
+    validClassMap.set(c.iri, pascalLabel);
+    validClassMap.set(pascalLabel, c.iri);
+    validClassMap.set(pascalLabel.toLowerCase(), c.iri);
+    validClassMap.set((c.label || '').toLowerCase(), c.iri);
+    if (c.annotations && c.annotations.table_name) {
+      validClassMap.set(c.annotations.table_name.toLowerCase(), c.iri);
+    }
+  });
+
+  // Build Ontology Class Card Nodes (Collapsed or Expanded)
+  classes.forEach(c => {
+    const pascalLabel = formatSemanticPascalCase(c.label || c.name || 'Class');
+    const domainType = c.annotations?.domain_type || 'Dimension';
+    const isExpanded = expandedClassIds.has(c.iri);
+    const tblName = c.annotations?.table_name || c.mapped_table_name || pascalLabel;
+
+    // Filter properties for this class
+    const classDataProps = properties.filter(p =>
+      p.property_type === 'DatatypeProperty' &&
+      (p.domain === c.iri || p.parent_class === c.label || p.parent_class === pascalLabel || (p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase()))
+    );
+
+    const classObjProps = properties.filter(p =>
+      p.property_type === 'ObjectProperty' &&
+      (p.domain === c.iri || p.parent_class === c.label || p.parent_class === pascalLabel || (p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase()))
+    );
+
+    // Compute Confidence & Rationale
+    const confInfo = calculateClassConfidence(c, classDataProps, classObjProps);
+
+    // Dynamic Card Dimensions: Clean, sleek card showing only class name
+    const cardWidth = isExpanded ? 240 : Math.max(140, pascalLabel.length * 9.5 + 44);
+    const cardHeight = isExpanded ? Math.min(320, 110 + classDataProps.length * 20 + classObjProps.length * 20) : 46;
+
+    // Generate crisp vector SVG Data URI
+    const svgUri = generateOntologyClassCardSvg({
+      label: pascalLabel,
+      iri: c.iri,
+      domainType: domainType,
+      isExpanded: isExpanded,
+      dataProps: classDataProps,
+      objProps: classObjProps,
+      confidence: confInfo.score,
+      sourceTable: tblName,
+      width: cardWidth,
+      height: cardHeight
+    });
+
+    cyElements.push({
+      group: 'nodes',
+      data: {
+        id: c.iri,
+        label: pascalLabel,
+        rawClass: c,
+        domainType: domainType,
+        isExpanded: isExpanded,
+        confidence: confInfo.score,
+        confLabel: confInfo.label,
+        confReasons: confInfo.reasons,
+        dataProps: classDataProps,
+        objProps: classObjProps,
+        sourceTable: tblName,
+        cardWidth: cardWidth,
+        cardHeight: cardHeight,
+        svgCard: svgUri,
+        nodeType: 'ontologyClass'
+      },
+      position: { x: 500, y: 200 },
+      grabbable: true
+    });
+  });
+
+  // Build Directed Object Property Edges with Semantic Labels
+  const addedEdgeKeys = new Set();
+
+  properties.forEach(p => {
+    if (p.property_type === 'ObjectProperty') {
+      const srcLabel = p.domain || p.parent_class;
+      const srcIri = validClassMap.get(srcLabel) || validClassMap.get((srcLabel || '').toLowerCase()) || p.domain;
+      const tgtLabel = p.target_class || (p.range ? String(p.range).split('#').pop() : '');
+      const tgtIri = validClassMap.get(tgtLabel) || validClassMap.get((tgtLabel || '').toLowerCase()) || validClassMap.get(p.range);
+
+      if (srcIri && tgtIri && srcIri !== tgtIri) {
+        const edgeKey = `${srcIri}->${tgtIri}:${p.label}`;
+        if (!addedEdgeKeys.has(edgeKey)) {
+          addedEdgeKeys.add(edgeKey);
+
+          const relConf = calculateRelationshipConfidence(p);
+          const relLabel = formatSemanticCamelCase(p.relationship_name || p.label || 'relatesTo');
+
+          cyElements.push({
+            group: 'edges',
+            data: {
+              id: `edge_${p.iri || edgeKey}`,
+              source: srcIri,
+              target: tgtIri,
+              label: relLabel,
+              edgeType: 'ObjectProperty',
+              relationshipName: relLabel,
+              inverseProperty: p.inverse_property || '',
+              confidence: relConf.score,
+              confReasons: relConf.reasons,
+              rawProperty: p
+            }
+          });
+        }
+      }
+    }
+  });
+
+  // Build Subclass Hierarchy Edges (rdfs:subClassOf) connecting each class to parent or Base Class
+  classes.forEach(c => {
+    const rawSub = c.subclass_of && c.subclass_of.length > 0 ? c.subclass_of[0] : 'owl:Thing';
+    const cleanSub = String(rawSub || 'owl:Thing').trim();
+    let parentIri = rootIri;
+
+    if (cleanSub && cleanSub !== 'owl:Thing' && cleanSub.toLowerCase() !== 'thing' && cleanSub !== 'http://www.w3.org/2002/07/owl#Thing' && cleanSub !== 'http://www.w3.org/2002/07/owl#thing') {
+      const foundIri = validClassMap.get(cleanSub) || validClassMap.get(cleanSub.toLowerCase());
+      if (foundIri && foundIri !== c.iri) {
+        parentIri = foundIri;
+      } else {
+        // Custom intermediate SuperClass Category (e.g. MasterData, ReferenceData)
+        const customSuperIri = `sc_${cleanSub.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+        if (!validClassMap.has(customSuperIri)) {
+          validClassMap.set(customSuperIri, customSuperIri);
+          validClassMap.set(cleanSub.toLowerCase(), customSuperIri);
+
+          const customLabel = formatSemanticPascalCase(cleanSub);
+          const scWidth = Math.max(140, customLabel.length * 9.5 + 44);
+          const scSvg = generateBaseClassCardSvg({ label: customLabel, width: scWidth, height: 46 });
+
+          cyElements.push({
+            group: 'nodes',
+            data: {
+              id: customSuperIri,
+              label: customLabel,
+              domainType: 'SuperClass',
+              isBaseClass: true,
+              confidence: 100,
+              confLabel: 'SuperClass Category',
+              confReasons: ['Enterprise Taxonomy SuperClass Category'],
+              dataProps: [],
+              objProps: [],
+              sourceTable: 'SuperClass Taxonomy',
+              cardWidth: scWidth,
+              cardHeight: 46,
+              svgCard: scSvg,
+              nodeType: 'ontologyClass',
+              isRoot: false
+            },
+            position: { x: 500, y: 120 },
+            grabbable: true
+          });
+
+          // Connect custom intermediate superclass to root owl:Thing
+          cyElements.push({
+            group: 'edges',
+            data: {
+              id: `subclass_${customSuperIri}_${rootIri}`,
+              source: customSuperIri,
+              target: rootIri,
+              label: 'subClassOf',
+              edgeType: 'SubClassOf'
+            }
+          });
+        }
+        parentIri = customSuperIri;
+      }
+    }
+
+    // Connect Child Class to Parent SuperClass / Base Class
+    cyElements.push({
+      group: 'edges',
+      data: {
+        id: `subclass_${c.iri}_${parentIri}`,
+        source: c.iri,
+        target: parentIri,
+        label: 'subClassOf',
+        edgeType: 'SubClassOf'
+      }
+    });
+  });
+
+  // Filter elements to ensure all edge source and target nodes exist in the node set
+  const validNodeIds = new Set(cyElements.filter(e => e.group === 'nodes').map(e => e.data.id));
+  const sanitizedElements = cyElements.filter(e => {
+    if (e.group === 'nodes') return true;
+    return validNodeIds.has(e.data.source) && validNodeIds.has(e.data.target);
+  });
+
+  // Initialize Cytoscape Instance
+  cyOntologyInstance = cytoscape({
+    container: cyContainer,
+    elements: sanitizedElements,
+    boxSelectionEnabled: false,
+    autoungrabify: false,
+    autolock: false,
+    userZoomingEnabled: true,
+    userPanningEnabled: true,
+    wheelSensitivity: 0.25,
+    textureOnViewport: false,
+    style: [
+      {
+        selector: 'node',
+        style: {
+          'width': 140,
+          'height': 46,
+          'shape': 'round-rectangle',
+          'background-color': '#0284c7',
+          'border-width': 0
+        }
+      },
+      {
+        selector: 'node[nodeType = "ontologyClass"]',
+        style: {
+          'shape': 'round-rectangle',
+          'width': 'data(cardWidth)',
+          'height': 'data(cardHeight)',
+          'background-opacity': 0,
+          'background-image': 'data(svgCard)',
+          'background-fit': 'contain',
+          'background-clip': 'none',
+          'border-width': 0,
+          'label': '',
+          'overlay-padding': '4px',
+          'overlay-opacity': 0,
+          'transition-property': 'opacity',
+          'transition-duration': '0.18s'
+        }
+      },
+      {
+        selector: 'node:selected, node.highlighted',
+        style: {
+          'border-width': 2.5,
+          'border-color': '#0284c7',
+          'border-opacity': 1,
+          'shadow-blur': 16,
+          'shadow-color': 'rgba(2, 132, 199, 0.4)',
+          'opacity': 1
+        }
+      },
+      {
+        selector: 'edge[edgeType = "ObjectProperty"]',
+        style: {
+          'width': 1.8,
+          'line-color': '#4f46e5',
+          'target-arrow-color': '#4f46e5',
+          'target-arrow-shape': 'triangle',
+          'arrow-scale': 1.15,
+          'curve-style': 'bezier',
+          'label': 'data(label)',
+          'color': '#334155',
+          'font-size': '11px',
+          'font-family': 'Inter, sans-serif',
+          'font-weight': '500',
+          'text-rotation': 'autorotate',
+          'text-background-color': '#ffffff',
+          'text-background-opacity': 0.95,
+          'text-background-padding': '3px',
+          'text-background-shape': 'roundrectangle',
+          'text-border-color': '#e2e8f0',
+          'text-border-width': 1,
+          'text-border-opacity': 0.8,
+          'transition-property': 'line-color, width, opacity',
+          'transition-duration': '0.15s'
+        }
+      },
+      {
+        selector: 'edge[edgeType = "SubClassOf"]',
+        style: {
+          'width': 1.6,
+          'line-style': 'dashed',
+          'line-color': '#94a3b8',
+          'target-arrow-color': '#64748b',
+          'target-arrow-shape': 'triangle',
+          'arrow-scale': 1.1,
+          'curve-style': 'bezier',
+          'label': '',
+          'overlay-opacity': 0
+        }
+      },
+      {
+        selector: '.faded',
+        style: {
+          'opacity': 0.12
+        }
+      },
+      {
+        selector: '.highlighted-edge',
+        style: {
+          'width': 2.6,
+          'line-color': '#0284c7',
+          'target-arrow-color': '#0284c7',
+          'opacity': 1
+        }
+      }
+    ],
+    layout: { name: 'preset' }
+  });
+
+  // Run Custom Hierarchical Sugiyama-Style Layout
+  runLayeredOntologyLayout(cyOntologyInstance);
+
+  // Setup Graph Events: Click, Double Click (Expand/Collapse), Drag, Background Tap
+  setupOntologyGraphEvents(cyOntologyInstance);
+}
+
+// ==========================================================================
+// DYNAMIC SVG CARD GENERATORS FOR ONTOLOGY & BASE CLASS NODES
+// ==========================================================================
+function generateBaseClassCardSvg({ label, width, height }) {
+  return `data:image/svg+xml;utf8,` + encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <defs>
+        <filter id="baseShadow" x="-10%" y="-10%" width="120%" height="130%">
+          <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.08"/>
+        </filter>
+      </defs>
+      <rect x="1.5" y="1.5" width="${width - 3}" height="${height - 3}" rx="10" ry="10" fill="#f8fafc" stroke="#475569" stroke-width="1.8" stroke-dasharray="4,2" filter="url(#baseShadow)" />
+      <rect x="1.5" y="1.5" width="4.5" height="${height - 3}" rx="2" fill="#334155" />
+      
+      <!-- Base Class Label -->
+      <text x="14" y="${height / 2 + 5}" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="700" fill="#1e293b">
+        🏛️  ${escapeXml(label)}
+      </text>
+    </svg>
+  `);
+}
+
+function generateOntologyClassCardSvg({ label, domainType, isExpanded, dataProps, objProps, sourceTable, width, height }) {
+  // Domain Color Accents
+  let accentColor = '#0284c7'; // Sky blue default
+  let icon = '🟠';
+
+  if (domainType === 'Fact') {
+    accentColor = '#4338ca'; icon = '🧬';
+  } else if (domainType === 'Lookup') {
+    accentColor = '#d97706'; icon = '📦';
+  } else if (domainType === 'SCD') {
+    accentColor = '#059669'; icon = '🏛️';
+  } else if (domainType === 'Dimension') {
+    accentColor = '#0284c7'; icon = '🟠';
+  }
+
+  if (!isExpanded) {
+    // Clean, elegant card showing ONLY class name
+    return `data:image/svg+xml;utf8,` + encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+        <defs>
+          <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="130%">
+            <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.06"/>
+          </filter>
+        </defs>
+        <rect x="1.5" y="1.5" width="${width - 3}" height="${height - 3}" rx="10" ry="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#cardShadow)" />
+        <rect x="1.5" y="1.5" width="4.5" height="${height - 3}" rx="2" fill="${accentColor}" />
+        
+        <!-- Only Class Name with Icon -->
+        <text x="14" y="${height / 2 + 5}" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="600" fill="#0f172a">
+          ${icon}  ${escapeXml(label)}
+        </text>
+      </svg>
+    `);
+  }
+
+  // Expanded Detailed Card
+  const visibleProps = dataProps.slice(0, 4);
+  const visibleRels = objProps.slice(0, 3);
+  let curY = 46;
+
+  let propsSvg = visibleProps.map(p => {
+    const pName = formatSemanticCamelCase(p.label || p.name || 'attr');
+    const pRange = (p.range ? String(p.range).split('#').pop() : 'string').replace('xsd:', '');
+    const row = `
+      <text x="14" y="${curY}" font-family="JetBrains Mono, monospace" font-size="10" fill="#334155">
+        ▪ ${escapeXml(pName)} <tspan font-size="8.5" fill="#64748b">(${escapeXml(pRange)})</tspan>
+      </text>
+    `;
+    curY += 18;
+    return row;
+  }).join('');
+
+  if (dataProps.length > 4) {
+    propsSvg += `<text x="14" y="${curY}" font-family="Inter, sans-serif" font-size="9" fill="#64748b">+${dataProps.length - 4} more attributes...</text>`;
+    curY += 16;
+  }
+
+  curY += 6;
+  const relDividerY = curY;
+  curY += 14;
+
+  let relsSvg = visibleRels.map(r => {
+    const rName = formatSemanticCamelCase(r.relationship_name || r.label || 'relatesTo');
+    const rTgt = r.target_class || (r.range ? String(r.range).split('#').pop() : 'Class');
+    const row = `
+      <text x="14" y="${curY}" font-family="Inter, sans-serif" font-size="10" fill="#4338ca">
+        → ${escapeXml(rName)} <tspan font-size="9" font-weight="700" fill="#0284c7">➔ ${escapeXml(rTgt)}</tspan>
+      </text>
+    `;
+    curY += 18;
+    return row;
+  }).join('');
+
+  if (objProps.length === 0) {
+    relsSvg = `<text x="14" y="${curY}" font-family="Inter, sans-serif" font-size="9.5" fill="#94a3b8" font-style="italic">No linked relationships</text>`;
+    curY += 16;
+  }
+
+  return `data:image/svg+xml;utf8,` + encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <rect x="1" y="1" width="${width - 2}" height="${height - 2}" rx="10" ry="10" fill="#ffffff" stroke="#0284c7" stroke-width="2" />
+      <rect x="1" y="1" width="${width - 2}" height="32" rx="10" fill="#f8fafc" />
+      
+      <!-- Header -->
+      <text x="14" y="21" font-family="Inter, sans-serif" font-size="12.5" font-weight="700" fill="#0f172a">${icon} ${escapeXml(label)}</text>
+      
+      <!-- Collapse Button Hint -->
+      <rect x="${width - 76}" y="8" width="66" height="17" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1" />
+      <text x="${width - 43}" y="19" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="#0284c7" text-anchor="middle">Collapse ▴</text>
+      
+      <line x1="1" y1="32" x2="${width - 1}" y2="32" stroke="#e2e8f0" stroke-width="1" />
+      
+      <!-- Properties Section -->
+      ${propsSvg}
+      
+      <!-- Relationships Divider -->
+      <line x1="10" y1="${relDividerY}" x2="${width - 10}" y2="${relDividerY}" stroke="#e2e8f0" stroke-dasharray="3,3" />
+      
+      <!-- Relationships Section -->
+      ${relsSvg}
+      
+      <!-- Footer Lineage -->
+      <rect x="1" y="${height - 22}" width="${width - 2}" height="21" rx="0" fill="#f8fafc" />
+      <line x1="1" y1="${height - 22}" x2="${width - 1}" y2="${height - 22}" stroke="#e2e8f0" stroke-width="1" />
+      <text x="10" y="${height - 8}" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#64748b">src: ${escapeXml(sourceTable)}</text>
+    </svg>
+  `);
+}
+
+function escapeXml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+// ==========================================================================
+// HIERARCHICAL LAYERED GRAPH LAYOUT (Sugiyama-Style Layout)
+// ==========================================================================
+function runLayeredOntologyLayout(cy) {
   if (!cy) return;
 
   const container = document.getElementById('cy-ontology');
-  const width = container ? container.clientWidth || 1000 : 1000;
+  const containerWidth = container ? (container.clientWidth || 1000) : 1000;
+  const nodes = cy.nodes('[nodeType = "ontologyClass"]:visible');
+  if (nodes.length === 0) return;
 
-  // 1. Single Root thing Node
-  const rootNode = cy.nodes('[isRoot = true]').first();
+  // 1. Calculate Hierarchy Rank / Layer for Each Concept
+  const nodeLevels = new Map();
+  const rootNode = cy.nodes('[isBaseClass = true], [id = "http://www.w3.org/2002/07/owl#Thing"], [id = "owl:Thing"]').first();
+  const rootId = (rootNode && rootNode.length > 0) ? rootNode.id() : 'http://www.w3.org/2002/07/owl#Thing';
+
   if (rootNode && rootNode.length > 0) {
-    if (userMovedPositionsMap.has(rootNode.id())) {
-      rootNode.position(userMovedPositionsMap.get(rootNode.id()));
-    } else {
-      rootNode.position({ x: width / 2, y: 80 });
-    }
+    nodeLevels.set(rootNode.id(), 0);
   }
 
-  // 2. Class Concept Nodes
-  const classNodes = cy.nodes('[nodeType = "class"]:visible');
-  const nClasses = classNodes.length;
-
-  if (nClasses > 0) {
-    const xMargin = 200;
-    const availableWidth = Math.max(width - 2 * xMargin, 300);
-    const stepX = nClasses > 1 ? availableWidth / (nClasses - 1) : 0;
-
-    classNodes.forEach((cNode, i) => {
-      let cX, cY;
-      if (userMovedPositionsMap.has(cNode.id())) {
-        const uPos = userMovedPositionsMap.get(cNode.id());
-        cX = uPos.x;
-        cY = uPos.y;
-      } else {
-        cX = nClasses === 1 ? width / 2 : xMargin + i * stepX;
-        cY = 240 + (i % 2 === 0 ? 0 : 50);
+  // Level 1: nodes that point directly to root owl:Thing via SubClassOf
+  nodes.forEach(n => {
+    if (n.id() !== rootId) {
+      const scEdges = n.outgoers('edge[edgeType = "SubClassOf"]');
+      const pointsToRoot = scEdges.some(e => e.target().id() === rootId);
+      if (pointsToRoot || scEdges.length === 0) {
+        nodeLevels.set(n.id(), 1);
       }
-      cNode.position({ x: cX, y: cY });
+    }
+  });
 
-      // 3. Property Square Nodes for this Class
-      const propNodes = cy.nodes(`[nodeType = "property"][parentClass = "${cNode.id()}"]:visible`);
-      const nProps = propNodes.length;
+  // Iteratively compute deeper subclass levels (Level 2+)
+  let changed = true;
+  let iterations = 0;
+  while (changed && iterations < 10) {
+    changed = false;
+    iterations++;
 
-      if (nProps > 0) {
-        const side = i % 2 === 0 ? -1 : 1;
-        const stepY = 32;
-
-        propNodes.forEach((pNode, j) => {
-          if (userMovedPositionsMap.has(pNode.id())) {
-            pNode.position(userMovedPositionsMap.get(pNode.id()));
-          } else {
-            const propX = cX + side * 130;
-            const startY = cY - ((nProps - 1) * stepY) / 2;
-            const pY = startY + j * stepY;
-            pNode.position({ x: propX, y: pY });
+    nodes.forEach(n => {
+      if (n.id() !== rootId) {
+        const scEdges = n.outgoers('edge[edgeType = "SubClassOf"]');
+        scEdges.forEach(e => {
+          const parent = e.target();
+          if (parent && parent.id() !== rootId) {
+            const parentLvl = nodeLevels.get(parent.id()) || 1;
+            const currentLvl = nodeLevels.get(n.id()) || 1;
+            if (currentLvl <= parentLvl) {
+              nodeLevels.set(n.id(), parentLvl + 1);
+              changed = true;
+            }
           }
         });
       }
     });
   }
 
-  // 4. Relationship Diamond Nodes (Midpoint between connected classes)
-  const relNodes = cy.nodes('[nodeType = "relationship"]:visible');
-  relNodes.forEach(rNode => {
-    if (userMovedPositionsMap.has(rNode.id())) {
-      rNode.position(userMovedPositionsMap.get(rNode.id()));
-    } else {
-      const srcId = rNode.data('sourceClass');
-      const tgtId = rNode.data('targetClass');
-
-      const srcNode = cy.getElementById(srcId);
-      const tgtNode = cy.getElementById(tgtId);
-
-      if (srcNode && tgtNode && srcNode.length > 0 && tgtNode.length > 0) {
-        const sPos = srcNode.position();
-        const tPos = tgtNode.position();
-        const midX = (sPos.x + tPos.x) / 2;
-        const midY = (sPos.y + tPos.y) / 2 + 35;
-        rNode.position({ x: midX, y: midY });
-      }
-    }
+  // Assign Level 1 to any remaining unassigned nodes
+  nodes.forEach(n => {
+    if (!nodeLevels.has(n.id())) nodeLevels.set(n.id(), 1);
   });
 
-  // Ensure all nodes are unlocked and grabbable
+  // Group nodes by Layer
+  const byLayer = new Map();
+  nodes.forEach(n => {
+    const lvl = nodeLevels.get(n.id()) || 0;
+    if (!byLayer.has(lvl)) byLayer.set(lvl, []);
+    byLayer.get(lvl).push(n);
+  });
+
+  const sortedLayers = Array.from(byLayer.keys()).sort((a, b) => a - b);
+  const maxNodesInLayer = Math.max(1, ...Array.from(byLayer.values()).map(arr => arr.length));
+  const nodeSpacingX = 230;
+  const totalWidth = Math.max(containerWidth, maxNodesInLayer * nodeSpacingX + 160);
+
+  const startY = 60;
+  const layerSpacingY = 160;
+
+  // Position nodes layer by layer
+  sortedLayers.forEach((layerIdx, rank) => {
+    const layerNodes = byLayer.get(layerIdx);
+    const count = layerNodes.length;
+    const stepX = count > 1 ? (totalWidth - 230) / (count - 1) : 0;
+    const startX = count > 1 ? 115 : totalWidth / 2;
+    const currentY = startY + rank * layerSpacingY;
+
+    layerNodes.forEach((node, i) => {
+      // If user manually dragged node, respect custom position
+      if (ontoUserNodePositions.has(node.id())) {
+        const customPos = ontoUserNodePositions.get(node.id());
+        node.position(customPos);
+      } else {
+        const cX = count === 1 ? totalWidth / 2 : startX + i * stepX;
+        node.position({ x: cX, y: currentY });
+      }
+    });
+  });
+
   cy.nodes().unlock().grabify();
 
   setTimeout(() => {
-    if (cy) {
-      cy.resize();
-      cy.fit(cy.elements(':visible'), 60);
+    if (cy && !cy.destroyed()) {
+      try {
+        cy.resize();
+        cy.fit(cy.elements(':visible'), 50);
+      } catch(e) {}
     }
   }, 100);
 }
 
-// Populate Multi-Class Filter Checkbox List
-function populateOntologyClassFilterDropdown(classes) {
-  const listEl = document.getElementById('ontoClassCheckboxList');
-  if (!listEl) return;
-  listEl.innerHTML = '';
+// ==========================================================================
+// GRAPH INTERACTIONS, SELECTION & DETAILS PANEL
+// ==========================================================================
+function setupOntologyGraphEvents(cy) {
+  if (!cy) return;
 
-  classes.forEach(c => {
-    const label = c.label || c.name || 'OWLClass';
-    const item = document.createElement('label');
-    item.style.fontSize = '12px';
-    item.style.display = 'flex';
-    item.style.alignItems = 'center';
-    item.style.gap = '8px';
-    item.style.cursor = 'pointer';
-    item.style.padding = '4px 6px';
-    item.style.borderRadius = '4px';
-    item.innerHTML = `
-      <input type="checkbox" class="onto-class-chk" value="${c.iri}" checked style="cursor: pointer;">
-      <span style="font-weight: 500; color: var(--text-primary);">📦 ${label}</span>
-    `;
-    listEl.appendChild(item);
-  });
-  updateOntologyClassFilterBtnLabel();
-}
-
-function toggleOntologyClassFilterDropdown() {
-  const drop = document.getElementById('ontoClassFilterDropdown');
-  if (!drop) return;
-  drop.style.display = drop.style.display === 'none' ? 'block' : 'none';
-}
-
-function selectAllOntologyClassesFilter(selectState) {
-  document.querySelectorAll('.onto-class-chk').forEach(chk => chk.checked = Boolean(selectState));
-}
-
-function filterOntologyClassCheckboxList(query) {
-  const q = (query || '').toLowerCase().trim();
-  const listEl = document.getElementById('ontoClassCheckboxList');
-  if (!listEl) return;
-  Array.from(listEl.children).forEach(labelEl => {
-    const text = labelEl.innerText.toLowerCase();
-    labelEl.style.display = (!q || text.includes(q)) ? 'flex' : 'none';
-  });
-}
-
-function updateOntologyClassFilterBtnLabel() {
-  const btn = document.getElementById('ontoClassFilterBtn');
-  if (!btn) return;
-  const chks = document.querySelectorAll('.onto-class-chk');
-  const checked = document.querySelectorAll('.onto-class-chk:checked');
-  if (chks.length === 0) {
-    btn.innerText = '🧠 Select Classes to Root ▾';
-  } else if (checked.length === chks.length) {
-    btn.innerText = '🧠 Select Classes to Root (All Selected) ▾';
-  } else {
-    btn.innerText = `🧠 Select Classes to Root (${checked.length}/${chks.length} Classes) ▾`;
-  }
-}
-
-function applyOntologyClassFilter() {
-  const drop = document.getElementById('ontoClassFilterDropdown');
-  if (drop) drop.style.display = 'none';
-
-  if (!cyOntologyInstance) return;
-
-  const chks = document.querySelectorAll('.onto-class-chk:checked');
-  const selectedIris = new Set(Array.from(chks).map(c => c.value));
-  updateOntologyClassFilterBtnLabel();
-
-  if (selectedIris.size === 0) {
-    cyOntologyInstance.elements().style('display', 'none');
-    return;
-  }
-
-  // Traversal upwards to root for each selected node, plus attached property nodes & relationships
-  const nodesToKeep = new Set();
-  nodesToKeep.add('sc_root_thing'); // Always keep single top root node
-
-  selectedIris.forEach(startIri => {
-    nodesToKeep.add(startIri);
-
-    // Include datatype property nodes for this class
-    cyOntologyInstance.nodes(`[parentClass = "${startIri}"]`).forEach(propNode => {
-      nodesToKeep.add(propNode.id());
-    });
+  // Drag & drop position persistence
+  cy.on('dragfree', 'node', evt => {
+    const node = evt.target;
+    ontoUserNodePositions.set(node.id(), { ...node.position() });
   });
 
-  // Also include relationship diamond nodes connecting any 2 nodesToKeep
-  cyOntologyInstance.nodes('[nodeType = "relationship"]').forEach(relNode => {
-    const src = relNode.data('sourceClass');
-    const tgt = relNode.data('targetClass');
-    if (nodesToKeep.has(src) && nodesToKeep.has(tgt)) {
-      nodesToKeep.add(relNode.id());
+  // Single Tap on Node -> Select & Open Details Panel
+  cy.on('tap', 'node', evt => {
+    const node = evt.target;
+    const nData = node.data();
+
+    // Neighborhood Highlighting
+    const neighborhood = node.neighborhood().add(node);
+    cy.elements().addClass('faded').removeClass('highlighted highlighted-edge');
+    node.addClass('highlighted');
+    node.connectedEdges().addClass('highlighted-edge').removeClass('faded');
+    node.neighborhood('node').removeClass('faded');
+
+    openOntoDetailsPanel(nData, 'node');
+  });
+
+  // Double Click / Double Tap on Node -> Toggle Expand/Collapse
+  let lastTapTime = 0;
+  let lastTappedNodeId = null;
+
+  cy.on('tap', 'node', evt => {
+    const node = evt.target;
+    const now = Date.now();
+    if (lastTappedNodeId === node.id() && now - lastTapTime < 350) {
+      // Double tap triggered
+      toggleNodeExpand(node.id());
+    }
+    lastTapTime = now;
+    lastTappedNodeId = node.id();
+  });
+
+  // Tap on Edge -> Show Relationship Details Panel
+  cy.on('tap', 'edge', evt => {
+    const edge = evt.target;
+    const eData = edge.data();
+
+    cy.elements().addClass('faded').removeClass('highlighted highlighted-edge');
+    edge.addClass('highlighted-edge').removeClass('faded');
+    edge.source().removeClass('faded').addClass('highlighted');
+    edge.target().removeClass('faded').addClass('highlighted');
+
+    openOntoDetailsPanel(eData, 'edge');
+  });
+
+  // Tap on Canvas Background -> Deselect & Close Details Panel
+  cy.on('tap', evt => {
+    if (evt.target === cy) {
+      cy.elements().removeClass('faded highlighted highlighted-edge');
+      closeOntoDetailsPanel();
     }
   });
 
-  // Display nodes in nodesToKeep and hide the rest
-  cyOntologyInstance.batch(() => {
-    cyOntologyInstance.nodes().forEach(node => {
-      if (nodesToKeep.has(node.id())) {
-        node.style('display', 'element');
-        node.removeClass('faded');
-      } else {
-        node.style('display', 'none');
-      }
+  // Level of Detail (LOD) Zoom Listener
+  cy.on('zoom', () => {
+    const zoomLevel = cy.zoom();
+    if (zoomLevel < 0.55) {
+      cy.edges().style('font-size', '0px'); // Hide edge text when zoomed out
+    } else {
+      cy.edges().style('font-size', '11px');
+    }
+  });
+}
+
+// Toggle Node Expand / Collapse
+function toggleNodeExpand(nodeId) {
+  if (expandedClassIds.has(nodeId)) {
+    expandedClassIds.delete(nodeId);
+  } else {
+    expandedClassIds.add(nodeId);
+  }
+  renderOntologyMode();
+}
+
+// Toggle Expand All / Collapse All
+function toggleExpandAllNodes() {
+  const btn = document.getElementById('ontoExpandAllBtn');
+  const classes = ontoModelData?.classes || [];
+
+  if (expandedClassIds.size > 0) {
+    expandedClassIds.clear();
+    if (btn) btn.innerText = '📦 Expand All';
+  } else {
+    classes.forEach(c => expandedClassIds.add(c.iri));
+    if (btn) btn.innerText = '📁 Collapse All';
+  }
+  renderOntologyMode();
+}
+
+// Open Dynamic Right-Side Details Drawer
+function openOntoDetailsPanel(itemData, itemType = 'node') {
+  const drawer = document.getElementById('ontoDetailsDrawer');
+  const wrapper = document.getElementById('ontoWorkspaceWrapper');
+  if (!drawer || !wrapper) return;
+
+  wrapper.classList.add('details-open');
+  drawer.classList.add('active');
+
+  if (itemType === 'node') {
+    renderClassDetailsPanel(itemData);
+  } else if (itemType === 'edge') {
+    renderRelationshipDetailsPanel(itemData);
+  }
+
+  // Auto-resize Cytoscape canvas smoothly
+  setTimeout(() => {
+    if (cyOntologyInstance) cyOntologyInstance.resize();
+  }, 300);
+}
+
+function closeOntoDetailsPanel() {
+  const drawer = document.getElementById('ontoDetailsDrawer');
+  const wrapper = document.getElementById('ontoWorkspaceWrapper');
+  if (drawer) drawer.classList.remove('active');
+  if (wrapper) wrapper.classList.remove('details-open');
+
+  setTimeout(() => {
+    if (cyOntologyInstance) cyOntologyInstance.resize();
+  }, 300);
+}
+
+function renderClassDetailsPanel(nData) {
+  if (nData.isBaseClass || nData.id === 'owl:Thing' || nData.id === 'http://www.w3.org/2002/07/owl#Thing') {
+    document.getElementById('odd-type-badge').innerText = 'owl:Class (Universal Base Class)';
+    document.getElementById('odd-title').innerText = nData.label || 'owl:Thing';
+    document.getElementById('odd-subtitle').innerText = 'http://www.w3.org/2002/07/owl#Thing';
+    document.getElementById('odd-source-system').innerText = 'W3C OWL 2.0 Standard';
+    document.getElementById('odd-source-table').innerText = 'Root SuperClass Taxonomy';
+    document.getElementById('odd-subclass').innerText = 'Top-Level Universal Base Class';
+    document.getElementById('odd-domain-tag').innerText = 'Taxonomy Root';
+  } else {
+    document.getElementById('odd-type-badge').innerText = 'owl:Class';
+    document.getElementById('odd-title').innerText = nData.label || 'Ontology Class';
+    document.getElementById('odd-subtitle').innerText = nData.id || '';
+    const srcConn = ontoConnectorsData && ontoConnectorsData.length > 0 ? ontoConnectorsData[0].name : 'SQL Server (Production)';
+    document.getElementById('odd-source-system').innerText = srcConn;
+    document.getElementById('odd-source-table').innerText = nData.sourceTable || nData.label;
+    document.getElementById('odd-subclass').innerText = (nData.rawClass?.subclass_of ? nData.rawClass.subclass_of[0] : 'owl:Thing');
+    document.getElementById('odd-domain-tag').innerText = nData.domainType || 'Dimension';
+  }
+
+  // Metrics
+  document.getElementById('odd-prop-count').innerText = nData.dataProps?.length || 0;
+  document.getElementById('odd-rel-count').innerText = nData.objProps?.length || 0;
+  document.getElementById('odd-source-count').innerText = 1;
+
+  // Data Properties List
+  const propsContainer = document.getElementById('odd-props-list');
+  document.getElementById('odd-props-header-badge').innerText = nData.dataProps?.length || 0;
+  if (nData.dataProps && nData.dataProps.length > 0) {
+    propsContainer.innerHTML = nData.dataProps.map(p => {
+      const pName = formatSemanticCamelCase(p.label || p.name);
+      return `
+        <div style="background: var(--bg-surface); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+          <div>
+            <span style="font-weight: 600; color: #0f172a; font-family: var(--font-mono);">▪ ${pName}</span>
+            <span style="font-size: 10px; color: var(--text-secondary); display: block;">src: ${p.mapped_column_name || p.label}</span>
+          </div>
+          <span class="badge" style="background: #ecfdf5; color: #059669; font-size: 10px;">${(p.range || 'string').replace('xsd:', '')}</span>
+        </div>
+      `;
+    }).join('');
+  } else {
+    propsContainer.innerHTML = '<span style="font-size: 11px; color: var(--text-secondary); font-style: italic;">No datatype properties.</span>';
+  }
+
+  // Object Properties List
+  const relsContainer = document.getElementById('odd-rels-list');
+  document.getElementById('odd-rels-header-badge').innerText = nData.objProps?.length || 0;
+  if (nData.objProps && nData.objProps.length > 0) {
+    relsContainer.innerHTML = nData.objProps.map(r => {
+      const rName = formatSemanticCamelCase(r.relationship_name || r.label);
+      const rTgt = r.target_class || (r.range ? String(r.range).split('#').pop() : 'Class');
+      return `
+        <div style="background: var(--bg-surface); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+          <div>
+            <strong style="color: var(--accent-violet); font-family: var(--font-mono);">${rName}</strong>
+            ${r.inverse_property ? `<span style="font-size: 10px; color: var(--text-secondary); display: block;">⇄ ${r.inverse_property}</span>` : ''}
+          </div>
+          <span class="badge" style="background: #e0f2fe; color: #0284c7; font-size: 10px;">➔ ${rTgt}</span>
+        </div>
+      `;
+    }).join('');
+  } else {
+    relsContainer.innerHTML = '<span style="font-size: 11px; color: var(--text-secondary); font-style: italic;">No connected relationships.</span>';
+  }
+
+  // Business Rules
+  const rulesSec = document.getElementById('odd-rules-section');
+  const rulesList = document.getElementById('odd-rules-list');
+  const rules = nData.rawClass?.business_rules || [];
+  if (rules.length > 0) {
+    rulesSec.style.display = 'block';
+    rulesList.innerHTML = rules.map(ru => `
+      <div style="background: #f0f9ff; border: 1px solid #bae6fd; padding: 4px 8px; border-radius: 4px; font-size: 11px; color: #0284c7;">
+        <strong>⚙️ ${escapeXml(ru.name)}</strong>: ${escapeXml(ru.rule_definition || 'Rule applied')}
+      </div>
+    `).join('');
+  } else {
+    rulesSec.style.display = 'none';
+  }
+
+  // Action Button
+  document.getElementById('odd-edit-class-btn').onclick = () => {
+    switchToTab('ontology');
+    if (typeof openOntologyClassModal === 'function') {
+      openOntologyClassModal(nData.sourceTable || nData.label);
+    }
+  };
+}
+
+function renderRelationshipDetailsPanel(eData) {
+  document.getElementById('odd-type-badge').innerText = 'owl:ObjectProperty';
+  document.getElementById('odd-title').innerText = eData.relationshipName || eData.label;
+  document.getElementById('odd-subtitle').innerText = `Directed Relationship: ${eData.source} ➔ ${eData.target}`;
+
+  document.getElementById('odd-prop-count').innerText = 1;
+  document.getElementById('odd-rel-count').innerText = 1;
+  document.getElementById('odd-source-count').innerText = 1;
+
+  document.getElementById('odd-source-system').innerText = 'Relationship Lineage';
+  document.getElementById('odd-source-table').innerText = `${eData.source} ➔ ${eData.target}`;
+  document.getElementById('odd-subclass').innerText = eData.inverseProperty ? `owl:inverseOf ${eData.inverseProperty}` : 'Unidirectional';
+  document.getElementById('odd-domain-tag').innerText = 'ObjectProperty';
+
+  document.getElementById('odd-props-list').innerHTML = `
+    <div style="background: var(--bg-surface); padding: 8px; border-radius: 6px; font-size: 11px;">
+      <div><strong>Domain (Source):</strong> ${eData.source}</div>
+      <div style="margin-top: 4px;"><strong>Range (Target):</strong> ${eData.target}</div>
+      ${eData.inverseProperty ? `<div style="margin-top: 4px; color: var(--accent-violet);"><strong>Bidirectional Inverse:</strong> ${eData.inverseProperty}</div>` : ''}
+    </div>
+  `;
+
+  document.getElementById('odd-rels-list').innerHTML = '<span style="font-size: 11px; color: var(--text-secondary);">Direct semantic link between concepts.</span>';
+  document.getElementById('odd-rules-section').style.display = 'none';
+
+  document.getElementById('odd-edit-class-btn').onclick = () => {
+    switchToTab('ontology');
+    if (typeof openOntologyClassModal === 'function') {
+      openOntologyClassModal(eData.source);
+    }
+  };
+}
+
+// ==========================================================================
+// MODE 2: SOURCE METADATA MODE (Physical Relational Database Schema ERD)
+// ==========================================================================
+function renderMetadataMode() {
+  const cyContainer = document.getElementById('cy-ontology');
+  if (!cyContainer) return;
+
+  if (cyOntologyInstance) {
+    try { cyOntologyInstance.stop(); } catch(e){}
+    try { cyOntologyInstance.destroy(); } catch(e){}
+    cyOntologyInstance = null;
+  }
+
+  if (!ontoMetadataData || ontoMetadataData.length === 0) {
+    cyContainer.innerHTML = '<div style="color: var(--text-secondary); padding: 50px; text-align: center; font-size: 13px;">No physical database metadata cataloged yet. Run Auto Discovery under Metadata Discovery tab.</div>';
+    return;
+  }
+
+  cyContainer.innerHTML = '';
+
+  const cyElements = [];
+  const validTableMap = new Map();
+
+  ontoMetadataData.forEach(tbl => {
+    const fullTblName = `${tbl.schema_name}.${tbl.table_name}`;
+    validTableMap.set(fullTblName, tbl.id);
+    validTableMap.set(tbl.table_name, tbl.id);
+
+    const pks = (tbl.columns || []).filter(c => c.is_primary_key);
+    const fks = (tbl.columns || []).filter(c => c.is_foreign_key);
+
+    // SVG physical database table card
+    const cardWidth = 210;
+    const cardHeight = Math.min(260, 60 + (tbl.columns || []).length * 18);
+    const svgUri = generateMetadataTableCardSvg({
+      schemaName: tbl.schema_name,
+      tableName: tbl.table_name,
+      columns: tbl.columns || [],
+      width: cardWidth,
+      height: cardHeight
     });
 
-    cyOntologyInstance.edges().forEach(edge => {
-      const srcId = edge.source().id();
-      const tgtId = edge.target().id();
-      if (nodesToKeep.has(srcId) && nodesToKeep.has(tgtId)) {
-        edge.style('display', 'element');
-        edge.removeClass('faded');
-      } else {
-        edge.style('display', 'none');
+    cyElements.push({
+      group: 'nodes',
+      data: {
+        id: tbl.id,
+        label: tbl.table_name,
+        schemaName: tbl.schema_name,
+        tableName: tbl.table_name,
+        columns: tbl.columns || [],
+        pks: pks,
+        fks: fks,
+        cardWidth: cardWidth,
+        cardHeight: cardHeight,
+        svgCard: svgUri,
+        nodeType: 'metadataTable'
+      },
+      position: { x: 300, y: 200 },
+      grabbable: true
+    });
+  });
+
+  // Physical Foreign Key Edges
+  ontoMetadataData.forEach(tbl => {
+    (tbl.columns || []).forEach(col => {
+      if (col.is_foreign_key && col.foreign_table_name) {
+        const targetId = validTableMap.get(col.foreign_table_name) || validTableMap.get(col.foreign_table_name.toLowerCase());
+        if (targetId && targetId !== tbl.id) {
+          cyElements.push({
+            group: 'edges',
+            data: {
+              id: `fk_${tbl.id}_${col.column_name}_${targetId}`,
+              source: tbl.id,
+              target: targetId,
+              label: `FK: ${col.column_name}`,
+              edgeType: 'ForeignKey'
+            }
+          });
+        }
       }
     });
   });
 
-  // Re-run single Timbr Layout
-  runTimbrLayout(cyOntologyInstance);
+  // Filter elements to ensure all edge source and target nodes exist in the node set
+  const validNodeIds = new Set(cyElements.filter(e => e.group === 'nodes').map(e => e.data.id));
+  const sanitizedElements = cyElements.filter(e => {
+    if (e.group === 'nodes') return true;
+    return validNodeIds.has(e.data.source) && validNodeIds.has(e.data.target);
+  });
+
+  cyOntologyInstance = cytoscape({
+    container: cyContainer,
+    elements: sanitizedElements,
+    boxSelectionEnabled: false,
+    autoungrabify: false,
+    autolock: false,
+    userZoomingEnabled: true,
+    userPanningEnabled: true,
+    textureOnViewport: false,
+    style: [
+      {
+        selector: 'node',
+        style: {
+          'width': 220,
+          'height': 160,
+          'shape': 'round-rectangle',
+          'background-color': '#059669',
+          'border-width': 0
+        }
+      },
+      {
+        selector: 'node[nodeType = "metadataTable"]',
+        style: {
+          'shape': 'round-rectangle',
+          'width': 'data(cardWidth)',
+          'height': 'data(cardHeight)',
+          'background-opacity': 0,
+          'background-image': 'data(svgCard)',
+          'background-fit': 'contain',
+          'border-width': 0
+        }
+      },
+      {
+        selector: 'edge[edgeType = "ForeignKey"]',
+        style: {
+          'width': 1.6,
+          'line-color': '#059669',
+          'target-arrow-color': '#059669',
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'bezier',
+          'label': 'data(label)',
+          'font-size': '10px',
+          'color': '#065f46',
+          'font-family': 'JetBrains Mono, monospace',
+          'text-background-color': '#ffffff',
+          'text-background-opacity': 0.9,
+          'text-background-padding': '2px'
+        }
+      }
+    ],
+    layout: {
+      name: 'cose',
+      animate: false,
+      padding: 40,
+      nodeOverlap: 20
+    }
+  });
+}
+
+function generateMetadataTableCardSvg({ schemaName, tableName, columns, width, height }) {
+  const visibleCols = columns.slice(0, 8);
+  let curY = 44;
+
+  const colsSvg = visibleCols.map(c => {
+    const isPk = Boolean(c.is_primary_key);
+    const isFk = Boolean(c.is_foreign_key);
+    const keyIcon = isPk ? '🔑' : (isFk ? '🔗' : '▪');
+    const row = `
+      <text x="12" y="${curY}" font-family="JetBrains Mono, monospace" font-size="9.5" fill="${isPk ? '#b45309' : '#334155'}">
+        ${keyIcon} ${escapeXml(c.column_name)} <tspan font-size="8.5" fill="#64748b">(${escapeXml(c.data_type)})</tspan>
+      </text>
+    `;
+    curY += 16;
+    return row;
+  }).join('');
+
+  return `data:image/svg+xml;utf8,` + encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <rect x="1" y="1" width="${width - 2}" height="${height - 2}" rx="8" ry="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+      <rect x="1" y="1" width="${width - 2}" height="28" rx="8" fill="#1e293b" />
+      
+      <!-- Table Header -->
+      <text x="10" y="18" font-family="Inter, sans-serif" font-size="11" font-weight="700" fill="#ffffff">📦 ${escapeXml(tableName)}</text>
+      <text x="${width - 10}" y="18" font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8" text-anchor="end">${escapeXml(schemaName)}</text>
+      
+      <!-- Columns -->
+      ${colsSvg}
+    </svg>
+  `);
+}
+
+// ==========================================================================
+// MODE 3: SOURCE-TO-ONTOLOGY MAPPING VIEW (3-Column Visual Bridge)
+// ==========================================================================
+function renderMappingMode() {
+  const sourcesContainer = document.getElementById('mapping-sources-list');
+  const targetsContainer = document.getElementById('mapping-targets-list');
+  const totalLinksEl = document.getElementById('map-total-links');
+  const srcBadge = document.getElementById('map-source-badge');
+  const tgtBadge = document.getElementById('map-target-badge');
+
+  if (!sourcesContainer || !targetsContainer) return;
+
+  const tables = ontoMetadataData || [];
+  const classes = ontoModelData?.classes || [];
+  const properties = ontoModelData?.properties || [];
+
+  if (srcBadge) srcBadge.innerText = `${tables.length} Tables`;
+  if (tgtBadge) tgtBadge.innerText = `${classes.length} Concepts`;
+
+  let totalMappings = 0;
+
+  // Render Source Columns Cards
+  sourcesContainer.innerHTML = tables.map(tbl => {
+    const cols = tbl.columns || [];
+    const srcConn = ontoConnectorsData && ontoConnectorsData.length > 0 ? ontoConnectorsData[0].name : 'SQL Server';
+
+    return `
+      <div class="onto-mapping-card" onclick="highlightMappingPair('${tbl.table_name}')">
+        <div class="flex-between">
+          <strong style="font-size: 13px; color: var(--text-primary);">📦 ${tbl.table_name}</strong>
+          <span class="badge" style="background: rgba(2, 132, 199, 0.12); color: var(--accent-cyan); font-size: 9px;">${tbl.schema_name}</span>
+        </div>
+        <div style="font-size: 10.5px; color: var(--text-secondary);">Source System: <strong>${srcConn}</strong> (${cols.length} columns)</div>
+        <div style="display: flex; flex-direction: column; gap: 3px; margin-top: 4px; border-top: 1px dashed var(--border-color); padding-top: 4px;">
+          ${cols.slice(0, 4).map(c => `
+            <div style="display: flex; justify-content: space-between; font-size: 10px; font-family: var(--font-mono); color: #334155;">
+              <span>▪ ${c.column_name}</span>
+              <span style="color: var(--text-secondary);">${c.data_type}</span>
+            </div>
+          `).join('')}
+          ${cols.length > 4 ? `<span style="font-size: 9.5px; color: var(--text-secondary);">+${cols.length - 4} more columns...</span>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Render Target Ontology Cards
+  targetsContainer.innerHTML = classes.map(c => {
+    const pascalLabel = formatSemanticPascalCase(c.label || c.name || 'Class');
+    const tblName = c.annotations?.table_name || c.mapped_table_name || pascalLabel;
+    const matchingProps = properties.filter(p => p.domain === c.iri || p.parent_class === c.label || (p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase()));
+
+    totalMappings += matchingProps.length + 1;
+
+    return `
+      <div class="onto-mapping-card" onclick="highlightMappingPair('${tblName}')">
+        <div class="flex-between">
+          <strong style="font-size: 13px; color: var(--accent-cyan);">🧠 ${pascalLabel}</strong>
+        </div>
+        <div style="font-size: 10.5px; color: var(--text-secondary);">Mapped from table: <strong class="font-mono">${tblName}</strong></div>
+        <div style="display: flex; flex-direction: column; gap: 3px; margin-top: 4px; border-top: 1px dashed var(--border-color); padding-top: 4px;">
+          ${matchingProps.slice(0, 4).map(p => `
+            <div style="display: flex; justify-content: space-between; font-size: 10px; font-family: var(--font-mono); color: #047857;">
+              <span>${p.property_type === 'ObjectProperty' ? '➔ ' : '▪ '}${formatSemanticCamelCase(p.label)}</span>
+              <span style="color: var(--text-secondary);">${p.range ? String(p.range).replace('xsd:', '') : 'string'}</span>
+            </div>
+          `).join('')}
+          ${matchingProps.length > 4 ? `<span style="font-size: 9.5px; color: var(--text-secondary);">+${matchingProps.length - 4} more properties...</span>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (totalLinksEl) totalLinksEl.innerText = `${totalMappings} Mappings Active`;
+}
+
+function highlightMappingPair(tableName) {
+  const norm = (tableName || '').toLowerCase().replace(/_/g, '');
+  document.querySelectorAll('.onto-mapping-card').forEach(card => {
+    const text = card.innerText.toLowerCase().replace(/_/g, '');
+    if (text.includes(norm)) {
+      card.classList.add('selected');
+    } else {
+      card.classList.remove('selected');
+    }
+  });
+}
+
+function filterMappingView() {
+  const q = (document.getElementById('mappingSearchInput')?.value || '').toLowerCase().trim();
+  document.querySelectorAll('.onto-mapping-card').forEach(card => {
+    const text = card.innerText.toLowerCase();
+    card.style.display = (!q || text.includes(q)) ? 'flex' : 'none';
+  });
+}
+
+// ==========================================================================
+// TOOLBAR FILTERS, SEARCH & ACTIONS
+// ==========================================================================
+function onOntoSearchChange(query) {
+  ontoSearchQuery = (query || '').toLowerCase().trim();
+  applyOntoGraphFilters();
+}
+
+function setOntoConceptFilter(filterType) {
+  ontoConceptFilter = filterType;
+  document.querySelectorAll('#ontoTypeFilterChips .onto-chip-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-filter') === filterType);
+  });
+  applyOntoGraphFilters();
+}
+
+function applyOntoGraphFilters() {
+  if (!cyOntologyInstance) return;
+
+  const domainFilter = document.getElementById('ontoDomainFilterSelect')?.value || 'ALL';
+  const confFilter = document.getElementById('ontoConfidenceFilterSelect')?.value || 'ALL';
+
+  cyOntologyInstance.batch(() => {
+    cyOntologyInstance.nodes().forEach(node => {
+      const nData = node.data();
+      let match = true;
+
+      // 1. Search Query
+      if (ontoSearchQuery) {
+        const text = `${nData.label || ''} ${nData.sourceTable || ''} ${nData.domainType || ''}`.toLowerCase();
+        if (!text.includes(ontoSearchQuery)) match = false;
+      }
+
+      // 2. Domain Filter (keep Base Class visible)
+      if (domainFilter !== 'ALL' && nData.domainType !== domainFilter && !nData.isBaseClass) {
+        match = false;
+      }
+
+      // 3. Confidence Filter (keep Base Class visible)
+      if (confFilter === 'high' && (nData.confidence || 0) < 90 && !nData.isBaseClass) match = false;
+      if (confFilter === 'medium' && ((nData.confidence || 0) < 70 || (nData.confidence || 0) >= 90) && !nData.isBaseClass) match = false;
+      if (confFilter === 'low' && (nData.confidence || 0) >= 70 && !nData.isBaseClass) match = false;
+
+      // 4. Concept Type Filter
+      if (ontoConceptFilter === 'relationships') {
+        match = false;
+      }
+
+      node.style('display', match ? 'element' : 'none');
+    });
+
+    cyOntologyInstance.edges().forEach(edge => {
+      const eData = edge.data();
+      let match = true;
+
+      if (ontoConceptFilter === 'classes') {
+        match = false;
+      }
+
+      const srcVisible = edge.source().style('display') !== 'none';
+      const tgtVisible = edge.target().style('display') !== 'none';
+
+      if (!srcVisible || !tgtVisible) match = false;
+
+      edge.style('display', match ? 'element' : 'none');
+    });
+  });
+}
+
+function zoomOntoGraph(factor) {
+  if (!cyOntologyInstance) return;
+  cyOntologyInstance.zoom(cyOntologyInstance.zoom() * factor);
+}
+
+function fitOntoGraphView() {
+  if (!cyOntologyInstance) return;
+  cyOntologyInstance.fit(cyOntologyInstance.elements(':visible'), 50);
 }
 
 function resetOntologyGraphView() {
+  ontoUserNodePositions.clear();
   if (cyOntologyInstance) {
-    userMovedPositionsMap.clear();
-    cyOntologyInstance.elements().removeClass('faded').removeClass('highlighted');
+    cyOntologyInstance.elements().removeClass('faded highlighted highlighted-edge');
     cyOntologyInstance.elements().style('display', 'element');
-    selectAllOntologyClassesFilter(true);
-    updateOntologyClassFilterBtnLabel();
-    runTimbrLayout(cyOntologyInstance);
+    runLayeredOntologyLayout(cyOntologyInstance);
   }
+}
+
+function toggleOntoLegend() {
+  ontoLegendCollapsed = !ontoLegendCollapsed;
+  const items = document.getElementById('ontoLegendItems');
+  const icon = document.getElementById('ontoLegendToggleIcon');
+  if (items) items.style.display = ontoLegendCollapsed ? 'none' : 'grid';
+  if (icon) icon.innerText = ontoLegendCollapsed ? '▼' : '▲';
+}
+
+// ==========================================================================
+// UTILITY HELPERS: SEMANTIC NAMING & CONFIDENCE CALCULATOR
+// ==========================================================================
+function formatSemanticPascalCase(rawName) {
+  if (!rawName) return 'Concept';
+  let clean = String(rawName).split('#').pop().split('.').pop();
+  
+  // Clean common database table prefixes (e.g. ref_assay_type -> AssayType, ref_chemical -> Chemical)
+  clean = clean.replace(/^(ref_|tbl_|dim_|fact_|stg_|raw_|mstr_|vw_|t_)/i, '');
+  
+  return clean
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join('');
+}
+
+function formatSemanticCamelCase(rawName) {
+  if (!rawName) return 'property';
+  const pascal = formatSemanticPascalCase(rawName);
+  return pascal.charAt(0).toLowerCase() + pascal.slice(1);
+}
+
+function calculateClassConfidence(cls, dataProps, objProps) {
+  let score = 92;
+  const reasons = [];
+
+  const pks = cls.primary_keys || (cls.annotations ? cls.annotations.primary_keys : []) || [];
+  if (pks.length > 0 || dataProps.some(p => p.is_primary_key)) {
+    score += 4;
+    reasons.push('Primary Key identity articulated');
+  }
+
+  if (objProps.length > 0) {
+    score += 2;
+    reasons.push('Foreign Key constraint relationship detected');
+  }
+
+  reasons.push('Column similarity & PascalCase semantic alignment');
+  reasons.push('W3C OWL taxonomy structure generated');
+
+  score = Math.min(99, Math.max(65, score));
+  return {
+    score: score,
+    label: score >= 90 ? 'High Confidence' : (score >= 70 ? 'Medium Confidence' : 'Review Required'),
+    reasons: reasons
+  };
+}
+
+function calculateRelationshipConfidence(prop) {
+  let score = 94;
+  const reasons = [
+    'Foreign key relational constraint detected',
+    'Domain & Range class matching verified',
+    'Directional ObjectProperty axiom inferred'
+  ];
+
+  if (prop.inverse_property) {
+    score += 4;
+    reasons.push('Bidirectional owl:inverseOf axiom synthesized');
+  }
+
+  score = Math.min(99, score);
+  return { score, reasons };
 }

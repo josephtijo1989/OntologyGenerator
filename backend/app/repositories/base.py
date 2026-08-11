@@ -34,8 +34,11 @@ class BaseRepository(Generic[ModelType]):
         self.db.refresh(db_obj)
         return db_obj
 
-    def delete(self, id: Any) -> bool:
-        obj = self.get_by_id(id)
+    def delete(self, id_or_obj: Any) -> bool:
+        if isinstance(id_or_obj, self.model):
+            obj = id_or_obj
+        else:
+            obj = self.get_by_id(id_or_obj)
         if obj:
             self.db.delete(obj)
             self.db.commit()

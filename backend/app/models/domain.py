@@ -39,6 +39,7 @@ class TargetGraphType(str, enum.Enum):
     NEO4J = "NEO4J"
     MEMGRAPH = "MEMGRAPH"
     APACHE_AGE = "APACHE_AGE"
+    NEPTUNE = "NEPTUNE"
 
 
 class BusinessRuleType(str, enum.Enum):
