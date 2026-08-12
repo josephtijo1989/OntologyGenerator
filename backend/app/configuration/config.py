@@ -36,7 +36,8 @@ class Settings(BaseSettings):
         description="Base64 Encrypted Key for Database Credentials AES-256 GCM Encryption"
     )
 
-    # Database Configuration (Microsoft SQL Server Application Database)
+    # Database Configuration (Defaults to SQLite for seamless local execution; configurable to MS SQL Server)
+    DB_TYPE: str = Field(default="sqlite", description="Database type: sqlite, mssql")
     DB_SERVER: str = Field(default="localhost", description="SQL Server Hostname or IP")
     DB_PORT: int = Field(default=1433, description="SQL Server Port")
     DB_USER: str = Field(default="sa", description="SQL Server Database User")
@@ -45,16 +46,31 @@ class Settings(BaseSettings):
     DB_DRIVER: str = Field(default="ODBC Driver 18 for SQL Server", description="SQL Server ODBC Driver")
     DB_POOL_SIZE: int = Field(default=20, description="SQLAlchemy Connection Pool Size")
     DB_MAX_OVERFLOW: int = Field(default=10, description="SQLAlchemy Connection Max Overflow")
+    CUSTOM_DATABASE_URL: Optional[str] = Field(default=None, alias="DATABASE_URL", description="Direct database URL override")
+
+    @property
+    def SQLITE_DB_PATH(self) -> str:
+        """Absolute path to the local SQLite database file in the project backend directory."""
+        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        return os.path.join(backend_dir, "quick_pasteur_app.db")
 
     @property
     def DATABASE_URL(self) -> str:
-        """Constructs the SQLAlchemy connection URI for MS SQL Server via pyodbc."""
-        encoded_driver = self.DB_DRIVER.replace(" ", "+")
-        return (
-            f"mssql+pyodbc://{self.DB_USER}:{self.DB_PASSWORD}@"
-            f"{self.DB_SERVER}:{self.DB_PORT}/{self.DB_NAME}?"
-            f"driver={encoded_driver}&TrustServerCertificate=yes"
-        )
+        """Constructs the SQLAlchemy connection URI. Defaults to SQLite unless DB_TYPE=mssql or DATABASE_URL is explicitly set."""
+        if self.CUSTOM_DATABASE_URL:
+            return self.CUSTOM_DATABASE_URL
+
+        if self.DB_TYPE.lower() == "mssql":
+            encoded_driver = self.DB_DRIVER.replace(" ", "+")
+            return (
+                f"mssql+pyodbc://{self.DB_USER}:{self.DB_PASSWORD}@"
+                f"{self.DB_SERVER}:{self.DB_PORT}/{self.DB_NAME}?"
+                f"driver={encoded_driver}&TrustServerCertificate=yes"
+            )
+
+        # Standard SQLite URL for portable, zero-config local execution
+        normalized_path = self.SQLITE_DB_PATH.replace("\\", "/")
+        return f"sqlite:///{normalized_path}"
 
     # Redis & Celery Configuration
     REDIS_HOST: str = Field(default="localhost", description="Redis Server Host")

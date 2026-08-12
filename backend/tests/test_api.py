@@ -15,20 +15,21 @@ def test_health_check():
 
 def test_projects_crud_and_ontology_relationships():
     # 1. Create Project
+    test_code = f"AUTO_{uuid.uuid4().hex[:8]}"
     payload = {
-        "name": "Automated Test Project",
-        "code": "AUTO_TEST_PROJ_99",
+        "name": f"Automated Test Project {test_code}",
+        "code": test_code,
         "description": "Integration testing project"
     }
     create_resp = client.post("/api/v1/projects", json=payload)
-    assert create_resp.status_code in [201, 400]
+    assert create_resp.status_code == 201
+    project_id = create_resp.json()["id"]
     
     # 2. Get All Projects
     list_resp = client.get("/api/v1/projects")
     assert list_resp.status_code == 200
     projects = list_resp.json()
-    assert len(projects) > 0
-    project_id = projects[0]["id"]
+    assert any(p["id"] == project_id for p in projects)
 
     # 3. Get Project Dashboard
     dash_resp = client.get(f"/api/v1/projects/{project_id}/dashboard/metrics")
