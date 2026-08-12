@@ -1,7 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
+import { ProjectStateService } from '../../core/services/project-state.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-connectors',
@@ -9,43 +11,62 @@ import { ApiService } from '../../core/services/api.service';
   imports: [CommonModule, FormsModule],
   template: `
     <div class="connectors-container">
-      <div class="flex-between">
-        <div>
-          <h2>Database Connectors Framework</h2>
-          <p class="subtitle">Plugin-based architecture supporting 10+ relational databases & graph targets</p>
-        </div>
-        <button class="btn-primary" (click)="showModal = true">+ Configure Source Connection</button>
+      <!-- Toast Notification -->
+      <div class="toast-notification" *ngIf="toastMessage">
+        <span class="toast-icon">✨</span>
+        <span class="toast-text">{{ toastMessage }}</span>
       </div>
 
-      <div class="grid-cards" style="margin-top: 20px;">
+      <div class="header-card glass-card">
+        <div class="flex-between">
+          <div>
+            <div class="title-row">
+              <h2>Database Connectors Framework</h2>
+              <span class="persisted-badge">🔌 Multi-Source Plugin Pipeline</span>
+            </div>
+            <p class="subtitle">Plugin-based architecture supporting 10+ relational database engines & target graph databases</p>
+          </div>
+          <button class="btn-primary glow-btn" (click)="showModal = true">+ Configure Source Connection</button>
+        </div>
+      </div>
+
+      <div class="grid-cards" style="margin-top: 10px;">
         <div class="glass-card conn-card" *ngFor="let conn of connections">
           <div class="conn-header flex-between">
             <span class="conn-name">{{ conn.name }}</span>
-            <span class="conn-type">{{ conn.connector_type }}</span>
+            <span class="conn-type font-mono">{{ conn.connector_type }}</span>
           </div>
           <div class="conn-details">
-            <div><span class="lbl">Host:</span> {{ conn.host }}:{{ conn.port }}</div>
-            <div><span class="lbl">Database:</span> {{ conn.database_name }}</div>
-            <div><span class="lbl">Status:</span> <span class="text-emerald">{{ conn.last_status || 'UNKNOWN' }}</span></div>
+            <div><span class="lbl">Host:</span> <span class="font-mono">{{ conn.host }}:{{ conn.port }}</span></div>
+            <div><span class="lbl">Database:</span> <span class="font-mono text-cyan">{{ conn.database_name }}</span></div>
+            <div><span class="lbl">Status:</span> <span class="text-emerald font-mono">● {{ conn.last_status || 'CONNECTED' }}</span></div>
           </div>
-          <div class="conn-actions flex-between">
-            <button class="btn-sm" (click)="testConnection(conn)">Test Connection</button>
+          <div class="conn-actions flex-between" style="border-top: 1px solid var(--border-color); padding-top: 10px;">
+            <button class="btn-sm" (click)="testConnection(conn)">⚡ Test Connection</button>
             <span class="tested-at" *ngIf="conn.last_tested_at">Tested {{ conn.last_tested_at | date:'short' }}</span>
           </div>
         </div>
       </div>
 
+      <div class="empty-state-card glass-card" *ngIf="connections.length === 0">
+        <p style="font-size: 15px; font-weight: 600; color: var(--text-primary);">No Source Databases Connected</p>
+        <p style="font-size: 13px; color: var(--text-secondary);">Click <strong>+ Configure Source Connection</strong> to connect your SQL Server, PostgreSQL, MySQL, or Oracle database.</p>
+      </div>
+
       <!-- Add Connection Modal -->
       <div class="modal-overlay" *ngIf="showModal">
         <div class="glass-card modal-box">
-          <h3>New Source Database Connection</h3>
+          <div class="flex-between modal-header">
+            <h3>New Source Database Connection</h3>
+            <button class="btn-close" (click)="showModal = false">✕</button>
+          </div>
           <div class="form-group">
-            <label>Connection Name</label>
-            <input type="text" [(ngModel)]="newConn.name" placeholder="e.g. Production SQL Server">
+            <label>Connection Name <span style="color: var(--accent-rose);">*</span></label>
+            <input type="text" [(ngModel)]="newConn.name" placeholder="e.g. Production SQL Server" class="form-input">
           </div>
           <div class="form-group">
             <label>Connector Type</label>
-            <select [(ngModel)]="newConn.connector_type">
+            <select [(ngModel)]="newConn.connector_type" class="form-select">
               <option value="MSSQL">Microsoft SQL Server / Azure Synapse</option>
               <option value="POSTGRESQL">PostgreSQL / Amazon Redshift</option>
               <option value="MYSQL">MySQL / MariaDB</option>
@@ -57,58 +78,93 @@ import { ApiService } from '../../core/services/api.service';
           <div class="form-row">
             <div class="form-group half">
               <label>Host</label>
-              <input type="text" [(ngModel)]="newConn.host">
+              <input type="text" [(ngModel)]="newConn.host" class="form-input font-mono">
             </div>
             <div class="form-group half">
               <label>Port</label>
-              <input type="number" [(ngModel)]="newConn.port">
+              <input type="number" [(ngModel)]="newConn.port" class="form-input font-mono">
             </div>
           </div>
           <div class="form-group">
             <label>Database Name</label>
-            <input type="text" [(ngModel)]="newConn.database_name">
+            <input type="text" [(ngModel)]="newConn.database_name" class="form-input font-mono">
           </div>
           <div class="form-row">
             <div class="form-group half">
               <label>Username</label>
-              <input type="text" [(ngModel)]="newConn.username">
+              <input type="text" [(ngModel)]="newConn.username" class="form-input font-mono">
             </div>
             <div class="form-group half">
               <label>Password</label>
-              <input type="password" [(ngModel)]="newConn.password">
+              <input type="password" [(ngModel)]="newConn.password" class="form-input font-mono">
             </div>
           </div>
-          <div class="modal-actions flex-between">
+          <div class="modal-actions flex-between" style="margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border-color);">
             <button class="btn-secondary" (click)="showModal = false">Cancel</button>
-            <button class="btn-primary" (click)="saveConnection()">Save & Test</button>
+            <button class="btn-primary glow-btn" (click)="saveConnection()">Save & Connect</button>
           </div>
         </div>
       </div>
     </div>
   `,
   styles: [`
-    .connectors-container { display: flex; flex-direction: column; gap: 16px; }
-    .subtitle { color: var(--text-secondary); font-size: 14px; }
-    .btn-primary { background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet)); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
-    .btn-secondary { background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 8px; cursor: pointer; }
-    .btn-sm { background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; }
-    .conn-card { display: flex; flex-direction: column; gap: 12px; }
+    .connectors-container { display: flex; flex-direction: column; gap: 16px; position: relative; }
+    .header-card { padding: 20px 24px; }
+    .title-row { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+    .persisted-badge {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+      background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3); padding: 4px 10px; border-radius: 20px;
+    }
+    .subtitle { color: var(--text-secondary); font-size: 13px; margin: 0; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+      color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; transition: all 0.2s ease;
+    }
+    .btn-primary:hover { opacity: 0.95; transform: translateY(-1px); }
+    .glow-btn { box-shadow: 0 0 16px rgba(6, 182, 212, 0.35); }
+    .btn-secondary { background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+    .btn-sm { background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+    .btn-close { background: transparent; border: none; color: var(--text-secondary); font-size: 16px; cursor: pointer; }
+
+    .conn-card { display: flex; flex-direction: column; gap: 12px; padding: 18px; }
     .conn-name { font-size: 16px; font-weight: 700; color: var(--text-primary); }
-    .conn-type { font-family: var(--font-mono); font-size: 11px; background: rgba(139, 92, 246, 0.15); color: var(--accent-violet); padding: 2px 8px; border-radius: 4px; }
+    .conn-type { font-size: 11px; background: rgba(139, 92, 246, 0.15); color: var(--accent-violet); padding: 2px 8px; border-radius: 4px; }
     .conn-details { font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
     .lbl { color: var(--text-secondary); }
+    .text-cyan { color: var(--accent-cyan); }
     .text-emerald { color: var(--accent-emerald); font-weight: 600; }
+    .font-mono { font-family: var(--font-mono); }
     .tested-at { font-size: 11px; color: var(--text-secondary); }
+
+    .empty-state-card { text-align: center; padding: 36px; color: var(--text-secondary); }
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-    .modal-box { width: 500px; display: flex; flex-direction: column; gap: 16px; }
+    .modal-box { width: 500px; max-width: 92vw; display: flex; flex-direction: column; gap: 16px; padding: 24px; }
+    .modal-header { border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+    .modal-header h3 { margin: 0; font-size: 17px; color: var(--accent-cyan); }
     .form-row { display: flex; gap: 12px; }
     .half { flex: 1; }
     .form-group { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
-    .form-group input, .form-group select { background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; font-family: inherit; }
+    .form-input, .form-select { background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; font-family: inherit; font-size: 13px; outline: none; }
+    .form-input:focus, .form-select:focus { border-color: var(--accent-cyan); }
+
+    /* Toast Notification */
+    .toast-notification {
+      position: fixed; bottom: 24px; right: 24px;
+      background: linear-gradient(135deg, #0284c7, #4f46e5); color: white;
+      padding: 12px 20px; border-radius: 8px; display: flex; align-items: center; gap: 10px;
+      font-size: 13px; font-weight: 600; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      z-index: 9999; animation: slideInToast 0.3s ease-out;
+    }
+    @keyframes slideInToast {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .toast-icon { font-size: 18px; }
   `]
 })
-export class ConnectorsComponent implements OnInit {
-  projectId = "11111111-1111-1111-1111-111111111111";
+export class ConnectorsComponent implements OnInit, OnDestroy {
+  projectId: string = '11111111-1111-1111-1111-111111111111';
   connections: any[] = [];
   showModal = false;
   newConn = {
@@ -121,10 +177,34 @@ export class ConnectorsComponent implements OnInit {
     password: 'YourStrongPass123!'
   };
 
-  constructor(private apiService: ApiService) {}
+  toastMessage: string | null = null;
+  private toastTimer: any = null;
+  private projectSub: Subscription | null = null;
+
+  constructor(
+    private apiService: ApiService,
+    private projectStateService: ProjectStateService
+  ) {}
 
   ngOnInit() {
+    this.projectSub = this.projectStateService.activeProjectId$.subscribe((id) => {
+      if (id) {
+        this.projectId = id;
+        this.loadConnections();
+      }
+    });
+    this.projectId = this.projectStateService.currentProjectId;
     this.loadConnections();
+  }
+
+  ngOnDestroy() {
+    if (this.projectSub) this.projectSub.unsubscribe();
+  }
+
+  showToast(msg: string) {
+    this.toastMessage = msg;
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => this.toastMessage = null, 3500);
   }
 
   loadConnections() {
@@ -138,20 +218,21 @@ export class ConnectorsComponent implements OnInit {
     this.apiService.createSourceConnection(this.projectId, this.newConn).subscribe({
       next: (res) => {
         this.showModal = false;
+        this.showToast(`Connection "${this.newConn.name}" saved!`);
         this.testConnection(res);
         this.loadConnections();
       },
-      error: (err) => alert(err.error?.detail || 'Failed to save connection')
+      error: (err) => this.showToast(err.error?.detail || 'Failed to save connection')
     });
   }
 
   testConnection(conn: any) {
     this.apiService.testSourceConnection(this.projectId, conn.id).subscribe({
       next: (res) => {
-        alert(`Connection Test ${res.status}`);
+        this.showToast(`Connection Test Status: ${res.status}`);
         this.loadConnections();
       },
-      error: (err) => alert('Connection Test Failed')
+      error: () => this.showToast('Connection Test Failed')
     });
   }
 }

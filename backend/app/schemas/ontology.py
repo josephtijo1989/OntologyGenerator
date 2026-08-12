@@ -54,11 +54,20 @@ class OntologyPropertySchema(BaseModel):
     comment: Optional[str] = None
 
 
+class OntologyViewerStats(BaseModel):
+    classes_count: int = 0
+    datatype_properties_count: int = 0
+    object_properties_count: int = 0
+    total_triples_count: int = 0
+
+
 class OntologyModelResponse(BaseModel):
     ontology_name: str
     base_iri: str
     classes: List[OntologyClassSchema]
     properties: List[OntologyPropertySchema]
+    stats: Optional[OntologyViewerStats] = None
+    graph: Optional[Dict[str, Any]] = None
 
 
 class OntologyExportRequest(BaseModel):
@@ -86,12 +95,6 @@ class OntologyParseViewRequest(BaseModel):
     filename: Optional[str] = None
     format_hint: Optional[str] = "auto"
 
-
-class OntologyViewerStats(BaseModel):
-    classes_count: int = 0
-    datatype_properties_count: int = 0
-    object_properties_count: int = 0
-    total_triples_count: int = 0
 
 
 class OntologyParseViewResponse(BaseModel):

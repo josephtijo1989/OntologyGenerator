@@ -164,9 +164,12 @@ class PostgreSQLConnector(BaseConnector):
                 if not t_rows or t_rows == 0:
                     try:
                         cur.execute(f'SELECT COUNT(1) FROM "{schema}"."{table}";')
-                        t_rows = cur.fetchone()[0]
+                        f_res = cur.fetchone()
+                        if f_res is not None:
+                            t_rows = f_res[0]
                     except Exception:
                         t_rows = (abs(hash(f"{schema}.{table}")) % 18000) + 450
+
 
                 catalogs.append({
                     "schema_name": schema,
@@ -298,10 +301,11 @@ class PostgreSQLConnector(BaseConnector):
             cur = conn.cursor()
             query = f'SELECT COUNT(1) FROM "{schema_name}"."{table_name}";'
             cur.execute(query)
-            row_count = cur.fetchone()[0]
+            f_res = cur.fetchone()
+            if f_res is not None:
+                rows = f_res[0]
             cur.close()
-            conn.close()
-            rows = row_count
+
         except Exception:
             pass
 

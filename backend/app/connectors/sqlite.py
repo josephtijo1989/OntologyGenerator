@@ -60,7 +60,7 @@ class SQLiteConnector(BaseConnector):
             }
         ]
 
-    def profile_table(self, schema_name: str, table_name: str, sample_size: int = 10000) -> Dict[str, Any]:
+    def profile_table(self, schema_name: str, table_name: str, columns: Optional[List[Dict[str, Any]]] = None, sample_size: int = 10000) -> Dict[str, Any]:
         return {
             "row_count": 450,
             "column_stats": {

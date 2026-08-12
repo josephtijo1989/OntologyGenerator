@@ -9,6 +9,7 @@ import { MetadataComponent } from './features/metadata/metadata.component';
 import { ProfilingComponent } from './features/profiling/profiling.component';
 import { GraphVisualizerComponent } from './features/graph-visualizer/graph-visualizer.component';
 import { OntologyEditorComponent } from './features/ontology-editor/ontology-editor.component';
+import { OntologyViewerComponent } from './features/ontology-viewer/ontology-viewer.component';
 import { RulesManagementComponent } from './features/rules-management/rules-management.component';
 import { WorkflowDesignerComponent } from './features/workflow-designer/workflow-designer.component';
 import { AuditLogsComponent } from './features/audit-logs/audit-logs.component';
@@ -27,6 +28,7 @@ import { AuditLogsComponent } from './features/audit-logs/audit-logs.component';
     ProfilingComponent,
     GraphVisualizerComponent,
     OntologyEditorComponent,
+    OntologyViewerComponent,
     RulesManagementComponent,
     WorkflowDesignerComponent,
     AuditLogsComponent
@@ -44,6 +46,7 @@ import { AuditLogsComponent } from './features/audit-logs/audit-logs.component';
           <app-profiling *ngIf="activeTab === 'profiling'"></app-profiling>
           <app-graph-visualizer *ngIf="activeTab === 'graph-visualizer'"></app-graph-visualizer>
           <app-ontology-editor *ngIf="activeTab === 'ontology-editor'"></app-ontology-editor>
+          <app-ontology-viewer *ngIf="activeTab === 'ontology-viewer'"></app-ontology-viewer>
           <app-rules-management *ngIf="activeTab === 'rules-management'"></app-rules-management>
           <app-workflow-designer *ngIf="activeTab === 'workflow-designer'"></app-workflow-designer>
           <app-audit-logs *ngIf="activeTab === 'audit-logs'"></app-audit-logs>

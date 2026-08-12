@@ -1,6 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
+import { ProjectStateService } from '../../core/services/project-state.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
@@ -8,9 +10,14 @@ import { ApiService } from '../../core/services/api.service';
   imports: [CommonModule],
   template: `
     <div class="dashboard-container">
-      <div class="header-section">
-        <h2>Executive System Overview</h2>
-        <p class="subtitle">Real-time telemetry and metadata graph metrics for active project</p>
+      <div class="header-section glass-card">
+        <div class="flex-between">
+          <div>
+            <h2>Executive System Overview & Health</h2>
+            <p class="subtitle">Real-time telemetry and metadata graph metrics for active project workspace</p>
+          </div>
+          <button class="btn-secondary" (click)="loadMetrics()">🔄 Refresh Metrics</button>
+        </div>
       </div>
 
       <div class="grid-cards" *ngIf="metrics">
@@ -19,7 +26,7 @@ import { ApiService } from '../../core/services/api.service';
             <span>Discovered Tables</span>
             <span class="metric-icon">📋</span>
           </div>
-          <div class="metric-value">{{ metrics.total_tables_discovered }}</div>
+          <div class="metric-value font-mono text-cyan">{{ metrics.total_tables_discovered || 0 }}</div>
           <div class="metric-footer text-emerald">↑ 100% schema coverage</div>
         </div>
 
@@ -28,8 +35,8 @@ import { ApiService } from '../../core/services/api.service';
             <span>Graph Nodes & Edges</span>
             <span class="metric-icon">🕸️</span>
           </div>
-          <div class="metric-value">{{ metrics.total_columns_discovered }}</div>
-          <div class="metric-footer text-cyan">{{ metrics.total_relationships_inferred }} Inferred Lineage Edges</div>
+          <div class="metric-value font-mono text-violet">{{ metrics.total_columns_discovered || 0 }}</div>
+          <div class="metric-footer text-cyan">{{ metrics.total_relationships_inferred || 0 }} Inferred Lineage Edges</div>
         </div>
 
         <div class="glass-card metric-card">
@@ -37,8 +44,8 @@ import { ApiService } from '../../core/services/api.service';
             <span>Active Business Rules</span>
             <span class="metric-icon">⚙️</span>
           </div>
-          <div class="metric-value">{{ metrics.business_rules_active }}</div>
-          <div class="metric-footer text-amber">Masking & Validation Enabled</div>
+          <div class="metric-value font-mono text-amber">{{ metrics.business_rules_active || 0 }}</div>
+          <div class="metric-footer text-amber">Masking & Validation Rules</div>
         </div>
 
         <div class="glass-card metric-card">
@@ -46,35 +53,43 @@ import { ApiService } from '../../core/services/api.service';
             <span>System Health</span>
             <span class="metric-icon">💚</span>
           </div>
-          <div class="metric-value text-emerald">{{ metrics.system_health }}</div>
-          <div class="metric-footer">SQL Server & Celery Online</div>
+          <div class="metric-value text-emerald font-mono">{{ metrics.system_health || 'OPERATIONAL' }}</div>
+          <div class="metric-footer">SQL Server & Celery Pipeline Online</div>
         </div>
       </div>
 
       <!-- Domain Entity Classification Summary -->
       <div class="glass-card domain-summary-card" *ngIf="metrics">
         <h3>Domain Entity Classification Breakdown</h3>
-        <div class="domain-pills">
+        <div class="domain-pills" *ngIf="metrics.domain_classification">
           <div class="domain-pill" *ngFor="let item of metrics.domain_classification | keyvalue">
             <span class="domain-name">{{ item.key }}</span>
-            <span class="domain-count">{{ item.value }} tables</span>
+            <span class="domain-count font-mono">{{ item.value }} table(s)</span>
           </div>
+        </div>
+        <div *ngIf="!metrics.domain_classification || (metrics.domain_classification | keyvalue).length === 0" style="color: var(--text-secondary); font-size: 13px;">
+          No domain entities classified yet. Run Auto Discovery under Metadata tab.
         </div>
       </div>
     </div>
   `,
   styles: [`
-    .dashboard-container { display: flex; flex-direction: column; gap: 24px; }
-    .header-section h2 { font-size: 24px; font-weight: 700; }
-    .subtitle { color: var(--text-secondary); font-size: 14px; }
+    .dashboard-container { display: flex; flex-direction: column; gap: 20px; }
+    .header-section { padding: 20px 24px; }
+    .header-section h2 { font-size: 22px; font-weight: 700; margin: 0 0 4px 0; }
+    .subtitle { color: var(--text-secondary); font-size: 13px; margin: 0; }
+    .btn-secondary { background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; }
     .metric-card { display: flex; flex-direction: column; gap: 12px; }
-    .metric-header { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); }
-    .metric-value { font-size: 32px; font-weight: 700; font-family: var(--font-mono); }
+    .metric-header { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
+    .metric-value { font-size: 32px; font-weight: 700; }
     .metric-footer { font-size: 12px; }
     .text-emerald { color: var(--accent-emerald); }
     .text-cyan { color: var(--accent-cyan); }
+    .text-violet { color: var(--accent-violet); }
     .text-amber { color: var(--accent-amber); }
-    .domain-summary-card { display: flex; flex-direction: column; gap: 16px; margin-top: 12px; }
+    .font-mono { font-family: var(--font-mono); }
+    .domain-summary-card { display: flex; flex-direction: column; gap: 16px; padding: 20px; }
+    .domain-summary-card h3 { font-size: 16px; margin: 0; }
     .domain-pills { display: flex; flex-wrap: wrap; gap: 12px; }
     .domain-pill {
       background: var(--bg-surface);
@@ -85,17 +100,37 @@ import { ApiService } from '../../core/services/api.service';
       gap: 10px;
       font-size: 13px;
     }
-    .domain-name { font-weight: 600; color: var(--accent-violet); }
-    .domain-count { color: var(--text-secondary); font-family: var(--font-mono); }
+    .domain-name { font-weight: 600; color: var(--accent-cyan); }
+    .domain-count { color: var(--text-secondary); }
   `]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
+  projectId: string = '11111111-1111-1111-1111-111111111111';
   metrics: any = null;
+  private projectSub: Subscription | null = null;
 
-  constructor(private apiService: ApiService) {}
+  constructor(
+    private apiService: ApiService,
+    private projectStateService: ProjectStateService
+  ) {}
 
   ngOnInit() {
-    this.apiService.getDashboardMetrics("11111111-1111-1111-1111-111111111111").subscribe({
+    this.projectSub = this.projectStateService.activeProjectId$.subscribe((id) => {
+      if (id) {
+        this.projectId = id;
+        this.loadMetrics();
+      }
+    });
+    this.projectId = this.projectStateService.currentProjectId;
+    this.loadMetrics();
+  }
+
+  ngOnDestroy() {
+    if (this.projectSub) this.projectSub.unsubscribe();
+  }
+
+  loadMetrics() {
+    this.apiService.getDashboardMetrics(this.projectId).subscribe({
       next: (res) => this.metrics = res,
       error: (err) => console.error(err)
     });

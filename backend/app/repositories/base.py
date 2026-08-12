@@ -2,7 +2,7 @@ from typing import Generic, TypeVar, Type, Optional, List, Any
 from sqlalchemy.orm import Session
 from app.configuration.database import Base
 
-ModelType = TypeVar("ModelType", bound=Base)
+ModelType = TypeVar("ModelType", bound=Any)
 
 
 class BaseRepository(Generic[ModelType]):

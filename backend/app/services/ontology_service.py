@@ -5,7 +5,7 @@ from app.models.domain import OntologyClass, OntologyAttribute, MetadataTable, M
 from app.repositories.connection_repository import OntologyConfigRepository
 from app.ontology.generator import OntologyGenerator
 from app.ontology.exporter import OntologyExporter
-from app.schemas.ontology import OntologyModelResponse
+from app.schemas.ontology import OntologyModelResponse, OntologyViewerStats
 from app.utilities.logger import logger
 
 
@@ -119,11 +119,127 @@ class OntologyService:
                 prop_schema["is_inverse"] = matched_attr.is_inverse
                 prop_schema["is_primary_key"] = matched_attr.is_primary_key
 
+        # Construct Cytoscape graph nodes and edges
+        graph_nodes = []
+        graph_edges = []
+        node_ids = set()
+
+        for c in onto_result["classes"]:
+            c_name = c["label"]
+            node_ids.add(c_name)
+            class_attrs = [
+                {
+                    "name": p.get("name") or p.get("label"),
+                    "range": p.get("range", "xsd:string"),
+                    "is_primary_key": p.get("is_primary_key", False)
+                }
+                for p in onto_result["properties"]
+                if p.get("property_type") == "DatatypeProperty" and (p.get("parent_class") == c_name or p.get("table_name") == c.get("mapped_table_name"))
+            ]
+            graph_nodes.append({
+                "id": c_name,
+                "label": c_name,
+                "type": "Class",
+                "iri": c["iri"],
+                "domain_type": c.get("annotations", {}).get("domain_type", "Dimension"),
+                "comment": c.get("comment", ""),
+                "primary_keys": c.get("primary_keys", []),
+                "attributes": class_attrs,
+                "properties": {
+                    "type": "Class",
+                    "domain_type": c.get("annotations", {}).get("domain_type", "Dimension"),
+                    "subclass_of": c.get("subclass_of", []),
+                    "comment": c.get("comment", "")
+                }
+            })
+
+        for c in onto_result["classes"]:
+            c_name = c["label"]
+            for sc in c.get("subclass_of", []):
+                if sc and sc != "owl:Thing":
+                    if sc not in node_ids:
+                        node_ids.add(sc)
+                        graph_nodes.append({
+                            "id": sc,
+                            "label": sc,
+                            "type": "SuperClass",
+                            "iri": f"{base_iri}{sc}",
+                            "domain_type": "Hierarchy",
+                            "comment": f"Parent class {sc}",
+                            "attributes": [],
+                            "properties": {"type": "SuperClass"}
+                        })
+                    graph_edges.append({
+                        "id": f"sub_{c_name}_{sc}",
+                        "source": c_name,
+                        "target": sc,
+                        "label": "subClassOf",
+                        "type": "subClassOf",
+                        "relationship_type": "INHERITANCE"
+                    })
+
+        for p in onto_result["properties"]:
+            if p.get("property_type") == "ObjectProperty":
+                src = p.get("parent_class")
+                tgt = p.get("target_class")
+                if src and tgt:
+                    if tgt not in node_ids:
+                        node_ids.add(tgt)
+                        graph_nodes.append({
+                            "id": tgt,
+                            "label": tgt,
+                            "type": "Class",
+                            "iri": p.get("range", f"{base_iri}{tgt}"),
+                            "domain_type": "External",
+                            "comment": f"Target class {tgt}",
+                            "attributes": [],
+                            "properties": {"type": "Class"}
+                        })
+                    if src not in node_ids:
+                        node_ids.add(src)
+                        graph_nodes.append({
+                            "id": src,
+                            "label": src,
+                            "type": "Class",
+                            "iri": p.get("domain", f"{base_iri}{src}"),
+                            "domain_type": "External",
+                            "comment": f"Source class {src}",
+                            "attributes": [],
+                            "properties": {"type": "Class"}
+                        })
+                    edge_id = f"rel_{src}_{p['label']}_{tgt}"
+                    graph_edges.append({
+                        "id": edge_id,
+                        "source": src,
+                        "target": tgt,
+                        "label": p["label"],
+                        "type": "ObjectProperty",
+                        "relationship_type": "OBJECT_PROPERTY",
+                        "inverse_property": p.get("inverse_property"),
+                        "comment": p.get("comment", "")
+                    })
+
+        dt_count = len([p for p in onto_result["properties"] if p.get("property_type") == "DatatypeProperty"])
+        obj_count = len([p for p in onto_result["properties"] if p.get("property_type") == "ObjectProperty"])
+        total_triples = len(onto_result["graph"]) if "graph" in onto_result else (len(onto_result["classes"]) * 4 + len(onto_result["properties"]) * 3)
+
         return OntologyModelResponse(
-            ontology_name=onto_name,
-            base_iri=base_iri,
+            ontology_name=str(onto_name),
+            base_iri=str(base_iri),
             classes=onto_result["classes"],
-            properties=onto_result["properties"]
+            properties=onto_result["properties"],
+            stats=OntologyViewerStats(
+                classes_count=len(onto_result["classes"]),
+                datatype_properties_count=dt_count,
+                object_properties_count=obj_count,
+                total_triples_count=total_triples
+            ),
+            graph={
+                "nodes": graph_nodes,
+                "edges": graph_edges,
+                "node_count": len(graph_nodes),
+                "edge_count": len(graph_edges)
+            }
         )
 
     def update_class_details(self, project_id: str, class_name: str, update_data: Dict[str, Any]) -> OntologyModelResponse:

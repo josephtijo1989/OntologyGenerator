@@ -49,6 +49,8 @@ class MetadataService:
 
         for cat in raw_catalogs:
             tbl_name = cat.get("table_name")
+            if not tbl_name:
+                continue
             schema_name = cat.get("schema_name", "dbo")
             dom_type = cat.get("inferred_domain_type", "Transactional")
 
@@ -72,7 +74,8 @@ class MetadataService:
             self.db.refresh(meta_table)
 
             # 2. Semantic Ontology Class mapped to Physical Table
-            cls_name = tbl_name.lower()
+            cls_name = str(tbl_name).lower()
+
             onto_class = OntologyClass(
                 project_id=project_id,
                 mapped_table_id=meta_table.id,

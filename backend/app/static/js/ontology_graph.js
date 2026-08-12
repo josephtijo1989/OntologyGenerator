@@ -965,7 +965,18 @@ function renderClassDetailsPanel(nData) {
     rulesSec.style.display = 'none';
   }
 
-  // Action Button
+  // Action Buttons
+  const targetLabel = nData.label || (nData.isBaseClass ? 'owl:Thing' : 'Concept');
+  const subclassBtn = document.getElementById('odd-create-subclass-btn');
+  const subclassLabelSpan = document.getElementById('odd-subclass-target-label');
+  if (subclassBtn) {
+    subclassBtn.style.display = 'flex';
+    if (subclassLabelSpan) subclassLabelSpan.innerText = targetLabel;
+    subclassBtn.onclick = () => {
+      openCreateClassModalFromGraph(targetLabel);
+    };
+  }
+
   document.getElementById('odd-edit-class-btn').onclick = () => {
     switchToTab('ontology');
     if (typeof openOntologyClassModal === 'function') {
@@ -998,6 +1009,9 @@ function renderRelationshipDetailsPanel(eData) {
 
   document.getElementById('odd-rels-list').innerHTML = '<span style="font-size: 11px; color: var(--text-secondary);">Direct semantic link between concepts.</span>';
   document.getElementById('odd-rules-section').style.display = 'none';
+
+  const subclassBtn = document.getElementById('odd-create-subclass-btn');
+  if (subclassBtn) subclassBtn.style.display = 'none';
 
   document.getElementById('odd-edit-class-btn').onclick = () => {
     switchToTab('ontology');
@@ -1445,3 +1459,223 @@ function calculateRelationshipConfidence(prop) {
   score = Math.min(99, score);
   return { score, reasons };
 }
+
+// ==========================================================================
+// CREATE CLASS FROM GRAPHICAL ONTOLOGY MODAL & ACTIONS
+// ==========================================================================
+function openCreateClassModalFromGraph(preselectedParent = null) {
+  if (!currentProjectId) {
+    if (typeof showToast === 'function') showToast('Please select an active project first.', 'error');
+    return;
+  }
+
+  // Reset Form
+  document.getElementById('goc-label').value = '';
+  document.getElementById('goc-domain').value = 'Transactional';
+  document.getElementById('goc-comment').value = '';
+
+  // Build SuperClass Dropdown Options (Root owl:Thing + All existing classes)
+  const parentSelect = document.getElementById('goc-parent');
+  if (parentSelect) {
+    parentSelect.innerHTML = '<option value="owl:Thing">owl:Thing (Root Base Class)</option>';
+    const availableClasses = (ontoModelData && ontoModelData.classes) ? ontoModelData.classes : [];
+    availableClasses.forEach(c => {
+      const cLabel = (c.label || '').trim();
+      if (cLabel && cLabel !== 'owl:Thing') {
+        const opt = document.createElement('option');
+        opt.value = cLabel;
+        opt.innerText = `${cLabel} (${c.annotations?.domain_type || 'Dimension'})`;
+        parentSelect.appendChild(opt);
+      }
+    });
+
+    if (preselectedParent && preselectedParent !== 'owl:Thing') {
+      parentSelect.value = preselectedParent;
+    } else {
+      parentSelect.value = 'owl:Thing';
+    }
+  }
+
+  // Clear & Initialize default properties table with 1 primary key attribute
+  const tbody = document.getElementById('goc-props-tbody');
+  if (tbody) {
+    tbody.innerHTML = '';
+    addGraphCreateClassPropRow('DatatypeProperty', 'id', 'xsd:string', true);
+  }
+
+  openModal('createOntologyClassModal');
+}
+
+function openCreateSubclassFromInspectedNode() {
+  const currentTitle = document.getElementById('odd-title')?.innerText?.trim();
+  openCreateClassModalFromGraph(currentTitle || 'owl:Thing');
+}
+
+function addGraphCreateClassPropRow(propType = 'DatatypeProperty', defaultName = '', defaultRange = '', isPk = false) {
+  const tbody = document.getElementById('goc-props-tbody');
+  if (!tbody) return;
+
+  const isObj = propType === 'ObjectProperty';
+  const pName = defaultName || (isObj ? 'relatesTo' : 'hasAttribute');
+  const pRange = defaultRange || (isObj ? 'TargetClass' : 'xsd:string');
+
+  const tr = document.createElement('tr');
+  tr.className = 'goc-prop-row';
+  tr.setAttribute('data-type', propType);
+  tr.innerHTML = `
+    <td>
+      <input type="text" class="goc-prop-name" value="${pName}" placeholder="${isObj ? 'e.g. belongsToGroup' : 'e.g. score'}" style="padding: 4px 8px; font-size: 11px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;">
+    </td>
+    <td>
+      <select class="goc-prop-type" onchange="onGocPropTypeChanged(this)" style="padding: 4px 6px; font-size: 11px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px; width: 100%;">
+        <option value="DatatypeProperty" ${!isObj ? 'selected' : ''}>📊 Datatype</option>
+        <option value="ObjectProperty" ${isObj ? 'selected' : ''}>🔗 Object (Rel)</option>
+      </select>
+    </td>
+    <td>
+      <input type="text" class="goc-prop-range" value="${pRange}" placeholder="${isObj ? 'TargetClass' : 'xsd:string'}" style="padding: 4px 8px; font-size: 11px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;">
+    </td>
+    <td>
+      <input type="text" class="goc-prop-inverse" placeholder="${isObj ? 'e.g. hasInverse' : 'N/A'}" ${!isObj ? 'disabled style="opacity: 0.5; padding: 4px 8px; font-size: 11px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-secondary); border-radius: 4px;"' : 'style="padding: 4px 8px; font-size: 11px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;"'}>
+    </td>
+    <td style="text-align: center;">
+      <input type="checkbox" class="goc-prop-pk" ${isPk ? 'checked' : ''} ${isObj ? 'disabled' : ''} title="Primary Key" style="cursor: pointer; transform: scale(1.1);">
+    </td>
+    <td style="text-align: center;">
+      <button type="button" class="btn-danger" style="padding: 2px 6px; font-size: 11px;" onclick="this.closest('tr').remove()" title="Remove Property">🗑️</button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function onGocPropTypeChanged(sel) {
+  const row = sel.closest('tr');
+  if (!row) return;
+  const isObj = sel.value === 'ObjectProperty';
+  const rangeInput = row.querySelector('.goc-prop-range');
+  const invInput = row.querySelector('.goc-prop-inverse');
+  const pkInput = row.querySelector('.goc-prop-pk');
+
+  if (isObj) {
+    if (rangeInput && rangeInput.value.startsWith('xsd:')) rangeInput.value = 'TargetClass';
+    if (invInput) {
+      invInput.disabled = false;
+      invInput.style.opacity = '1';
+      invInput.placeholder = 'e.g. hasInverse';
+    }
+    if (pkInput) {
+      pkInput.checked = false;
+      pkInput.disabled = true;
+    }
+  } else {
+    if (rangeInput && !rangeInput.value.startsWith('xsd:')) rangeInput.value = 'xsd:string';
+    if (invInput) {
+      invInput.disabled = true;
+      invInput.style.opacity = '0.5';
+      invInput.value = '';
+      invInput.placeholder = 'N/A';
+    }
+    if (pkInput) {
+      pkInput.disabled = false;
+    }
+  }
+}
+
+async function submitCreateClassFromGraph() {
+  if (!currentProjectId) {
+    if (typeof showToast === 'function') showToast('Please select an active project first.', 'error');
+    return;
+  }
+
+  const rawLabel = document.getElementById('goc-label').value.trim();
+  if (!rawLabel) {
+    if (typeof showToast === 'function') showToast('Please enter a class name / label.', 'warning');
+    document.getElementById('goc-label').focus();
+    return;
+  }
+
+  // Format into PascalCase class name (e.g. VIPCustomer)
+  const classLabel = formatSemanticPascalCase(rawLabel);
+  const parentClass = document.getElementById('goc-parent').value.trim() || 'owl:Thing';
+  const domainType = document.getElementById('goc-domain').value || 'Transactional';
+  const comment = document.getElementById('goc-comment').value.trim() || `Class representing ${classLabel}`;
+
+  // Gather properties
+  const propRows = document.querySelectorAll('#goc-props-tbody tr');
+  const properties = [];
+  propRows.forEach(row => {
+    const nameIn = row.querySelector('.goc-prop-name');
+    const typeSel = row.querySelector('.goc-prop-type');
+    const rangeIn = row.querySelector('.goc-prop-range');
+    const invIn = row.querySelector('.goc-prop-inverse');
+    const pkIn = row.querySelector('.goc-prop-pk');
+
+    if (nameIn && typeSel && rangeIn) {
+      const pName = nameIn.value.trim();
+      if (!pName) return;
+      const pType = typeSel.value;
+      const isObj = pType === 'ObjectProperty';
+      properties.push({
+        label: pName,
+        relationship_name: pName,
+        property_type: pType,
+        range: rangeIn.value.trim() || (isObj ? 'TargetClass' : 'xsd:string'),
+        parent_class: classLabel,
+        target_class: isObj ? (rangeIn.value.trim() || null) : null,
+        inverse_property: (isObj && invIn) ? (invIn.value.trim() || null) : null,
+        is_inverse: false,
+        is_primary_key: pkIn ? Boolean(pkIn.checked) : false
+      });
+    }
+  });
+
+  const payload = {
+    class_name: classLabel,
+    label: classLabel,
+    subclass_of: [parentClass],
+    domain_type: domainType,
+    comment: comment,
+    properties: properties
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/projects/${currentProjectId}/ontology/classes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      closeModal('createOntologyClassModal');
+      if (typeof showToast === 'function') showToast(`✨ Ontology Class "${classLabel}" created successfully!`, 'success');
+
+      // Refresh Graphical Ontology & Center on the newly created class
+      await initOntologyGraph();
+      if (typeof loadOntology === 'function') loadOntology();
+      if (typeof loadDashboard === 'function') loadDashboard();
+
+      setTimeout(() => {
+        if (cyOntologyInstance && !cyOntologyInstance.destroyed()) {
+          const cyNode = cyOntologyInstance.nodes().filter(n => {
+            const l = n.data('label') || '';
+            const id = n.data('id') || '';
+            return l.toLowerCase() === classLabel.toLowerCase() || id.toLowerCase().endsWith(classLabel.toLowerCase());
+          });
+          if (cyNode && cyNode.length > 0) {
+            cyNode.select();
+            cyOntologyInstance.fit(cyNode, 100);
+            renderClassDetailsPanel(cyNode[0].data());
+            const wrapper = document.getElementById('ontoWorkspaceWrapper');
+            if (wrapper) wrapper.classList.add('details-open');
+          }
+        }
+      }, 250);
+    } else {
+      const err = await res.json();
+      if (typeof showToast === 'function') showToast(`Failed to create ontology class: ${err.detail || 'Error'}`, 'error');
+    }
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('Network error while creating ontology class.', 'error');
+  }
+}
+

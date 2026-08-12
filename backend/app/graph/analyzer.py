@@ -43,11 +43,13 @@ class MetadataAnalyzer:
                     entity_prefix = col_name_lower[:-3]  # e.g., 'customer' from 'customer_id'
                     # Check plural or singular match
                     matched_table = None
+                    matched_schema = "dbo"
                     for t_name in table_names:
                         if t_name in (entity_prefix, entity_prefix + "s", entity_prefix + "es"):
                             matched_table = table_names[t_name].get("table_name")
                             matched_schema = table_names[t_name].get("schema_name", "dbo")
                             break
+
 
                     if matched_table and matched_table != table_name:
                         inferred_fks.append({

@@ -1,6 +1,6 @@
 import re
 import urllib.parse
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from rdflib import Graph, URIRef, Literal, Namespace, RDF, RDFS, OWL, XSD
 from app.utilities.logger import logger
 
@@ -20,10 +20,11 @@ class OntologyGenerator:
     def generate_ontology(
         self,
         metadata_catalogs: List[Dict[str, Any]],
-        rules: List[Dict[str, Any]] = None,
+        rules: Optional[List[Dict[str, Any]]] = None,
         base_iri: str = "http://enterprise.org/ontology#",
         prefix: str = "eonto"
     ) -> Dict[str, Any]:
+
         rules = rules or []
         logger.info(f"Generating OWL ontology for {len(metadata_catalogs)} tables and {len(rules)} business rules using base IRI {base_iri}")
         g = Graph()
@@ -52,9 +53,10 @@ class OntologyGenerator:
         registered_prop_iris = set()
 
         for cat in metadata_catalogs:
-            table_name = cat.get("table_name")
-            default_class_name = "".join([part.capitalize() for part in table_name.split("_")])
+            table_name = cat.get("table_name") or ""
+            default_class_name = "".join([part.capitalize() for part in table_name.split("_")]) if table_name else "AnonymousClass"
             class_name = cat.get("custom_class_label") or default_class_name
+
             uri_safe_class_name = urllib.parse.quote(class_name.replace(" ", "_"), safe=":-_")
             class_uri = make_safe_uriref(f"{base_iri}{uri_safe_class_name}")
 
@@ -387,17 +389,18 @@ class OntologyGenerator:
 
                 # Infer implicit foreign key relationships if no explicit FKs present
                 if not fks:
-                    all_tables = [c.get("table_name") for c in metadata_catalogs if c.get("table_name") != table_name]
+                    all_tables = [c.get("table_name") for c in metadata_catalogs if c.get("table_name") and c.get("table_name") != table_name]
                     for col in cat.get("columns_json", []):
                         c_name = col.get("name", "").lower()
                         if c_name.endswith("_id") and len(c_name) > 3:
                             possible_target = c_name[:-3]
-                            matching = [t for t in all_tables if t.lower() == possible_target or possible_target in t.lower()]
+                            matching = [t for t in all_tables if t and (t.lower() == possible_target or possible_target in t.lower())]
                             if matching and matching[0] not in added_fk_targets:
-                                target_tbl = matching[0]
+                                target_tbl = str(matching[0])
                                 added_fk_targets.add(target_tbl)
                                 target_cname = "".join([part.capitalize() for part in target_tbl.split("_")])
                                 target_c_uri = make_safe_uriref(f"{base_iri}{urllib.parse.quote(target_cname, safe=':-_')}")
+
 
                                 fwd_rel_name = f"relatesTo{target_cname}"
                                 fwd_prop_uri = make_safe_uriref(f"{base_iri}{urllib.parse.quote(fwd_rel_name, safe=':-_')}")

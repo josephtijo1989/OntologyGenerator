@@ -80,7 +80,8 @@ export class SidebarComponent {
     { id: 'metadata', label: 'Metadata Discovery', icon: '🔍' },
     { id: 'profiling', label: 'Data Profiling & Quality', icon: '📈' },
     { id: 'graph-visualizer', label: 'Knowledge Graph', icon: '🕸️' },
-    { id: 'ontology-editor', label: 'OWL Ontology Editor', icon: '🧠' },
+    { id: 'ontology-editor', label: 'OWL Ontology Studio', icon: '🧠' },
+    { id: 'ontology-viewer', label: 'OWL Graphical Sandbox', icon: '🌐' },
     { id: 'rules-management', label: 'Business Rules Engine', icon: '⚙️' },
     { id: 'workflow-designer', label: 'Workflow Designer', icon: '🔄' },
     { id: 'audit-logs', label: 'Audit Trail Logs', icon: '🛡️' }

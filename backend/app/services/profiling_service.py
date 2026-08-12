@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from app.models.domain import ProfilingResult, MetadataTable, MetadataColumn
 from app.repositories.connection_repository import SourceConnectionRepository
@@ -7,12 +7,15 @@ from app.utilities.encryption import cipher
 from app.utilities.logger import logger
 
 
-def get_table_row_count(tbl: MetadataTable, profile_data: Dict[str, Any] = None) -> int:
+def get_table_row_count(tbl: Any, profile_data: Optional[Dict[str, Any]] = None) -> int:
     if profile_data and profile_data.get("row_count"):
-        return profile_data.get("row_count")
-    if tbl and tbl.row_count and tbl.row_count > 0:
-        return tbl.row_count
-    return (abs(hash(f"{tbl.schema_name}.{tbl.table_name}")) % 18000) + 450
+        return int(profile_data.get("row_count") or 0)
+    if tbl and getattr(tbl, "row_count", None) and int(tbl.row_count) > 0:
+        return int(tbl.row_count)
+    s_name = getattr(tbl, "schema_name", "dbo") if tbl else "dbo"
+    t_name = getattr(tbl, "table_name", "tbl") if tbl else "tbl"
+    return (abs(hash(f"{s_name}.{t_name}")) % 18000) + 450
+
 
 
 class ProfilingService:
@@ -140,7 +143,8 @@ class ProfilingService:
                 self.db.commit()
                 self.db.refresh(res)
             else:
-                stats = dict(res.column_stats_json or {})
+                raw_stats = getattr(res, "column_stats_json", None)
+                stats = dict(raw_stats) if isinstance(raw_stats, dict) else {}
                 updated_stats = False
                 for col in tbl.columns:
                     cname = col.column_name
@@ -189,7 +193,8 @@ class ProfilingService:
         if not res:
             raise ValueError(f"Profiling result with ID {profiling_id} not found")
 
-        stats = dict(res.column_stats_json or {})
+        raw_stats = getattr(res, "column_stats_json", None)
+        stats = dict(raw_stats) if isinstance(raw_stats, dict) else {}
         tbl = self.db.query(MetadataTable).filter(MetadataTable.id == res.metadata_catalog_id).first()
 
         for col_name, item in column_pii_map.items():

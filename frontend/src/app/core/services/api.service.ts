@@ -60,8 +60,27 @@ export class ApiService {
     return this.http.get<any>(`${this.baseUrl}/projects/${projectId}/ontology/generate`);
   }
 
+  createOntologyClass(projectId: string, payload: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/projects/${projectId}/ontology/classes`, payload);
+  }
+
+  updateOntologyClass(projectId: string, className: string, payload: any): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/projects/${projectId}/ontology/classes/${className}`, payload);
+  }
+
   exportOntology(projectId: string, format: string): Observable<string> {
     return this.http.post(`${this.baseUrl}/projects/${projectId}/ontology/export`, { format }, { responseType: 'text' });
+  }
+
+  parseOntologyPreview(payload: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/ontology/parse-preview`, payload);
+  }
+
+  uploadOntologyPreview(file: File, formatHint: string = 'auto'): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('format_hint', formatHint);
+    return this.http.post<any>(`${this.baseUrl}/ontology/upload-preview`, formData);
   }
 
   getRules(projectId: string): Observable<any[]> {

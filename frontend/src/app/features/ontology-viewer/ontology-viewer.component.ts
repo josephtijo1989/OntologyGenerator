@@ -31,8 +31,8 @@ interface PresetOption {
             </p>
           </div>
           <div class="header-actions">
-            <button class="btn-primary glow-btn" (click)="openSubclassModal()" *ngIf="parsedData">
-              ➕ Create Subclass
+            <button class="btn-primary glow-btn" (click)="openCreateClassModal()" *ngIf="parsedData" id="viewer-create-class-header-btn">
+              ➕ Create Class
             </button>
             <button class="btn-secondary" (click)="resetViewer()" *ngIf="parsedData">
               🗑️ Clear Sandbox
@@ -252,7 +252,8 @@ interface PresetOption {
               </span>
             </div>
             <div class="toolbar-right">
-              <button class="btn-sm btn-subclass-nav" (click)="openSubclassModal()">➕ Add Subclass</button>
+              <button class="btn-primary btn-sm glow-btn" (click)="openCreateClassModal()" title="Create New Semantic Class">➕ Create Class</button>
+              <button class="btn-sm btn-subclass-nav" (click)="openCreateClassModal()" title="Add Subclass to Hierarchy">➕ Add Subclass</button>
               <div class="layout-selector">
                 <label>Layout:</label>
                 <select [(ngModel)]="graphLayout" (change)="applyLayout()" class="layout-dropdown">
@@ -271,7 +272,12 @@ interface PresetOption {
           </div>
 
           <div class="graph-layout-container">
-            <div #cyContainer class="cy-canvas"></div>
+            <div #cyContainer class="cy-canvas" title="Double click empty canvas to create a class"></div>
+
+            <!-- Canvas Quick Hint -->
+            <div class="canvas-quick-hint">
+              <span>💡 Double-click canvas or click <strong>➕ Create Class</strong> to add nodes to graphical ontology</span>
+            </div>
 
             <!-- Node Inspector Overlay / Drawer -->
             <div class="inspector-drawer glass-card" *ngIf="selectedGraphNode">
@@ -331,10 +337,13 @@ interface PresetOption {
                   </div>
                 </div>
 
-                <!-- Drawer Subclass Action -->
-                <div class="drawer-action-row" style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">
-                  <button class="btn-primary" style="width: 100%; font-size: 11px; padding: 6px 10px;" (click)="openSubclassModal(selectedGraphNode.label)">
+                <!-- Drawer Subclass & Sibling Actions -->
+                <div class="drawer-action-row" style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 6px;">
+                  <button class="btn-primary" style="width: 100%; font-size: 11px; padding: 6px 10px;" (click)="openCreateClassModal(selectedGraphNode.label)">
                     ➕ Create Subclass of {{ selectedGraphNode.label }}
+                  </button>
+                  <button class="btn-secondary" style="width: 100%; font-size: 11px; padding: 6px 10px;" (click)="openCreateClassModal(selectedGraphNode.properties?.subclass_of?.[0] || 'owl:Thing')">
+                    ➕ Create Sibling Class
                   </button>
                 </div>
               </div>
@@ -349,8 +358,8 @@ interface PresetOption {
               <strong style="color: var(--text-primary); font-size: 14px;">OWL Classes Matrix ({{ filteredClasses.length }})</strong>
               <span style="font-size: 11px; color: var(--text-secondary); margin-left: 8px;">Explore semantic class concepts & taxonomy hierarchy</span>
             </div>
-            <button class="btn-primary" (click)="openSubclassModal()" style="font-size: 12px; padding: 6px 14px;">
-              ➕ Create New Subclass
+            <button class="btn-primary glow-btn" (click)="openCreateClassModal()" style="font-size: 12px; padding: 6px 14px;">
+              ➕ Create New Class
             </button>
           </div>
 
@@ -503,28 +512,54 @@ interface PresetOption {
         </div>
       </div>
 
-      <!-- Create Subclass Modal Overlay -->
+      <!-- Toast Notification Container -->
+      <div class="toast-notification" *ngIf="toastMessage">
+        <span class="toast-icon">✨</span>
+        <span class="toast-text">{{ toastMessage }}</span>
+      </div>
+
+      <!-- Create Class / Subclass Modal Overlay -->
       <div class="modal-overlay" *ngIf="isSubclassModalOpen">
-        <div class="glass-card modal-box" style="width: 680px; max-width: 92vw; max-height: 90vh; overflow-y: auto;">
+        <div class="glass-card modal-box" style="width: 720px; max-width: 94vw; max-height: 92vh; overflow-y: auto;">
           <div class="flex-between modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 14px;">
             <div>
-              <h4 style="font-size: 16px; margin: 0; color: var(--accent-cyan);">✨ Create Subclass in Sandbox</h4>
-              <p class="subtitle" style="margin: 2px 0 0 0; font-size: 11px;">Define a new semantic subclass, its parent superclass hierarchy, and initial properties</p>
+              <h4 style="font-size: 17px; margin: 0; color: var(--accent-cyan); display: flex; align-items: center; gap: 8px;">
+                <span>✨</span> Create Class in Graphical Ontology
+              </h4>
+              <p class="subtitle" style="margin: 2px 0 0 0; font-size: 11px;">Define a root semantic class (owl:Thing) or subclass, taxonomy hierarchy, attributes, and relationships</p>
             </div>
-            <button class="btn-close" (click)="closeSubclassModal()">✕</button>
+            <button class="btn-close" (click)="closeCreateClassModal()">✕</button>
           </div>
 
           <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+            <!-- Hierarchy Type Selection Tabs -->
+            <div class="class-type-toggle-row">
+              <label class="toggle-option" [class.active]="newSubclassParent === 'owl:Thing'" (click)="newSubclassParent = 'owl:Thing'">
+                <span class="toggle-radio"></span>
+                <span>🏛️ Root OWL Class (owl:Thing)</span>
+              </label>
+              <label class="toggle-option" [class.active]="newSubclassParent !== 'owl:Thing'" (click)="newSubclassParent = (availableSuperclasses[1] || 'owl:Thing')">
+                <span class="toggle-radio"></span>
+                <span>🌲 Subclass of Existing Concept</span>
+              </label>
+            </div>
+
             <div class="form-row" style="display: flex; gap: 12px;">
               <div class="form-group half" style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
-                <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Subclass Name / Label <span style="color: var(--accent-rose);">*</span></label>
-                <input type="text" [(ngModel)]="newSubclassLabel" placeholder="e.g. HumanProtein or VIPCustomer" class="form-input font-mono" style="padding: 8px 10px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-size: 12px;" />
+                <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Class Name / Label <span style="color: var(--accent-rose);">*</span></label>
+                <input type="text" [(ngModel)]="newSubclassLabel" placeholder="e.g. TherapeuticAntibody or BioAssay" class="form-input font-mono" style="padding: 8px 10px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-size: 12px;" />
+                <span class="form-hint" *ngIf="parsedData?.base_iri" style="font-size: 10px; color: var(--accent-cyan); font-family: var(--font-mono); margin-top: 2px;">
+                  IRI: {{ parsedData.base_iri }}{{ newSubclassLabel || 'ClassName' }}
+                </span>
               </div>
               <div class="form-group half" style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
-                <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Parent SuperClass (rdfs:subClassOf) <span style="color: var(--accent-rose);">*</span></label>
+                <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Parent Hierarchy (rdfs:subClassOf) <span style="color: var(--accent-rose);">*</span></label>
                 <select [(ngModel)]="newSubclassParent" class="form-select font-mono" style="padding: 8px 10px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-size: 12px;">
                   <option *ngFor="let opt of availableSuperclasses" [value]="opt">{{ opt }}</option>
                 </select>
+                <span class="form-hint" style="font-size: 10px; color: var(--text-secondary); margin-top: 2px;">
+                  {{ newSubclassParent === 'owl:Thing' ? 'Creates a standalone root semantic entity' : 'Inherits properties and hierarchy from parent' }}
+                </span>
               </div>
             </div>
 
@@ -541,29 +576,32 @@ interface PresetOption {
               </div>
               <div class="form-group half" style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
                 <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Description / RDFS Comment</label>
-                <input type="text" [(ngModel)]="newSubclassComment" placeholder="e.g. Specialized biological protein macromolecule" class="form-input" style="padding: 8px 10px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-size: 12px;" />
+                <input type="text" [(ngModel)]="newSubclassComment" placeholder="e.g. Biological macromolecule with antigen binding specificity" class="form-input" style="padding: 8px 10px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-size: 12px;" />
               </div>
             </div>
 
             <!-- Properties in modal -->
             <div class="props-form-section" style="border-top: 1px dashed var(--border-color); padding-top: 10px;">
               <div class="flex-between" style="margin-bottom: 8px;">
-                <span style="font-size: 12px; font-weight: 700; color: var(--text-primary);">Initial Subclass Properties (Optional)</span>
+                <div>
+                  <span style="font-size: 12px; font-weight: 700; color: var(--text-primary);">Initial Class Properties & Attributes</span>
+                  <span style="font-size: 11px; color: var(--text-secondary); margin-left: 6px;">(Optional Datatype & Object Properties)</span>
+                </div>
                 <div style="display: flex; gap: 6px;">
                   <button class="btn-sm" (click)="addSubclassPropRow('DatatypeProperty')">➕ Add Datatype</button>
                   <button class="btn-sm" (click)="addSubclassPropRow('ObjectProperty')">🔗 Add Relationship</button>
                 </div>
               </div>
 
-              <div class="props-table-wrap" *ngIf="newSubclassProps.length > 0" style="max-height: 180px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">
+              <div class="props-table-wrap" *ngIf="newSubclassProps.length > 0" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">
                 <table class="data-table" style="font-size: 11px;">
                   <thead>
                     <tr>
                       <th>Property Name</th>
                       <th>Type</th>
                       <th>Range / Target</th>
-                      <th>Inverse</th>
-                      <th style="text-align: center; width: 40px;">🔑 PK</th>
+                      <th>Inverse Rel</th>
+                      <th style="text-align: center; width: 45px;">🔑 PK</th>
                       <th style="width: 30px;"></th>
                     </tr>
                   </thead>
@@ -580,13 +618,19 @@ interface PresetOption {
                         <select *ngIf="p.property_type === 'ObjectProperty'" [(ngModel)]="p.range" style="padding: 4px 6px; font-size: 11px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px; width: 100%;">
                           <option *ngFor="let cls of availableSuperclasses" [value]="cls">{{ cls }}</option>
                         </select>
-                        <input *ngIf="p.property_type === 'DatatypeProperty'" type="text" [(ngModel)]="p.range" style="padding: 4px 6px; font-size: 11px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;" class="font-mono" />
+                        <select *ngIf="p.property_type === 'DatatypeProperty'" [(ngModel)]="p.range" style="padding: 4px 6px; font-size: 11px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px; width: 100%;">
+                          <option value="xsd:string">xsd:string</option>
+                          <option value="xsd:integer">xsd:integer</option>
+                          <option value="xsd:decimal">xsd:decimal</option>
+                          <option value="xsd:dateTime">xsd:dateTime</option>
+                          <option value="xsd:boolean">xsd:boolean</option>
+                        </select>
                       </td>
                       <td>
                         <input type="text" [(ngModel)]="p.inverse_property" [disabled]="p.property_type !== 'ObjectProperty'" placeholder="invRel" style="padding: 4px 6px; font-size: 11px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius: 4px;" class="font-mono" />
                       </td>
                       <td style="text-align: center;">
-                        <input type="checkbox" [(ngModel)]="p.is_primary_key" [disabled]="p.property_type === 'ObjectProperty'" style="cursor: pointer;" />
+                        <input type="checkbox" [(ngModel)]="p.is_primary_key" [disabled]="p.property_type === 'ObjectProperty'" style="cursor: pointer;" title="Mark as Primary Key (owl:hasKey)" />
                       </td>
                       <td style="text-align: center;">
                         <button style="background: transparent; border: none; color: var(--accent-rose); cursor: pointer;" (click)="removeSubclassPropRow(i)">🗑️</button>
@@ -598,8 +642,8 @@ interface PresetOption {
             </div>
 
             <div class="modal-actions flex-between" style="margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border-color);">
-              <button class="btn-secondary" (click)="closeSubclassModal()">Cancel</button>
-              <button class="btn-primary" (click)="submitCreateSubclass()">✨ Create Subclass</button>
+              <button class="btn-secondary" (click)="closeCreateClassModal()">Cancel</button>
+              <button class="btn-primary glow-btn" (click)="submitCreateClass()">✨ Create Class in Graphical Ontology</button>
             </div>
           </div>
         </div>
@@ -968,6 +1012,86 @@ interface PresetOption {
       color: #93c5fd;
     }
     .empty-state-card { text-align: center; padding: 32px; color: var(--text-secondary); }
+
+    /* Toast Notification */
+    .toast-notification {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: linear-gradient(135deg, #0284c7, #4f46e5);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      z-index: 9999;
+      animation: slideInToast 0.3s ease-out;
+    }
+    @keyframes slideInToast {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .toast-icon { font-size: 18px; }
+
+    /* Canvas Quick Hint */
+    .canvas-quick-hint {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      pointer-events: none;
+      z-index: 5;
+    }
+    .canvas-quick-hint strong { color: var(--accent-cyan); }
+
+    /* Class Type Toggle in Modal */
+    .class-type-toggle-row {
+      display: flex;
+      gap: 10px;
+      background: rgba(15, 23, 42, 0.5);
+      padding: 6px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+    .toggle-option {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .toggle-option:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.04); }
+    .toggle-option.active {
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+    .toggle-radio {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid var(--text-secondary);
+      display: inline-block;
+    }
+    .toggle-option.active .toggle-radio {
+      border-color: var(--accent-cyan);
+      background: var(--accent-cyan);
+    }
   `]
 })
 export class OntologyViewerComponent implements AfterViewInit, OnDestroy {
@@ -1476,6 +1600,13 @@ ecom:referencesProduct a owl:ObjectProperty ;
       }
     });
 
+    // Double tap on empty canvas opens Create Class Modal directly from Graphical Ontology
+    this.cyInstance.on('dbltap', (evt) => {
+      if (evt.target === this.cyInstance) {
+        this.openCreateClassModal();
+      }
+    });
+
     // Auto-select first node if available
     if (this.parsedData.graph.nodes.length > 0) {
       this.selectedGraphNode = this.parsedData.graph.nodes[0];
@@ -1532,8 +1663,19 @@ ecom:referencesProduct a owl:ObjectProperty ;
   }
 
   // ==========================================
-  // Subclass Creation Sandbox State & Methods
+  // Class & Subclass Creation in Graphical Ontology
   // ==========================================
+
+  toastMessage: string | null = null;
+  private toastTimer: any = null;
+
+  showToast(msg: string) {
+    this.toastMessage = msg;
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => {
+      this.toastMessage = null;
+    }, 3500);
+  }
 
   isSubclassModalOpen = false;
   newSubclassLabel = '';
@@ -1554,7 +1696,7 @@ ecom:referencesProduct a owl:ObjectProperty ;
     return list;
   }
 
-  openSubclassModal(parentClassLabel?: string) {
+  openCreateClassModal(parentClassLabel?: string) {
     if (!this.parsedData) return;
     this.newSubclassLabel = '';
     this.newSubclassDomain = 'Dimension';
@@ -1570,8 +1712,17 @@ ecom:referencesProduct a owl:ObjectProperty ;
     this.isSubclassModalOpen = true;
   }
 
-  closeSubclassModal() {
+  closeCreateClassModal() {
     this.isSubclassModalOpen = false;
+  }
+
+  // Backwards compatibility aliases
+  openSubclassModal(parentClassLabel?: string) {
+    this.openCreateClassModal(parentClassLabel);
+  }
+
+  closeSubclassModal() {
+    this.closeCreateClassModal();
   }
 
   addSubclassPropRow(propType: 'DatatypeProperty' | 'ObjectProperty' = 'DatatypeProperty') {
@@ -1600,26 +1751,26 @@ ecom:referencesProduct a owl:ObjectProperty ;
     }
   }
 
-  submitCreateSubclass() {
+  submitCreateClass() {
     if (!this.parsedData) return;
     const rawLabel = (this.newSubclassLabel || '').trim();
     if (!rawLabel) {
-      alert('Subclass label/name is required.');
+      alert('Class name / label is required.');
       return;
     }
     const cleanLabel = rawLabel.replace(/[^a-zA-Z0-9_]/g, '');
     if (!cleanLabel) {
-      alert('Subclass name must contain valid alphanumeric characters.');
+      alert('Class name must contain valid alphanumeric characters.');
       return;
     }
     if (this.parsedData.classes.some((c: any) => c.label.toLowerCase() === cleanLabel.toLowerCase())) {
-      alert(`A class named "${cleanLabel}" already exists.`);
+      alert(`A class named "${cleanLabel}" already exists in the ontology.`);
       return;
     }
 
     const baseIri = this.parsedData.base_iri || 'http://uploaded.ontology/schema#';
     const classIri = `${baseIri}${cleanLabel}`;
-    const comment = (this.newSubclassComment || '').trim() || `Subclass representing ${cleanLabel}`;
+    const comment = (this.newSubclassComment || '').trim() || `Class representing ${cleanLabel}`;
     const parent = this.newSubclassParent || 'owl:Thing';
     const pks = this.newSubclassProps.filter((p: any) => p.is_primary_key && p.property_type === 'DatatypeProperty').map((p: any) => p.name);
 
@@ -1638,7 +1789,7 @@ ecom:referencesProduct a owl:ObjectProperty ;
         table_name: cleanLabel,
         primary_keys: pks,
         is_uploaded: true,
-        is_custom_subclass: true
+        is_custom_class: true
       }
     };
 
@@ -1732,7 +1883,7 @@ ecom:referencesProduct a owl:ObjectProperty ;
     this.parsedData.graph.edge_count = this.parsedData.graph.edges.length;
 
     // Turtle
-    let turtleAddition = `\n# --- Custom Subclass: ${cleanLabel} ---\n`;
+    let turtleAddition = `\n# --- Custom Class: ${cleanLabel} ---\n`;
     const parentRef = parent === 'owl:Thing' ? 'owl:Thing' : (parent.includes(':') ? parent : `:${parent}`);
     turtleAddition += `:${cleanLabel} a owl:Class ;\n`;
     turtleAddition += `    rdfs:label "${cleanLabel}" ;\n`;
@@ -1771,13 +1922,27 @@ ecom:referencesProduct a owl:ObjectProperty ;
     this.parsedData.stats.object_properties_count += newProps.filter((p: any) => p.property_type === 'ObjectProperty').length;
     this.parsedData.stats.total_triples_count += (4 + newProps.length * 4);
 
-    this.closeSubclassModal();
+    this.closeCreateClassModal();
+    this.showToast(`✨ Class "${cleanLabel}" created and rendered in Graphical Ontology!`);
 
     if (this.activeViewTab === 'graph') {
       this.initCytoscape();
       setTimeout(() => {
         this.selectedGraphNode = graphNode;
-      }, 100);
+        const cyNode = this.cyInstance?.$(`#${cleanLabel}`);
+        if (cyNode && cyNode.length > 0) {
+          this.cyInstance?.animate({
+            center: { eles: cyNode },
+            zoom: 1.4,
+            duration: 500
+          });
+          cyNode.select();
+        }
+      }, 150);
     }
+  }
+
+  submitCreateSubclass() {
+    this.submitCreateClass();
   }
 }

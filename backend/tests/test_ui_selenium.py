@@ -457,6 +457,31 @@ class TestFullApplicationUI:
         driver.execute_script("arguments[0].click();", fit_btn)
         time.sleep(0.3)
 
+        # 6. Test "Create New Class" directly from Graphical Ontology Visualizer
+        create_class_btn = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//*[@id='panel-ontology-graph']//button[contains(., 'Create New Class')]"))
+        )
+        driver.execute_script("arguments[0].click();", create_class_btn)
+
+        create_modal = WebDriverWait(driver, 6).until(
+            EC.visibility_of_element_located((By.ID, "createOntologyClassModal"))
+        )
+        assert create_modal.is_displayed()
+
+        # Fill Class Name & Description
+        new_class_name = f"GraphConcept_{int(time.time()) % 10000}"
+        driver.find_element(By.ID, "goc-label").send_keys(new_class_name)
+        driver.find_element(By.ID, "goc-comment").send_keys("Test class created directly from Graphical Ontology")
+
+        # Submit Create Class
+        submit_create_btn = driver.find_element(By.XPATH, "//*[@id='createOntologyClassModal']//button[@onclick='submitCreateClassFromGraph()']")
+        driver.execute_script("arguments[0].click();", submit_create_btn)
+
+        WebDriverWait(driver, 6).until(
+            EC.invisibility_of_element_located((By.ID, "createOntologyClassModal"))
+        )
+        wait_for_toast(driver, timeout=6)
+
     def test_09_ontology_viewer_sandbox(self, driver, test_server):
         # 1. Switch to "Upload & View Ontology" (Sandbox) tab
         viewer_btn = WebDriverWait(driver, 10).until(
@@ -507,10 +532,10 @@ class TestFullApplicationUI:
         assert driver.find_element(By.ID, "v-pane-graph").is_displayed()
 
         # 4. Test "Create Subclass" in Sandbox
-        create_subclass_btn = driver.find_element(By.XPATH, "//button[contains(., 'Create Subclass') or contains(., 'Add Subclass')]")
+        create_subclass_btn = driver.find_element(By.XPATH, "//*[@id='panel-ontology-viewer']//button[contains(., 'Create Subclass') or contains(., 'Add Subclass')]")
         driver.execute_script("arguments[0].click();", create_subclass_btn)
 
-        subclass_modal = WebDriverWait(driver, 5).until(
+        subclass_modal = WebDriverWait(driver, 6).until(
             EC.visibility_of_element_located((By.ID, "viewerSubclassModal"))
         )
         assert subclass_modal.is_displayed()
