@@ -5,6 +5,9 @@ from app.models.domain import (
 )
 from app.repositories.connection_repository import SourceConnectionRepository
 from app.connectors.factory import ConnectorFactory
+from app.ontology.generator import (
+    to_pascal_case_singular, to_camel_case, to_human_label, map_sql_to_xsd, infer_semantic_relationship_names
+)
 from app.utilities.encryption import cipher
 from app.utilities.logger import logger
 
@@ -73,23 +76,36 @@ class MetadataService:
             self.db.commit()
             self.db.refresh(meta_table)
 
-            # 2. Semantic Ontology Class mapped to Physical Table
-            cls_name = str(tbl_name).lower()
+            # 2. Semantic Ontology Class mapped to Physical Table (Singular PascalCase)
+            cls_name = to_pascal_case_singular(tbl_name) if tbl_name else "AnonymousClass"
+
+            # Determine taxonomy subclass
+            dom_lower = str(dom_type).lower()
+            if "dim" in dom_lower or "master" in dom_lower or "customer" in dom_lower or "product" in dom_lower:
+                subclass_str = "eonto:MasterEntity"
+            elif "lookup" in dom_lower or "ref" in dom_lower or "type" in dom_lower:
+                subclass_str = "eonto:ReferenceEntity"
+            elif "bridge" in dom_lower or "associative" in dom_lower or "map" in tbl_name.lower():
+                subclass_str = "eonto:AssociativeEntity"
+            else:
+                subclass_str = "eonto:TransactionalEntity"
 
             onto_class = OntologyClass(
                 project_id=project_id,
                 mapped_table_id=meta_table.id,
                 class_name=cls_name,
                 class_iri=f"http://enterprise.org/ontology#{cls_name}",
-                subclass_of="owl:Thing",
+                subclass_of=subclass_str,
                 domain_type=dom_type,
-                comment=f"Semantic OWL Class representing {tbl_name}"
+                comment=f"Semantic OWL Class representing {to_human_label(tbl_name)}"
             )
             self.db.add(onto_class)
             self.db.commit()
             self.db.refresh(onto_class)
 
-            class_map[cls_name] = onto_class
+            # Store in lookup map for relationship linking (both class name and table name keys)
+            class_map[cls_name.lower()] = onto_class
+            class_map[tbl_name.lower()] = onto_class
 
             # 3. Physical Columns & Semantic Attributes
             pks = cat.get("primary_keys", [])
@@ -121,15 +137,21 @@ class MetadataService:
                 self.db.commit()
                 self.db.refresh(meta_col)
 
-                # Mapped semantic attribute
+                # Mapped semantic attribute (camelCase naming & XSD mapping)
+                attr_prop_name = to_camel_case(c_name)
+                xsd_range = map_sql_to_xsd(c_type)
+                pk_prefix = "[PRIMARY KEY] " if is_pk else ""
+
                 onto_attr = OntologyAttribute(
                     class_id=onto_class.id,
                     mapped_column_id=meta_col.id,
-                    attribute_name=c_name.lower(),
+                    attribute_name=attr_prop_name,
+                    attribute_iri=f"http://enterprise.org/ontology#{attr_prop_name}",
                     property_type="DatatypeProperty",
-                    range_datatype=c_type,
+                    range_datatype=xsd_range,
                     is_primary_key=is_pk,
-                    comment=f"Datatype property mapped to column {c_name}"
+                    parent_class_name=cls_name,
+                    comment=f"{pk_prefix}Datatype property mapped to column {c_name} ({c_type})"
                 )
                 self.db.add(onto_attr)
 
@@ -142,7 +164,6 @@ class MetadataService:
             s_onto = class_map.get(s_tbl.lower())
             if not s_onto:
                 continue
-            s_cap = "".join([p.capitalize() for p in s_tbl.split("_")])
 
             for fk in cat.get("foreign_keys", []):
                 t_tbl = fk.get("foreign_table") if isinstance(fk, dict) else None
@@ -151,16 +172,17 @@ class MetadataService:
                 t_onto = class_map.get(t_tbl.lower())
                 if not t_onto:
                     continue
-                t_cap = "".join([p.capitalize() for p in t_tbl.split("_")])
 
-                fwd_name = f"relatesTo{t_cap}"
-                inv_name = f"has{s_cap}List"
+                fwd_name, inv_name, fwd_label, inv_label = infer_semantic_relationship_names(
+                    s_onto.class_name, t_onto.class_name, fk.get("column")
+                )
 
                 # Forward relationship attribute
                 fwd_attr = OntologyAttribute(
                     class_id=s_onto.id,
                     target_class_id=t_onto.id,
                     attribute_name=fwd_name,
+                    attribute_iri=f"http://enterprise.org/ontology#{fwd_name}",
                     property_type="ObjectProperty",
                     range_datatype=t_onto.class_name,
                     is_primary_key=False,
@@ -178,6 +200,7 @@ class MetadataService:
                     class_id=t_onto.id,
                     target_class_id=s_onto.id,
                     attribute_name=inv_name,
+                    attribute_iri=f"http://enterprise.org/ontology#{inv_name}",
                     property_type="ObjectProperty",
                     range_datatype=s_onto.class_name,
                     is_primary_key=False,

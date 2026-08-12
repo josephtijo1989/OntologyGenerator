@@ -269,3 +269,124 @@ pasteur:bindsCompound a owl:ObjectProperty ;
     empty_resp = client.post("/api/v1/ontology/parse-preview", json={"raw_content": "   "})
     assert empty_resp.status_code == 400
 
+
+def test_ontology_transformation_standards_and_checklist():
+    """
+    Validates all 5 ontology transformation standards & checklist items:
+    1. Class Singular PascalCase & custom label preservation.
+    2. Datatype Properties camelCase & XSD typing.
+    3. Primary Key Articulation (owl:FunctionalProperty, owl:hasKey, isPrimaryKey, hasPrimaryKey).
+    4. Domain-accurate semantic ObjectProperties & bidirectional owl:inverseOf axioms.
+    5. Top-Level Enterprise Taxonomies (MasterEntity, TransactionalEntity, etc.) and business rules.
+    """
+    from app.ontology.generator import (
+        OntologyGenerator, to_pascal_case_singular, to_camel_case, map_sql_to_xsd,
+        resolve_class_name, infer_semantic_relationship_names
+    )
+    from rdflib import OWL, RDF, XSD, Namespace
+
+    # 1. Naming & resolution helpers
+    assert to_pascal_case_singular("customer_profiles") == "CustomerProfile"
+    assert to_pascal_case_singular("orders") == "Order"
+    assert to_pascal_case_singular("order_items") == "OrderItem"
+    assert resolve_class_name("PremiumCustomer_99", "customers") == "PremiumCustomer_99"
+    assert to_camel_case("customer_id") == "customerId"
+    assert to_camel_case("unit_price") == "unitPrice"
+    assert map_sql_to_xsd("BIGINT") == "xsd:integer"
+    assert map_sql_to_xsd("DECIMAL(18,2)") == "xsd:decimal"
+    assert map_sql_to_xsd("DATETIME2") == "xsd:dateTime"
+
+    # 2. Semantic relationship inference (active/passive domain verbs)
+    fwd, inv, f_lbl, i_lbl = infer_semantic_relationship_names("Order", "Customer")
+    assert fwd == "placedBy"
+    assert inv == "hasOrder"
+
+    fwd_item, inv_item, _, _ = infer_semantic_relationship_names("OrderItem", "Order")
+    assert fwd_item == "belongsToOrder"
+    assert inv_item == "hasOrderItem"
+
+    fwd_cat, inv_cat, _, _ = infer_semantic_relationship_names("Product", "Category")
+    assert fwd_cat == "hasCategory"
+    assert inv_cat == "categorizesProduct"
+
+    # 3. Direct Ontology Generator test
+    generator = OntologyGenerator()
+    catalogs = [
+        {
+            "table_name": "customers",
+            "schema_name": "Sales",
+            "inferred_domain_type": "Dimension",
+            "columns_json": [
+                {"name": "customer_id", "type": "INT", "primary_key": True},
+                {"name": "company_name", "type": "VARCHAR"},
+                {"name": "credit_limit", "type": "DECIMAL(10,2)"}
+            ],
+            "primary_keys_json": ["customer_id"],
+            "foreign_keys_json": []
+        },
+        {
+            "table_name": "orders",
+            "schema_name": "Sales",
+            "inferred_domain_type": "Transactional",
+            "columns_json": [
+                {"name": "order_id", "type": "INT", "primary_key": True},
+                {"name": "customer_id", "type": "INT"},
+                {"name": "order_date", "type": "DATETIME"}
+            ],
+            "primary_keys_json": ["order_id"],
+            "foreign_keys_json": [
+                {
+                    "column": "customer_id",
+                    "foreign_table": "customers",
+                    "foreign_column": "customer_id"
+                }
+            ]
+        }
+    ]
+
+    rules = [
+        {
+            "id": "r1",
+            "name": "HighValueCustomerRule",
+            "rule_type": "BUSINESS",
+            "rule_definition": "Credit limit must exceed 10000",
+            "target_entity": "customers",
+            "target_attribute": "credit_limit"
+        }
+    ]
+
+    result = generator.generate_ontology(catalogs, rules=rules, base_iri="http://enterprise.org/ontology#", prefix="eonto")
+    g = result["graph"]
+    ONTO = Namespace("http://enterprise.org/ontology#")
+
+    # Check classes
+    assert len(result["classes"]) == 2
+    customer_cls = next((c for c in result["classes"] if c["label"] == "Customer"), None)
+    order_cls = next((c for c in result["classes"] if c["label"] == "Order"), None)
+    assert customer_cls is not None
+    assert order_cls is not None
+    assert "eonto:MasterEntity" in customer_cls["subclass_of"]
+    assert "eonto:TransactionalEntity" in order_cls["subclass_of"]
+
+    # Check Business Rule annotation
+    assert (ONTO.Customer, ONTO.hasBusinessRule, None) in g
+
+    # Check Primary Key FunctionalProperty and hasPrimaryKey
+    assert (ONTO.customerId, RDF.type, OWL.FunctionalProperty) in g
+    assert (ONTO.customerId, ONTO.isPrimaryKey, None) in g
+    assert (ONTO.Customer, ONTO.hasPrimaryKey, None) in g
+    assert (ONTO.Customer, OWL.hasKey, None) in g
+
+    assert (ONTO.orderId, RDF.type, OWL.FunctionalProperty) in g
+    assert (ONTO.orderId, ONTO.isPrimaryKey, None) in g
+    assert (ONTO.Order, ONTO.hasPrimaryKey, None) in g
+    assert (ONTO.Order, OWL.hasKey, None) in g
+
+    # Check Object Properties & Bidirectional owl:inverseOf
+    assert (ONTO.placedBy, RDF.type, OWL.ObjectProperty) in g
+    assert (ONTO.placedBy, RDF.type, OWL.FunctionalProperty) in g
+    assert (ONTO.hasOrder, RDF.type, OWL.ObjectProperty) in g
+    assert (ONTO.placedBy, OWL.inverseOf, ONTO.hasOrder) in g
+    assert (ONTO.hasOrder, OWL.inverseOf, ONTO.placedBy) in g
+
+
