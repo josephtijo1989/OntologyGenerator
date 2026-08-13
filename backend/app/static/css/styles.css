@@ -93,6 +93,11 @@ body {
   font-family: var(--font-mono);
   font-weight: 700;
   letter-spacing: 0.5px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .project-selector {

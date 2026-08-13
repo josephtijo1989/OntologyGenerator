@@ -13,10 +13,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // Navigation Switcher Listeners
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      const activeBtn = document.querySelector('.nav-btn.active');
+      const prevViewId = activeBtn ? activeBtn.getAttribute('data-view') : null;
+      const viewId = btn.getAttribute('data-view');
+
+      // Clear Upload & View Ontology whenever user leaves that tab
+      if (prevViewId === 'ontology-viewer' && viewId !== 'ontology-viewer') {
+        if (typeof clearOntologyViewerState === 'function') {
+          clearOntologyViewerState(true);
+        }
+      }
+
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
-      const viewId = btn.getAttribute('data-view');
       const targetPanel = document.getElementById('panel-' + viewId);
       if (targetPanel) targetPanel.classList.add('active');
 

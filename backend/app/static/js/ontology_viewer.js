@@ -160,19 +160,14 @@ ecom:referencesProduct a owl:ObjectProperty ;
 function initOntologyViewer() {
   renderViewerPresets();
   setupViewerDragAndDrop();
-  // Auto-load preset 0 on first visit if no data loaded yet
-  if (!viewerOntologyData) {
-    loadViewerPreset(0);
-  }
 }
 
-// Auto-run initOntologyViewer as soon as script loads or DOM is ready
+// Initialize presets and listeners on DOM ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     initOntologyViewer();
   });
 } else {
-  // DOM already loaded
   setTimeout(initOntologyViewer, 0);
 }
 
@@ -315,22 +310,61 @@ function clearViewerInputs(e) {
   }
 }
 
-function resetOntologyViewer() {
+function clearOntologyViewerState(silent = true) {
   viewerOntologyData = null;
   viewerSelectedNode = null;
   viewerCurrentLoadedFile = null;
+  viewerActiveTab = 'graph';
+  viewerPropertyFilter = 'all';
+
   clearViewerInputs();
-  document.getElementById('viewer-results-container').style.display = 'none';
-  document.getElementById('viewer-upload-body').style.display = 'block';
+
+  const resultsContainer = document.getElementById('viewer-results-container');
+  if (resultsContainer) resultsContainer.style.display = 'none';
+
+  const nodeCard = document.getElementById('viewerNodeCard');
+  if (nodeCard) nodeCard.style.display = 'none';
+
+  const uploadBody = document.getElementById('viewer-upload-body');
+  if (uploadBody) uploadBody.style.display = 'block';
+
   const collapseBtn = document.getElementById('viewer-collapse-btn');
   if (collapseBtn) collapseBtn.innerText = '▲ Collapse';
+
+  const formatSelect = document.getElementById('viewer-format-hint');
+  if (formatSelect) formatSelect.value = 'auto';
+
+  const searchInput = document.getElementById('viewer-search-input');
+  if (searchInput) searchInput.value = '';
+
+  const parseBtn = document.getElementById('viewer-parse-btn');
+  if (parseBtn) {
+    parseBtn.disabled = false;
+    parseBtn.innerText = '⚡ Parse & Visualize Ontology';
+  }
+
   if (cyViewerInstance) {
-    try { cyViewerInstance.stop(); } catch(e){}
-    try { cyViewerInstance.destroy(); } catch(e){}
+    try { cyViewerInstance.stop(); } catch (e) {}
+    try { cyViewerInstance.destroy(); } catch (e) {}
     cyViewerInstance = null;
   }
-  showToast('Sandbox reset. You can now upload a new ontology file.', 'info');
+
+  if (!silent) {
+    showToast('Sandbox cleared. You can now upload or paste a new ontology.', 'info');
+  }
 }
+
+function resetOntologyViewer() {
+  clearOntologyViewerState(false);
+}
+
+// Automatically clear viewer state when leaving the page or closing the window
+window.addEventListener('beforeunload', () => {
+  clearOntologyViewerState(true);
+});
+window.addEventListener('pagehide', () => {
+  clearOntologyViewerState(true);
+});
 
 function toggleViewerUploadCollapse() {
   const body = document.getElementById('viewer-upload-body');

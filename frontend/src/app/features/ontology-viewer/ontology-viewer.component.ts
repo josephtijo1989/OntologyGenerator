@@ -653,7 +653,7 @@ interface PresetOption {
   styles: [`
     .viewer-container { display: flex; flex-direction: column; gap: 20px; }
     .header-card { padding: 20px 24px; }
-    .title-row { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+    .title-row { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; flex-wrap: wrap; }
     .sandbox-badge {
       font-size: 11px;
       font-weight: 700;
@@ -663,9 +663,14 @@ interface PresetOption {
       border: 1px solid rgba(16, 185, 129, 0.3);
       padding: 4px 10px;
       border-radius: 20px;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
     }
-    .subtitle { color: var(--text-secondary); font-size: 13px; margin: 0; }
-    .header-actions { display: flex; gap: 10px; }
+    .subtitle { color: var(--text-secondary); font-size: 13px; margin: 0; line-height: 1.4; }
+    .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex-shrink: 0; }
     .btn-primary {
       background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
       color: white;
@@ -1269,16 +1274,11 @@ ecom:referencesProduct a owl:ObjectProperty ;
   constructor(private apiService: ApiService) {}
 
   ngAfterViewInit() {
-    if (!this.parsedData) {
-      this.loadPreset(this.presets[0]);
-    }
+    // Starts with clean, ready-to-ingest sandbox
   }
 
   ngOnDestroy() {
-    if (this.cyInstance) {
-      this.cyInstance.destroy();
-      this.cyInstance = null;
-    }
+    this.resetViewer();
   }
 
   loadPreset(preset: PresetOption) {
