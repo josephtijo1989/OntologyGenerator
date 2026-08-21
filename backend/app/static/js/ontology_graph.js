@@ -196,13 +196,17 @@ function renderOntologyMode() {
 
   classes.forEach(c => {
     const pascalLabel = formatSemanticPascalCase(c.label || c.name || 'Class');
-    validClassMap.set(c.iri, pascalLabel);
+    const cLabel = (c.label || c.name || '').trim();
+    const cLabelLower = cLabel.toLowerCase();
+    const tblName = (c.annotations?.table_name || c.mapped_table_name || '').trim().toLowerCase();
+
+    validClassMap.set(c.iri, c.iri);
+    validClassMap.set(c.iri.toLowerCase(), c.iri);
+    validClassMap.set(cLabel, c.iri);
+    validClassMap.set(cLabelLower, c.iri);
     validClassMap.set(pascalLabel, c.iri);
     validClassMap.set(pascalLabel.toLowerCase(), c.iri);
-    validClassMap.set((c.label || '').toLowerCase(), c.iri);
-    if (c.annotations && c.annotations.table_name) {
-      validClassMap.set(c.annotations.table_name.toLowerCase(), c.iri);
-    }
+    if (tblName) validClassMap.set(tblName, c.iri);
   });
 
 function isPropertyForClass(p, c, pascalLabel, tblName) {
@@ -309,18 +313,20 @@ function isPropertyForClass(p, c, pascalLabel, tblName) {
 
   properties.forEach(p => {
     if (p.property_type === 'ObjectProperty') {
-      const srcLabel = p.domain || p.parent_class;
-      const srcIri = validClassMap.get(srcLabel) || validClassMap.get((srcLabel || '').toLowerCase()) || p.domain;
-      const tgtLabel = p.target_class || (p.range ? String(p.range).split('#').pop() : '');
-      const tgtIri = validClassMap.get(tgtLabel) || validClassMap.get((tgtLabel || '').toLowerCase()) || validClassMap.get(p.range);
+      const rawSrc = p.domain || p.parent_class;
+      const rawTgt = p.target_class || (p.range ? String(p.range).split('#').pop() : '');
+
+      const srcIri = validClassMap.get(rawSrc) || validClassMap.get((rawSrc || '').toLowerCase()) || validClassMap.get(p.parent_class) || validClassMap.get((p.parent_class || '').toLowerCase());
+      const tgtIri = validClassMap.get(rawTgt) || validClassMap.get((rawTgt || '').toLowerCase()) || validClassMap.get(p.range) || validClassMap.get((p.range || '').toLowerCase());
 
       if (srcIri && tgtIri && srcIri !== tgtIri) {
-        const edgeKey = `${srcIri}->${tgtIri}:${p.label}`;
+        const relLabel = formatSemanticCamelCase(p.relationship_name || p.label || p.name || 'relatesTo');
+        const edgeKey = `${srcIri}->${tgtIri}:${relLabel}`;
+
         if (!addedEdgeKeys.has(edgeKey)) {
           addedEdgeKeys.add(edgeKey);
 
           const relConf = calculateRelationshipConfidence(p);
-          const relLabel = formatSemanticCamelCase(p.relationship_name || p.label || 'relatesTo');
 
           cyElements.push({
             group: 'edges',
