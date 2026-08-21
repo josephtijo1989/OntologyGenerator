@@ -63,7 +63,12 @@ class OntologyService:
 
             custom_props = []
             if c.attributes:
+                seen_attrs_in_c = set()
                 for attr in c.attributes:
+                    attr_key = (attr.attribute_name.lower(), attr.property_type.lower())
+                    if attr_key in seen_attrs_in_c:
+                        continue
+                    seen_attrs_in_c.add(attr_key)
                     custom_props.append({
                         "name": attr.attribute_name,
                         "label": attr.attribute_name,
@@ -100,10 +105,21 @@ class OntologyService:
                 cls_schema["mapped_table_name"] = matched_c.mapped_table.table_name if matched_c.mapped_table else None
 
         for prop_schema in onto_result["properties"]:
-            matched_attr = self.db.query(OntologyAttribute).filter(
-                (func.lower(OntologyAttribute.attribute_name) == prop_schema["label"].lower()) |
-                (func.lower(OntologyAttribute.relationship_name) == prop_schema["label"].lower())
-            ).first()
+            parent_cls = (prop_schema.get("parent_class") or "").lower()
+            prop_label = (prop_schema.get("label") or prop_schema.get("name") or "").lower()
+
+            query = self.db.query(OntologyAttribute).filter(
+                (func.lower(OntologyAttribute.attribute_name) == prop_label) |
+                (func.lower(OntologyAttribute.relationship_name) == prop_label)
+            )
+            if parent_cls:
+                query = query.filter(
+                    (func.lower(OntologyAttribute.parent_class_name) == parent_cls) |
+                    (OntologyAttribute.class_id.in_(
+                        self.db.query(OntologyClass.id).filter(func.lower(OntologyClass.class_name) == parent_cls)
+                    ))
+                )
+            matched_attr = query.first()
             if matched_attr:
                 prop_schema["id"] = matched_attr.id
                 if matched_attr.mapped_column:

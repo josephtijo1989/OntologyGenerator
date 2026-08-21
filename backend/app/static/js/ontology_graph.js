@@ -212,16 +212,32 @@ function renderOntologyMode() {
     const isExpanded = expandedClassIds.has(c.iri);
     const tblName = c.annotations?.table_name || c.mapped_table_name || pascalLabel;
 
-    // Filter properties for this class
-    const classDataProps = properties.filter(p =>
-      p.property_type === 'DatatypeProperty' &&
-      (p.domain === c.iri || p.parent_class === c.label || p.parent_class === pascalLabel || (p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase()))
-    );
+    // Filter properties for this class and strictly deduplicate by attribute name
+    const seenDataPropKeys = new Set();
+    const classDataProps = [];
+    properties.forEach(p => {
+      if (p.property_type === 'DatatypeProperty' && (p.domain === c.iri || p.parent_class === c.label || p.parent_class === pascalLabel || (p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase()))) {
+        const propName = formatSemanticCamelCase(p.label || p.name);
+        const propKey = propName.toLowerCase();
+        if (propKey && !seenDataPropKeys.has(propKey)) {
+          seenDataPropKeys.add(propKey);
+          classDataProps.push(p);
+        }
+      }
+    });
 
-    const classObjProps = properties.filter(p =>
-      p.property_type === 'ObjectProperty' &&
-      (p.domain === c.iri || p.parent_class === c.label || p.parent_class === pascalLabel || (p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase()))
-    );
+    const seenObjPropKeys = new Set();
+    const classObjProps = [];
+    properties.forEach(p => {
+      if (p.property_type === 'ObjectProperty' && (p.domain === c.iri || p.parent_class === c.label || p.parent_class === pascalLabel || (p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase()))) {
+        const relName = formatSemanticCamelCase(p.relationship_name || p.label || p.name);
+        const relKey = relName.toLowerCase();
+        if (relKey && !seenObjPropKeys.has(relKey)) {
+          seenObjPropKeys.add(relKey);
+          classObjProps.push(p);
+        }
+      }
+    });
 
     // Compute Confidence & Rationale
     const confInfo = calculateClassConfidence(c, classDataProps, classObjProps);

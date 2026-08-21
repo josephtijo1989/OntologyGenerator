@@ -152,12 +152,24 @@ async function loadOntology() {
         const comment = c.comment || `Class representing ${c.label}`;
 
         const tblName = c.annotations ? (c.annotations.table_name || '') : '';
-        const matchingProps = currentOntologyModel.properties ? currentOntologyModel.properties.filter(p =>
+        const rawMatchingProps = currentOntologyModel.properties ? currentOntologyModel.properties.filter(p =>
           p && (p.domain === c.iri ||
           p.parent_class === c.label ||
           (tblName && p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase()) ||
           (p.domain && p.domain.toLowerCase() === (c.iri || '').toLowerCase()))
         ) : [];
+
+        const seenPropsInCard = new Set();
+        const matchingProps = [];
+        rawMatchingProps.forEach(p => {
+          const pName = (p.relationship_name || p.label || p.name || '').trim().toLowerCase();
+          const pType = (p.property_type || 'DatatypeProperty').toLowerCase();
+          const pKey = `${pType}:${pName}`;
+          if (pName && !seenPropsInCard.has(pKey)) {
+            seenPropsInCard.add(pKey);
+            matchingProps.push(p);
+          }
+        });
 
         const dataProps = matchingProps.filter(p => p.property_type === 'DatatypeProperty');
         const objProps = matchingProps.filter(p => p.property_type === 'ObjectProperty');
