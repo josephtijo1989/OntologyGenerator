@@ -522,13 +522,33 @@ function isPropertyForClass(p, c, pascalLabel, tblName) {
       {
         selector: '.faded',
         style: {
-          'opacity': 0.12
+          'opacity': 0.15
         }
       },
       {
-        selector: '.highlighted-edge',
+        selector: 'edge.highlighted-edge',
         style: {
           'width': 2.6,
+          'line-color': '#0284c7',
+          'target-arrow-color': '#0284c7',
+          'opacity': 1
+        }
+      },
+      {
+        selector: 'edge[edgeType = "SubClassOf"].highlighted-edge',
+        style: {
+          'width': 2.2,
+          'line-style': 'dashed',
+          'line-color': '#0284c7',
+          'target-arrow-color': '#0284c7',
+          'opacity': 1
+        }
+      },
+      {
+        selector: 'edge[edgeType = "ObjectProperty"].highlighted-edge',
+        style: {
+          'width': 2.8,
+          'line-style': 'solid',
           'line-color': '#0284c7',
           'target-arrow-color': '#0284c7',
           'opacity': 1
@@ -814,12 +834,26 @@ function setupOntologyGraphEvents(cy) {
     const node = evt.target;
     const nData = node.data();
 
-    // Neighborhood Highlighting
-    const neighborhood = node.neighborhood().add(node);
+    // Reset all element classes
     cy.elements().addClass('faded').removeClass('highlighted highlighted-edge');
-    node.addClass('highlighted');
-    node.connectedEdges().addClass('highlighted-edge').removeClass('faded');
-    node.neighborhood('node').removeClass('faded');
+
+    // Highlight selected node
+    node.addClass('highlighted').removeClass('faded');
+
+    // Highlight direct connected edges (relationships & subclass edges)
+    const connEdges = node.connectedEdges();
+    connEdges.addClass('highlighted-edge').removeClass('faded');
+    connEdges.connectedNodes().removeClass('faded');
+
+    // Ensure parent superclasses (e.g. owl:Thing or parent category) are un-faded & connected
+    const outSubEdges = node.outgoers('edge[edgeType = "SubClassOf"]');
+    outSubEdges.addClass('highlighted-edge').removeClass('faded');
+    outSubEdges.target().removeClass('faded');
+
+    // Ensure child subclasses (e.g. Vodaphone, Airtel) are un-faded & connected
+    const inSubEdges = node.incomers('edge[edgeType = "SubClassOf"]');
+    inSubEdges.addClass('highlighted-edge').removeClass('faded');
+    inSubEdges.source().removeClass('faded');
 
     openOntoDetailsPanel(nData, 'node');
   });
