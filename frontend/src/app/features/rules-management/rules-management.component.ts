@@ -69,7 +69,7 @@ import { Subscription } from 'rxjs';
           </div>
           <div class="form-group">
             <label>Rule Name <span style="color: var(--accent-rose);">*</span></label>
-            <input type="text" [(ngModel)]="newRule.name" placeholder="e.g. Mask Customer Email" class="form-input">
+            <input type="text" [(ngModel)]="newRule.name" placeholder="Rule Name" class="form-input">
           </div>
           <div class="form-group">
             <label>Rule Type</label>
@@ -149,9 +149,9 @@ export class RulesManagementComponent implements OnInit, OnDestroy {
   rules: any[] = [];
   showModal = false;
   newRule = {
-    name: 'Mask Email PII Column',
+    name: '',
     rule_type: 'MASKING',
-    definition_json: { target_column: 'Email', mask_type: 'SHA256_HASH' },
+    definition_json: {},
     is_active: true
   };
 

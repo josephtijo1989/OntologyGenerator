@@ -538,7 +538,7 @@ interface PresetOption {
             <div class="form-row" style="display: flex; gap: 12px;">
               <div class="form-group half" style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
                 <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Class Name / Label <span style="color: var(--accent-rose);">*</span></label>
-                <input type="text" [(ngModel)]="newSubclassLabel" placeholder="e.g. TherapeuticAntibody or BioAssay" class="form-input font-mono" style="padding: 8px 10px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-size: 12px;" />
+                <input type="text" [(ngModel)]="newSubclassLabel" placeholder="Class Name / Label" class="form-input font-mono" style="padding: 8px 10px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-size: 12px;" />
                 <span class="form-hint" *ngIf="parsedData?.base_iri" style="font-size: 10px; color: var(--accent-cyan); font-family: var(--font-mono); margin-top: 2px;">
                   IRI: {{ parsedData.base_iri }}{{ newSubclassLabel || 'ClassName' }}
                 </span>
@@ -567,7 +567,7 @@ interface PresetOption {
               </div>
               <div class="form-group half" style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
                 <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Description / RDFS Comment</label>
-                <input type="text" [(ngModel)]="newSubclassComment" placeholder="e.g. Biological macromolecule with antigen binding specificity" class="form-input" style="padding: 8px 10px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-size: 12px;" />
+                <input type="text" [(ngModel)]="newSubclassComment" placeholder="Semantic Description" class="form-input" style="padding: 8px 10px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-size: 12px;" />
               </div>
             </div>
 

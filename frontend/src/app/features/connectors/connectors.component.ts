@@ -62,7 +62,7 @@ import { Subscription } from 'rxjs';
           </div>
           <div class="form-group">
             <label>Connection Name <span style="color: var(--accent-rose);">*</span></label>
-            <input type="text" [(ngModel)]="newConn.name" placeholder="e.g. Production SQL Server" class="form-input">
+            <input type="text" [(ngModel)]="newConn.name" placeholder="Connection Name" class="form-input">
           </div>
           <div class="form-group">
             <label>Connector Type</label>
@@ -81,25 +81,25 @@ import { Subscription } from 'rxjs';
           <div class="form-row">
             <div class="form-group half">
               <label>Host Name / IP</label>
-              <input type="text" [(ngModel)]="newConn.host" placeholder="e.g. localhost or 192.168.1.10" class="form-input font-mono">
+              <input type="text" [(ngModel)]="newConn.host" placeholder="Host Name or IP Address" class="form-input font-mono">
             </div>
             <div class="form-group half">
               <label>Database Port</label>
-              <input type="number" [(ngModel)]="newConn.port" placeholder="e.g. 1433" class="form-input font-mono">
+              <input type="number" [(ngModel)]="newConn.port" placeholder="Port Number" class="form-input font-mono">
             </div>
           </div>
           <div class="form-group">
             <label>Database Name</label>
-            <input type="text" [(ngModel)]="newConn.database_name" placeholder="e.g. AnalyticsDB" class="form-input font-mono">
+            <input type="text" [(ngModel)]="newConn.database_name" placeholder="Database Name" class="form-input font-mono">
           </div>
           <div class="form-row">
             <div class="form-group half">
               <label>Username</label>
-              <input type="text" [(ngModel)]="newConn.username" placeholder="e.g. sa or domain user" class="form-input font-mono">
+              <input type="text" [(ngModel)]="newConn.username" placeholder="Username" class="form-input font-mono">
             </div>
             <div class="form-group half">
               <label>Password</label>
-              <input type="password" [(ngModel)]="newConn.password" placeholder="Enter database password" class="form-input font-mono">
+              <input type="password" [(ngModel)]="newConn.password" placeholder="Password" class="form-input font-mono">
             </div>
           </div>
           <div class="modal-actions flex-between" style="margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border-color);">

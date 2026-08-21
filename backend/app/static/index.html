@@ -746,15 +746,15 @@
       </div>
       <div class="form-group">
         <label>Project Name</label>
-        <input type="text" id="np-name" placeholder="e.g. Enterprise ERP Transformation">
+        <input type="text" id="np-name" placeholder="Project Name">
       </div>
       <div class="form-group">
         <label>Project Code</label>
-        <input type="text" id="np-code" placeholder="e.g. ERP_2026">
+        <input type="text" id="np-code" placeholder="Project Code">
       </div>
       <div class="form-group">
         <label>Description</label>
-        <textarea id="np-desc" placeholder="High-level objectives for this data graph initiative..."></textarea>
+        <textarea id="np-desc" placeholder="Project goals and semantic domain context..."></textarea>
       </div>
       <div class="flex-between" style="margin-top: 12px;">
         <button class="btn-secondary" onclick="closeModal('projectModal')">Cancel</button>
@@ -803,7 +803,7 @@
       </div>
       <div class="form-group">
         <label>Connector Display Name</label>
-        <input type="text" id="nc-name" placeholder="e.g. Core ERP SQL Server DB">
+        <input type="text" id="nc-name" placeholder="Connector Display Name">
       </div>
       <div class="form-row">
         <div class="form-group half">
@@ -820,27 +820,27 @@
         </div>
         <div class="form-group half">
           <label>Database Port</label>
-          <input type="number" id="nc-port" placeholder="e.g. 1433">
+          <input type="number" id="nc-port" placeholder="Port Number">
         </div>
       </div>
       <div class="form-row">
         <div class="form-group half">
           <label>Host Name / IP</label>
-          <input type="text" id="nc-host" placeholder="e.g. DESKTOP-43S0L2R or 192.168.1.10">
+          <input type="text" id="nc-host" placeholder="Host Name or IP Address">
         </div>
         <div class="form-group half">
           <label>Database Name</label>
-          <input type="text" id="nc-dbname" placeholder="e.g. FouridsAnalytics">
+          <input type="text" id="nc-dbname" placeholder="Database Name">
         </div>
       </div>
       <div class="form-row">
         <div class="form-group half">
           <label>Username</label>
-          <input type="text" id="nc-user" placeholder="e.g. sa or domain user (leave blank for Windows Auth)">
+          <input type="text" id="nc-user" placeholder="Username">
         </div>
         <div class="form-group half">
           <label>Password</label>
-          <input type="password" id="nc-pass" placeholder="Enter password">
+          <input type="password" id="nc-pass" placeholder="Password">
         </div>
       </div>
       <div class="flex-between" style="margin-top: 12px;">
@@ -859,7 +859,7 @@
       </div>
       <div class="form-group">
         <label>Graph Config Name</label>
-        <input type="text" id="ng-name" placeholder="e.g. Production Neo4j Instance">
+        <input type="text" id="ng-name" placeholder="Graph Config Name">
       </div>
       <div class="form-row">
         <div class="form-group half">
@@ -872,21 +872,21 @@
         </div>
         <div class="form-group half">
           <label>Bolt / HTTP Port</label>
-          <input type="number" id="ng-port" placeholder="e.g. 7687">
+          <input type="number" id="ng-port" placeholder="Port Number">
         </div>
       </div>
       <div class="form-group">
         <label>Host Name / URI</label>
-        <input type="text" id="ng-host" placeholder="e.g. bolt://localhost:7687">
+        <input type="text" id="ng-host" placeholder="Host Name or URI">
       </div>
       <div class="form-row">
         <div class="form-group half">
           <label>Username / Auth User</label>
-          <input type="text" id="ng-user" placeholder="e.g. neo4j">
+          <input type="text" id="ng-user" placeholder="Username">
         </div>
         <div class="form-group half">
           <label>Password</label>
-          <input type="password" id="ng-pass" placeholder="Enter password">
+          <input type="password" id="ng-pass" placeholder="Password">
         </div>
       </div>
       <div class="flex-between" style="margin-top: 12px;">
@@ -906,7 +906,7 @@
       </div>
       <div class="form-group" style="margin-bottom: 18px;">
         <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block;">Rule Name</label>
-        <input type="text" id="nr-name" placeholder="e.g. Mask Customer Email & SSN" style="padding: 10px 14px; font-size: 14px; width: 100%;">
+        <input type="text" id="nr-name" placeholder="Rule Name" style="padding: 10px 14px; font-size: 14px; width: 100%;">
       </div>
       <div class="form-row" style="margin-bottom: 18px; display: flex; gap: 16px;">
         <!-- Searchable Target Entity Combobox -->
@@ -931,7 +931,7 @@
       </div>
       <div class="form-group" style="margin-bottom: 20px;">
         <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block;">Rule Definition (Plain English)</label>
-        <textarea id="nr-def" style="width: 100%; height: 120px; padding: 12px 14px; font-size: 14px; line-height: 1.5; background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; resize: vertical;" placeholder="e.g. Customer email addresses must be hashed and masked for PII compliance"></textarea>
+        <textarea id="nr-def" style="width: 100%; height: 120px; padding: 12px 14px; font-size: 14px; line-height: 1.5; background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; resize: vertical;" placeholder="Rule definition and semantic governance logic..."></textarea>
       </div>
       <div class="flex-between" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color);">
         <button class="btn-secondary" onclick="closeModal('ruleModal')" style="padding: 10px 22px; font-size: 14px;">Cancel</button>
@@ -1018,7 +1018,7 @@
       <div class="form-row" style="margin-top: 12px;">
         <div class="form-group half">
           <label>OWL Class Label Name</label>
-          <input type="text" id="ocm-label" placeholder="e.g. CustomerMaster">
+          <input type="text" id="ocm-label" placeholder="Class Name / Label">
         </div>
         <div class="form-group half">
           <label>Superclass Taxonomy / Parent Class (rdfs:subClassOf)</label>
@@ -1093,7 +1093,7 @@
       <div class="form-row" style="margin-top: 12px;">
         <div class="form-group half">
           <label style="font-size: 12px; font-weight: 600;">Subclass Name / Label <span style="color: var(--accent-rose);">*</span></label>
-          <input type="text" id="vsc-label" placeholder="e.g. HumanProtein or VIPCustomer" style="font-size: 12px;">
+          <input type="text" id="vsc-label" placeholder="Class Name / Label" style="font-size: 12px;">
         </div>
         <div class="form-group half">
           <label style="font-size: 12px; font-weight: 600;">Parent SuperClass (rdfs:subClassOf) <span style="color: var(--accent-rose);">*</span></label>
@@ -1116,7 +1116,7 @@
         </div>
         <div class="form-group half">
           <label style="font-size: 12px; font-weight: 600;">Description / RDFS Comment</label>
-          <input type="text" id="vsc-comment" placeholder="e.g. Specialized biological protein macromolecule" style="font-size: 12px;">
+          <input type="text" id="vsc-comment" placeholder="Semantic Description" style="font-size: 12px;">
         </div>
       </div>
 
@@ -1240,7 +1240,7 @@
       <div class="form-row" style="margin-top: 14px;">
         <div class="form-group half">
           <label style="font-size: 12px; font-weight: 600;">Class Label / Name <span style="color: var(--accent-rose);">*</span></label>
-          <input type="text" id="goc-label" placeholder="e.g. PremiumCustomer or AssayMeasurement" style="font-size: 12px;">
+          <input type="text" id="goc-label" placeholder="Class Name / Label" style="font-size: 12px;">
         </div>
         <div class="form-group half">
           <label style="font-size: 12px; font-weight: 600;">Parent SuperClass (rdfs:subClassOf) <span style="color: var(--accent-rose);">*</span></label>

@@ -67,11 +67,11 @@ import { ProjectStateService, ProjectModel } from '../../core/services/project-s
           </div>
           <div class="form-group">
             <label>Project Name <span style="color: var(--accent-rose);">*</span></label>
-            <input type="text" [(ngModel)]="newProj.name" placeholder="e.g. Core Banking Data Fabric" class="form-input">
+            <input type="text" [(ngModel)]="newProj.name" placeholder="Project Name" class="form-input">
           </div>
           <div class="form-group">
             <label>Project Code <span style="color: var(--accent-rose);">*</span></label>
-            <input type="text" [(ngModel)]="newProj.code" placeholder="e.g. BANK_FABRIC_01" class="form-input font-mono">
+            <input type="text" [(ngModel)]="newProj.code" placeholder="Project Code" class="form-input font-mono">
           </div>
           <div class="form-group">
             <label>Description</label>
