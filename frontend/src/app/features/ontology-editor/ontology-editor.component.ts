@@ -392,7 +392,7 @@ import cytoscape, { Core } from 'cytoscape';
 
       <!-- Create Class Modal Overlay -->
       <div class="modal-overlay" *ngIf="isCreateModalOpen">
-        <div class="glass-card modal-box" style="width: 720px; max-width: 94vw; max-height: 92vh; overflow-y: auto;">
+        <div class="glass-card modal-box" style="width: 720px; min-width: 480px; min-height: 400px; max-width: 96vw; max-height: 94vh; overflow: auto; resize: both;">
           <div class="flex-between modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 14px;">
             <div>
               <h4 style="font-size: 17px; margin: 0; color: var(--accent-cyan); display: flex; align-items: center; gap: 8px;">
