@@ -507,6 +507,7 @@ function renderOntologyMode() {
 // DYNAMIC SVG CARD GENERATORS FOR ONTOLOGY & BASE CLASS NODES
 // ==========================================================================
 function generateBaseClassCardSvg({ label, width, height }) {
+  const cornerRadius = (height - 3) / 2;
   return `data:image/svg+xml;utf8,` + encodeURIComponent(`
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
       <defs>
@@ -514,12 +515,12 @@ function generateBaseClassCardSvg({ label, width, height }) {
           <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.08"/>
         </filter>
       </defs>
-      <rect x="1.5" y="1.5" width="${width - 3}" height="${height - 3}" rx="10" ry="10" fill="#f8fafc" stroke="#475569" stroke-width="1.8" stroke-dasharray="4,2" filter="url(#baseShadow)" />
-      <rect x="1.5" y="1.5" width="4.5" height="${height - 3}" rx="2" fill="#334155" />
+      <rect x="1.5" y="1.5" width="${width - 3}" height="${height - 3}" rx="${cornerRadius}" ry="${cornerRadius}" fill="#f8fafc" stroke="#475569" stroke-width="1.8" stroke-dasharray="4,2" filter="url(#baseShadow)" />
+      <circle cx="18" cy="${height / 2}" r="6" fill="#334155" />
       
       <!-- Base Class Label -->
-      <text x="14" y="${height / 2 + 5}" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="700" fill="#1e293b">
-        🏛️  ${escapeXml(label)}
+      <text x="32" y="${height / 2 + 5}" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="700" fill="#1e293b">
+        🏛️ ${escapeXml(label)}
       </text>
     </svg>
   `);
@@ -541,7 +542,8 @@ function generateOntologyClassCardSvg({ label, domainType, isExpanded, dataProps
   }
 
   if (!isExpanded) {
-    // Clean, elegant card showing ONLY class name
+    const cornerRadius = (height - 3) / 2;
+    // Clean, elegant circular pill card showing class name and circular accent dot
     return `data:image/svg+xml;utf8,` + encodeURIComponent(`
       <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
         <defs>
@@ -549,12 +551,12 @@ function generateOntologyClassCardSvg({ label, domainType, isExpanded, dataProps
             <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.06"/>
           </filter>
         </defs>
-        <rect x="1.5" y="1.5" width="${width - 3}" height="${height - 3}" rx="10" ry="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#cardShadow)" />
-        <rect x="1.5" y="1.5" width="4.5" height="${height - 3}" rx="2" fill="${accentColor}" />
+        <rect x="1.5" y="1.5" width="${width - 3}" height="${height - 3}" rx="${cornerRadius}" ry="${cornerRadius}" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#cardShadow)" />
+        <circle cx="18" cy="${height / 2}" r="6" fill="${accentColor}" />
         
-        <!-- Only Class Name with Icon -->
-        <text x="14" y="${height / 2 + 5}" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="600" fill="#0f172a">
-          ${icon}  ${escapeXml(label)}
+        <!-- Class Name with Domain Accent -->
+        <text x="32" y="${height / 2 + 5}" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13.5" font-weight="600" fill="#0f172a">
+          ${escapeXml(label)}
         </text>
       </svg>
     `);

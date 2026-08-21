@@ -768,27 +768,28 @@ function initViewerCytoscape() {
 
 // Fallback SVG Generators if not present globally
 function generateViewerBaseClassSvg({ label, width, height }) {
+  const cornerRadius = (height - 3) / 2;
   return `data:image/svg+xml;utf8,` + encodeURIComponent(`
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-      <rect x="1.5" y="1.5" width="${width - 3}" height="${height - 3}" rx="10" ry="10" fill="#f8fafc" stroke="#475569" stroke-width="1.8" stroke-dasharray="4,2" />
-      <rect x="1.5" y="1.5" width="4.5" height="${height - 3}" rx="2" fill="#334155" />
-      <text x="14" y="${height / 2 + 5}" font-family="Inter, sans-serif" font-size="13.5" font-weight="700" fill="#1e293b">🏛️ ${label}</text>
+      <rect x="1.5" y="1.5" width="${width - 3}" height="${height - 3}" rx="${cornerRadius}" ry="${cornerRadius}" fill="#f8fafc" stroke="#475569" stroke-width="1.8" stroke-dasharray="4,2" />
+      <circle cx="18" cy="${height / 2}" r="6" fill="#334155" />
+      <text x="32" y="${height / 2 + 5}" font-family="Inter, sans-serif" font-size="13.5" font-weight="700" fill="#1e293b">🏛️ ${label}</text>
     </svg>
   `);
 }
 
 function generateViewerClassSvg({ label, domainType, width, height }) {
   let accentColor = '#0284c7';
-  let icon = '🟠';
-  if (domainType === 'Fact') { accentColor = '#4338ca'; icon = '🧬'; }
-  else if (domainType === 'Lookup') { accentColor = '#d97706'; icon = '📦'; }
-  else if (domainType === 'SCD') { accentColor = '#059669'; icon = '🏛️'; }
+  if (domainType === 'Fact') { accentColor = '#4338ca'; }
+  else if (domainType === 'Lookup') { accentColor = '#d97706'; }
+  else if (domainType === 'SCD') { accentColor = '#059669'; }
 
+  const cornerRadius = (height - 3) / 2;
   return `data:image/svg+xml;utf8,` + encodeURIComponent(`
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-      <rect x="1.5" y="1.5" width="${width - 3}" height="${height - 3}" rx="10" ry="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
-      <rect x="1.5" y="1.5" width="4.5" height="${height - 3}" rx="2" fill="${accentColor}" />
-      <text x="14" y="${height / 2 + 5}" font-family="Inter, sans-serif" font-size="13.5" font-weight="600" fill="#0f172a">${icon} ${label}</text>
+      <rect x="1.5" y="1.5" width="${width - 3}" height="${height - 3}" rx="${cornerRadius}" ry="${cornerRadius}" fill="#ffffff" stroke="${accentColor}" stroke-width="1.8" />
+      <circle cx="18" cy="${height / 2}" r="6" fill="${accentColor}" />
+      <text x="32" y="${height / 2 + 5}" font-family="Inter, sans-serif" font-size="13.5" font-weight="600" fill="#0f172a">${label}</text>
     </svg>
   `);
 }
