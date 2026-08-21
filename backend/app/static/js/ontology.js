@@ -152,12 +152,15 @@ async function loadOntology() {
         const comment = c.comment || `Class representing ${c.label}`;
 
         const tblName = c.annotations ? (c.annotations.table_name || '') : '';
-        const rawMatchingProps = currentOntologyModel.properties ? currentOntologyModel.properties.filter(p =>
-          p && (p.domain === c.iri ||
-          p.parent_class === c.label ||
-          (tblName && p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase()) ||
-          (p.domain && p.domain.toLowerCase() === (c.iri || '').toLowerCase()))
-        ) : [];
+        const rawMatchingProps = currentOntologyModel.properties ? currentOntologyModel.properties.filter(p => {
+          if (!p) return false;
+          const pParent = (p.parent_class || '').toLowerCase();
+          const cLabel = (c.label || '').toLowerCase();
+          if (pParent) return pParent === cLabel;
+          const pDomain = (p.domain || '').toLowerCase();
+          if (pDomain) return pDomain === (c.iri || '').toLowerCase() || pDomain.endsWith('#' + cLabel);
+          return tblName && p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase();
+        }) : [];
 
         const seenPropsInCard = new Set();
         const matchingProps = [];
@@ -463,12 +466,15 @@ function openOntologyClassModal(target) {
   document.getElementById('ocm-comment').value = c.comment || `Class representing ${c.label}`;
 
   const tblName = c.annotations ? (c.annotations.table_name || '') : '';
-  const matchingProps = currentOntologyModel.properties ? currentOntologyModel.properties.filter(p =>
-    p && (p.domain === c.iri ||
-    p.parent_class === c.label ||
-    (tblName && p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase()) ||
-    (p.domain && p.domain.toLowerCase() === (c.iri || '').toLowerCase()))
-  ) : [];
+  const matchingProps = currentOntologyModel.properties ? currentOntologyModel.properties.filter(p => {
+    if (!p) return false;
+    const pParent = (p.parent_class || '').toLowerCase();
+    const cLabel = (c.label || '').toLowerCase();
+    if (pParent) return pParent === cLabel;
+    const pDomain = (p.domain || '').toLowerCase();
+    if (pDomain) return pDomain === (c.iri || '').toLowerCase() || pDomain.endsWith('#' + cLabel);
+    return tblName && p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase();
+  }) : [];
 
   const tbody = document.getElementById('ocm-props-tbody');
   tbody.innerHTML = '';

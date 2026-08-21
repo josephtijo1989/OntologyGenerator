@@ -205,6 +205,26 @@ function renderOntologyMode() {
     }
   });
 
+function isPropertyForClass(p, c, pascalLabel, tblName) {
+  if (!p) return false;
+  const cLabelLower = (c.label || c.name || '').toLowerCase();
+  const pascalLower = (pascalLabel || '').toLowerCase();
+  const cIriLower = (c.iri || '').toLowerCase();
+  const pParentLower = (p.parent_class || '').toLowerCase();
+  const pDomainLower = (p.domain || '').toLowerCase();
+
+  if (pParentLower) {
+    return pParentLower === cLabelLower || pParentLower === pascalLower;
+  }
+  if (pDomainLower) {
+    return pDomainLower === cIriLower || pDomainLower.endsWith('#' + cLabelLower) || pDomainLower.endsWith('#' + pascalLower);
+  }
+  if (p.table_name && tblName) {
+    return p.table_name.toLowerCase() === tblName.toLowerCase();
+  }
+  return false;
+}
+
   // Build Ontology Class Card Nodes (Collapsed or Expanded)
   classes.forEach(c => {
     const pascalLabel = formatSemanticPascalCase(c.label || c.name || 'Class');
@@ -216,7 +236,7 @@ function renderOntologyMode() {
     const seenDataPropKeys = new Set();
     const classDataProps = [];
     properties.forEach(p => {
-      if (p.property_type === 'DatatypeProperty' && (p.domain === c.iri || p.parent_class === c.label || p.parent_class === pascalLabel || (p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase()))) {
+      if (p.property_type === 'DatatypeProperty' && isPropertyForClass(p, c, pascalLabel, tblName)) {
         const propName = formatSemanticCamelCase(p.label || p.name);
         const propKey = propName.toLowerCase();
         if (propKey && !seenDataPropKeys.has(propKey)) {
@@ -229,7 +249,7 @@ function renderOntologyMode() {
     const seenObjPropKeys = new Set();
     const classObjProps = [];
     properties.forEach(p => {
-      if (p.property_type === 'ObjectProperty' && (p.domain === c.iri || p.parent_class === c.label || p.parent_class === pascalLabel || (p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase()))) {
+      if (p.property_type === 'ObjectProperty' && isPropertyForClass(p, c, pascalLabel, tblName)) {
         const relName = formatSemanticCamelCase(p.relationship_name || p.label || p.name);
         const relKey = relName.toLowerCase();
         if (relKey && !seenObjPropKeys.has(relKey)) {
@@ -1270,7 +1290,7 @@ function renderMappingMode() {
   targetsContainer.innerHTML = classes.map(c => {
     const pascalLabel = formatSemanticPascalCase(c.label || c.name || 'Class');
     const tblName = c.annotations?.table_name || c.mapped_table_name || pascalLabel;
-    const matchingProps = properties.filter(p => p.domain === c.iri || p.parent_class === c.label || (p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase()));
+    const matchingProps = properties.filter(p => isPropertyForClass(p, c, pascalLabel, tblName));
 
     totalMappings += matchingProps.length + 1;
 
