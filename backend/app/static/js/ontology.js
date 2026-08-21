@@ -236,8 +236,7 @@ async function loadOntology() {
               ${pkBadge}
             </div>
             <div style="display: flex; gap: 8px;">
-              <button class="btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="toggleInlineEdit(${idx})">✏️ Quick Edit</button>
-              <button class="btn-primary" style="font-size: 11px; padding: 4px 10px;" onclick="openOntologyClassModal(${idx})">🔍 Full Modal & Properties</button>
+              <button class="btn-primary glow-btn" style="font-size: 11px; padding: 4px 12px;" onclick="openOntologyClassModal(${idx})">✏️ Quick Edit Class & Properties</button>
             </div>
           </div>
 
@@ -252,67 +251,6 @@ async function loadOntology() {
 
           ${relsBadgeHtml}
           ${rulesBadgeHtml}
-
-          <!-- Inline Quick Edit Form -->
-          <div id="inline-edit-${idx}" style="display: none; margin-top: 10px; padding: 12px; border: 1px dashed var(--accent-cyan); background: rgba(6, 182, 212, 0.05); border-radius: 6px;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 11px;">Class Label Name</label>
-                <input type="text" id="inline-label-${idx}" value="${c.label}" style="padding: 4px 8px; font-size: 12px;">
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 11px;">Superclass Taxonomy / Parent</label>
-                <select id="inline-subclass-${idx}" style="padding: 4px 8px; font-size: 12px; background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px; width: 100%;">
-                  ${getValidSuperclassOptions(c.label, currentOntologyModel.classes, subClass).map(opt => `<option value="${opt}" ${opt === subClass ? 'selected' : ''}>${opt}</option>`).join('')}
-                </select>
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 11px;">Domain Classification</label>
-                <select id="inline-domain-${idx}" style="padding: 4px 8px; font-size: 12px; background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px;">
-                  <option value="Lookup" ${domainType==='Lookup'?'selected':''}>Lookup</option>
-                  <option value="Fact" ${domainType==='Fact'?'selected':''}>Fact</option>
-                  <option value="Dimension" ${domainType==='Dimension'?'selected':''}>Dimension</option>
-                  <option value="SCD" ${domainType==='SCD'?'selected':''}>SCD</option>
-                  <option value="Transactional" ${domainType==='Transactional'?'selected':''}>Transactional</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group" style="margin-top: 8px; margin-bottom: 8px;">
-              <label style="font-size: 11px;">Description / RDFS Comment</label>
-              <input type="text" id="inline-comment-${idx}" value="${comment}" style="padding: 4px 8px; font-size: 12px; width: 100%;">
-            </div>
-
-            <div class="flex-between" style="margin-top: 10px;">
-              <span style="font-size: 12px; font-weight: 600; color: var(--text-primary);">Associated Attributes, Relationships & Inverse</span>
-              <div style="display: flex; gap: 6px;">
-                <button class="btn-secondary" style="font-size: 11px; padding: 2px 8px;" onclick="addInlinePropRow(${idx}, 'DatatypeProperty')">➕ Add Datatype</button>
-                <button class="btn-primary" style="font-size: 11px; padding: 2px 8px;" onclick="addInlinePropRow(${idx}, 'ObjectProperty')">🔗 Add Relationship</button>
-              </div>
-            </div>
-            <div style="max-height: 380px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 6px;">
-              <table class="data-table" style="font-size: 11px;">
-                <thead>
-                  <tr>
-                    <th>Property / Rel Name</th>
-                    <th>Type</th>
-                    <th>Range / Target Class</th>
-                    <th>Parent Class</th>
-                    <th>Inverse Relationship</th>
-                    <th style="width: 45px; text-align: center;">🔑 PK</th>
-                    <th style="width: 40px; text-align: center;">Action</th>
-                  </tr>
-                </thead>
-                <tbody id="inline-props-tbody-${idx}">
-                  ${propRowsHtml}
-                </tbody>
-              </table>
-            </div>
-
-            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
-              <button class="btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="toggleInlineEdit(${idx})">Cancel</button>
-              <button class="btn-primary" style="font-size: 11px; padding: 4px 10px;" onclick="submitInlineUpdate(${idx})">💾 Save Changes & Properties</button>
-            </div>
-          </div>
 
           <div style="display: flex; gap: 16px; margin-top: 6px; font-size: 11px; color: var(--accent-cyan); border-top: 1px dashed var(--border-color); padding-top: 6px;">
             <span>📊 Data Properties: <strong>${dataProps.length}</strong></span>
@@ -337,8 +275,7 @@ async function loadOntology() {
 }
 
 function toggleInlineEdit(idx) {
-  const el = document.getElementById(`inline-edit-${idx}`);
-  if (el) el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+  openOntologyClassModal(idx);
 }
 
 function addInlinePropRow(idx, propType = 'DatatypeProperty') {
