@@ -254,16 +254,6 @@ interface PresetOption {
             <div class="toolbar-right">
               <button class="btn-primary btn-sm glow-btn" (click)="openCreateClassModal()" title="Create New Semantic Class">➕ Create Class</button>
               <button class="btn-sm btn-subclass-nav" (click)="openCreateClassModal()" title="Add Subclass to Hierarchy">➕ Add Subclass</button>
-              <div class="layout-selector">
-                <label>Layout:</label>
-                <select [(ngModel)]="graphLayout" (change)="applyLayout()" class="layout-dropdown">
-                  <option value="cose">CoSE (Force-Directed Physics)</option>
-                  <option value="circle">Circle Layout</option>
-                  <option value="breadthfirst">Breadth-First Hierarchy</option>
-                  <option value="grid">Orthogonal Grid</option>
-                  <option value="concentric">Concentric Rings</option>
-                </select>
-              </div>
               <button class="btn-icon" (click)="zoomIn()" title="Zoom In">🔍+</button>
               <button class="btn-icon" (click)="zoomOut()" title="Zoom Out">🔍-</button>
               <button class="btn-icon" (click)="fitGraph()" title="Fit to Screen">⛶ Fit</button>

@@ -548,17 +548,7 @@
           <!-- Sub-Tab 1: Graph View -->
           <div id="v-pane-graph" style="position: relative; width: 100%;">
             <!-- Graph Toolbar -->
-            <div class="glass-card" style="padding: 8px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Layout:</span>
-                <select id="viewerLayoutSelect" class="project-selector" style="font-size: 11px; padding: 4px 8px; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-color);" onchange="changeViewerLayout(this.value)">
-                  <option value="cose">🌐 CoSE (Force-Directed Physics)</option>
-                  <option value="circle">⭕ Circle Layout</option>
-                  <option value="breadthfirst">🌲 Breadth-First Hierarchy</option>
-                  <option value="grid">🧱 Orthogonal Grid</option>
-                  <option value="concentric">🎯 Concentric Rings</option>
-                </select>
-              </div>
+            <div class="glass-card" style="padding: 8px 14px; margin-bottom: 8px; display: flex; justify-content: flex-end; align-items: center;">
               <div style="display: flex; gap: 6px; align-items: center;">
                 <button class="btn-primary" style="font-size: 11px; padding: 4px 10px;" onclick="openViewerSubclassModal()">➕ Add Subclass</button>
                 <button class="btn-sm" onclick="zoomViewerGraph(1.2)" title="Zoom In">➕</button>
