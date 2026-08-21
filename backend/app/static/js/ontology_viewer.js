@@ -793,22 +793,6 @@ function generateViewerClassSvg({ label, domainType, width, height }) {
   `);
 }
 
-  cyViewerInstance.on('tap', 'node', (evt) => {
-    const rawNode = evt.target.data('raw');
-    openViewerNodeInspector(rawNode);
-  });
-
-  cyViewerInstance.on('tap', (evt) => {
-    if (evt.target === cyViewerInstance) {
-      document.getElementById('viewerNodeCard').style.display = 'none';
-    }
-  });
-
-  // Open inspector for first class
-  if (nodes.length > 0) {
-    openViewerNodeInspector(nodes[0]);
-  }
-}
 
 function changeViewerLayout(layout) {
   viewerLayoutName = layout;
