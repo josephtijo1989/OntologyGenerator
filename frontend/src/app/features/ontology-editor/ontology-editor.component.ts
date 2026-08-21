@@ -987,7 +987,19 @@ export class OntologyEditorComponent implements OnInit, AfterViewInit, OnDestroy
 
   getClassProperties(className: string): any[] {
     if (!this.ontology || !this.ontology.properties) return [];
-    return this.ontology.properties.filter((p: any) => p.parent_class === className);
+    const props = this.ontology.properties.filter((p: any) => p.parent_class === className);
+    const seen = new Set<string>();
+    const result: any[] = [];
+    for (const p of props) {
+      const name = (p.relationship_name || p.label || p.name || '').trim().toLowerCase();
+      const type = (p.property_type || 'DatatypeProperty').toLowerCase();
+      const key = `${type}:${name}`;
+      if (name && !seen.has(key)) {
+        seen.add(key);
+        result.push(p);
+      }
+    }
+    return result;
   }
 
   getNodeEdges(nodeId: string): any[] {

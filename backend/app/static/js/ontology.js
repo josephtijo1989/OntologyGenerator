@@ -413,7 +413,7 @@ function openOntologyClassModal(target) {
   document.getElementById('ocm-comment').value = c.comment || `Class representing ${c.label}`;
 
   const tblName = c.annotations ? (c.annotations.table_name || '') : '';
-  const matchingProps = currentOntologyModel.properties ? currentOntologyModel.properties.filter(p => {
+  const rawMatchingProps = currentOntologyModel.properties ? currentOntologyModel.properties.filter(p => {
     if (!p) return false;
     const pParent = (p.parent_class || '').toLowerCase();
     const cLabel = (c.label || '').toLowerCase();
@@ -422,6 +422,18 @@ function openOntologyClassModal(target) {
     if (pDomain) return pDomain === (c.iri || '').toLowerCase() || pDomain.endsWith('#' + cLabel);
     return tblName && p.table_name && p.table_name.toLowerCase() === tblName.toLowerCase();
   }) : [];
+
+  const seenModalPropKeys = new Set();
+  const matchingProps = [];
+  rawMatchingProps.forEach(p => {
+    const pName = (p.relationship_name || p.label || p.name || '').trim().toLowerCase();
+    const pType = (p.property_type || 'DatatypeProperty').toLowerCase();
+    const pKey = `${pType}:${pName}`;
+    if (pName && !seenModalPropKeys.has(pKey)) {
+      seenModalPropKeys.add(pKey);
+      matchingProps.push(p);
+    }
+  });
 
   const tbody = document.getElementById('ocm-props-tbody');
   tbody.innerHTML = '';
