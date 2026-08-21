@@ -1442,6 +1442,40 @@ ecom:referencesProduct a owl:ObjectProperty ;
     return this.parsedData.graph.edges.filter((e: any) => e.source === nodeId || e.target === nodeId);
   }
 
+  // SVG Vector Card Generators for Graphical Ontology Alignment
+  private generateBaseClassCardSvg(label: string, width: number, height: number): string {
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+        <rect x="1.5" y="1.5" width="${width - 3}" height="${height - 3}" rx="10" ry="10" fill="#f8fafc" stroke="#475569" stroke-width="1.8" stroke-dasharray="4,2" />
+        <rect x="1.5" y="1.5" width="4.5" height="${height - 3}" rx="2" fill="#334155" />
+        <text x="14" y="${height / 2 + 5}" font-family="Inter, -apple-system, sans-serif" font-size="13.5" font-weight="700" fill="#1e293b">
+          🏛️ ${label}
+        </text>
+      </svg>
+    `;
+    return `data:image/svg+xml;utf8,` + encodeURIComponent(svg.trim());
+  }
+
+  private generateOntologyClassCardSvg(label: string, domainType: string, width: number, height: number): string {
+    let accentColor = '#0284c7';
+    let icon = '🟠';
+    if (domainType === 'Fact') { accentColor = '#4338ca'; icon = '🧬'; }
+    else if (domainType === 'Lookup') { accentColor = '#d97706'; icon = '📦'; }
+    else if (domainType === 'SCD') { accentColor = '#059669'; icon = '🏛️'; }
+    else if (domainType === 'Dimension') { accentColor = '#0284c7'; icon = '🟠'; }
+
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+        <rect x="1.5" y="1.5" width="${width - 3}" height="${height - 3}" rx="10" ry="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+        <rect x="1.5" y="1.5" width="4.5" height="${height - 3}" rx="2" fill="${accentColor}" />
+        <text x="14" y="${height / 2 + 5}" font-family="Inter, -apple-system, sans-serif" font-size="13.5" font-weight="600" fill="#0f172a">
+          ${icon} ${label}
+        </text>
+      </svg>
+    `;
+    return `data:image/svg+xml;utf8,` + encodeURIComponent(svg.trim());
+  }
+
   // Cytoscape Graph Rendering
   private initCytoscape() {
     if (!this.cyContainerRef || !this.parsedData?.graph) return;
@@ -1452,139 +1486,224 @@ ecom:referencesProduct a owl:ObjectProperty ;
     }
 
     const elements: any[] = [];
+    const validClassMap = new Map<string, string>();
 
-    // Add nodes
-    this.parsedData.graph.nodes.forEach((n: any) => {
+    // 1. Root Base Class Node: owl:Thing
+    const rootIri = 'http://www.w3.org/2002/07/owl#Thing';
+    validClassMap.set('owl:Thing', rootIri);
+    validClassMap.set('owl:thing', rootIri);
+    validClassMap.set('Thing', rootIri);
+    validClassMap.set(rootIri, rootIri);
+
+    const rootWidth = 140;
+    const rootHeight = 46;
+    const rootSvg = this.generateBaseClassCardSvg('owl:Thing', rootWidth, rootHeight);
+
+    elements.push({
+      group: 'nodes',
+      data: {
+        id: rootIri,
+        label: 'owl:Thing',
+        domainType: 'Base Class',
+        cardWidth: rootWidth,
+        cardHeight: rootHeight,
+        svgCard: rootSvg,
+        nodeType: 'ontologyClass',
+        isRoot: true,
+        rawNode: { id: rootIri, label: 'owl:Thing', comment: 'Universal Top-Level Base Class in W3C OWL 2.0' }
+      },
+      position: { x: 500, y: 60 }
+    });
+
+    const classes = this.parsedData.classes || [];
+    classes.forEach((c: any) => {
+      const lbl = c.label || c.name || 'Class';
+      validClassMap.set(c.iri || c.id, c.iri || c.id);
+      validClassMap.set(lbl, c.iri || c.id);
+      validClassMap.set(lbl.toLowerCase(), c.iri || c.id);
+    });
+
+    const rawNodes = this.parsedData.graph.nodes || [];
+    rawNodes.forEach((n: any) => {
+      if (n.id !== rootIri && n.label !== 'owl:Thing' && n.label !== 'Thing') {
+        validClassMap.set(n.id, n.id);
+        validClassMap.set(n.label, n.id);
+      }
+    });
+
+    // 2. Class Card Nodes
+    rawNodes.forEach((n: any) => {
+      if (n.id === rootIri || n.label === 'owl:Thing' || n.label === 'Thing') return;
+
+      const label = n.label || n.id;
+      const domainType = n.domain_type || n.type || 'Dimension';
+      const cardWidth = Math.max(140, label.length * 9.5 + 44);
+      const cardHeight = 46;
+      const svgUri = this.generateOntologyClassCardSvg(label, domainType, cardWidth, cardHeight);
+
       elements.push({
         group: 'nodes',
         data: {
           id: n.id,
-          label: n.label,
-          nodeType: n.type,
-          domainType: n.domain_type || 'Dimension',
+          label: label,
+          nodeType: 'ontologyClass',
+          domainType: domainType,
+          cardWidth: cardWidth,
+          cardHeight: cardHeight,
+          svgCard: svgUri,
           rawNode: n
         }
       });
     });
 
-    // Add edges
-    this.parsedData.graph.edges.forEach((e: any) => {
-      elements.push({
-        group: 'edges',
-        data: {
-          id: e.id,
-          source: e.source,
-          target: e.target,
-          label: e.label,
-          edgeType: e.type,
-          rawEdge: e
+    // 3. Edges
+    const addedEdgeKeys = new Set<string>();
+    const rawEdges = this.parsedData.graph.edges || [];
+
+    rawEdges.forEach((e: any) => {
+      const src = validClassMap.get(e.source) || e.source;
+      const tgt = validClassMap.get(e.target) || e.target;
+
+      if (src && tgt && src !== tgt) {
+        const edgeKey = `${src}->${tgt}:${e.label}`;
+        if (!addedEdgeKeys.has(edgeKey)) {
+          addedEdgeKeys.add(edgeKey);
+          const isSubclass = (e.type === 'subClassOf' || e.label === 'subClassOf');
+          elements.push({
+            group: 'edges',
+            data: {
+              id: e.id || `edge_${edgeKey}`,
+              source: src,
+              target: tgt,
+              label: isSubclass ? '' : (e.label || 'relatesTo'),
+              edgeType: isSubclass ? 'SubClassOf' : 'ObjectProperty',
+              rawEdge: e
+            }
+          });
         }
-      });
+      }
+    });
+
+    // Ensure SubClassOf edges connect top-level concepts to root owl:Thing
+    classes.forEach((c: any) => {
+      const cId = validClassMap.get(c.iri || c.id || c.label) || c.id || c.label;
+      if (cId && cId !== rootIri) {
+        const rawSub = c.subclass_of && c.subclass_of.length > 0 ? c.subclass_of[0] : 'owl:Thing';
+        let parentIri = rootIri;
+
+        if (rawSub && rawSub !== 'owl:Thing' && rawSub !== 'Thing' && rawSub !== rootIri) {
+          const found = validClassMap.get(rawSub) || validClassMap.get(String(rawSub).toLowerCase());
+          if (found && found !== cId) parentIri = found;
+        }
+
+        const subKey = `${cId}->${parentIri}:subClassOf`;
+        if (!addedEdgeKeys.has(subKey)) {
+          addedEdgeKeys.add(subKey);
+          elements.push({
+            group: 'edges',
+            data: {
+              id: `sub_${cId}_${parentIri}`,
+              source: cId,
+              target: parentIri,
+              label: '',
+              edgeType: 'SubClassOf'
+            }
+          });
+        }
+      }
+    });
+
+    // Filter elements to ensure valid source and target nodes exist
+    const validNodeIds = new Set(elements.filter(e => e.group === 'nodes').map(e => e.data.id));
+    const sanitizedElements = elements.filter(e => {
+      if (e.group === 'nodes') return true;
+      return validNodeIds.has(e.data.source) && validNodeIds.has(e.data.target);
     });
 
     const cytoscapeStyles: any[] = [
       {
         selector: 'node',
         style: {
-          'background-color': '#06b6d4',
-          'label': 'data(label)',
-          'color': '#f8fafc',
-          'font-size': '12px',
-          'font-family': 'Inter, sans-serif',
-          'font-weight': 600,
-          'text-valign': 'center',
-          'text-halign': 'center',
-          'width': '65px',
-          'height': '65px',
-          'border-width': '2px',
-          'border-color': '#38bdf8'
-        }
-      },
-      {
-        selector: 'node[domainType = "Fact"]',
-        style: {
-          'background-color': '#f59e0b',
-          'border-color': '#fbbf24'
-        }
-      },
-      {
-        selector: 'node[domainType = "Lookup"]',
-        style: {
-          'background-color': '#10b981',
-          'border-color': '#34d399'
-        }
-      },
-      {
-        selector: 'node[domainType = "Dimension"]',
-        style: {
-          'background-color': '#8b5cf6',
-          'border-color': '#a78bfa'
-        }
-      },
-      {
-        selector: 'node[nodeType = "SuperClass"]',
-        style: {
-          'background-color': '#334155',
-          'border-color': '#64748b',
+          'width': 140,
+          'height': 46,
           'shape': 'round-rectangle',
-          'width': '80px',
-          'height': '40px'
+          'background-color': '#0284c7',
+          'border-width': 0
+        }
+      },
+      {
+        selector: 'node[nodeType = "ontologyClass"]',
+        style: {
+          'shape': 'round-rectangle',
+          'width': 'data(cardWidth)',
+          'height': 'data(cardHeight)',
+          'background-opacity': 0,
+          'background-image': 'data(svgCard)',
+          'background-fit': 'contain',
+          'background-clip': 'none',
+          'border-width': 0,
+          'label': '',
+          'overlay-padding': '4px',
+          'overlay-opacity': 0
         }
       },
       {
         selector: 'node:selected',
         style: {
-          'border-width': '4px',
-          'border-color': '#ffffff'
-        }
-      },
-      {
-        selector: 'edge',
-        style: {
-          'width': 2,
-          'line-color': '#475569',
-          'target-arrow-color': '#94a3b8',
-          'target-arrow-shape': 'triangle',
-          'curve-style': 'bezier',
-          'label': 'data(label)',
-          'color': '#94a3b8',
-          'font-size': '10px',
-          'font-family': 'Inter, sans-serif',
-          'text-rotation': 'autorotate',
-          'text-background-color': '#0f172a',
-          'text-background-opacity': 0.85,
-          'text-background-padding': '3px',
-          'text-background-shape': 'roundrectangle',
-          'arrow-scale': 1.2
-        }
-      },
-      {
-        selector: 'edge[edgeType = "subClassOf"]',
-        style: {
-          'line-style': 'dashed',
-          'line-color': '#64748b',
-          'target-arrow-color': '#64748b',
-          'target-arrow-shape': 'triangle'
+          'border-width': '2.5px',
+          'border-color': '#0284c7',
+          'border-opacity': 1,
+          'shadow-blur': 16,
+          'shadow-color': 'rgba(2, 132, 199, 0.4)'
         }
       },
       {
         selector: 'edge[edgeType = "ObjectProperty"]',
         style: {
-          'line-color': '#06b6d4',
-          'target-arrow-color': '#06b6d4',
-          'color': '#67e8f9'
+          'width': 1.8,
+          'line-color': '#4f46e5',
+          'target-arrow-color': '#4f46e5',
+          'target-arrow-shape': 'triangle',
+          'arrow-scale': 1.15,
+          'curve-style': 'bezier',
+          'label': 'data(label)',
+          'color': '#334155',
+          'font-size': '11px',
+          'font-family': 'Inter, sans-serif',
+          'font-weight': '500',
+          'text-rotation': 'autorotate',
+          'text-background-color': '#ffffff',
+          'text-background-opacity': 0.95,
+          'text-background-padding': '3px',
+          'text-background-shape': 'roundrectangle',
+          'text-border-color': '#e2e8f0',
+          'text-border-width': 1,
+          'text-border-opacity': 0.8
+        }
+      },
+      {
+        selector: 'edge[edgeType = "SubClassOf"]',
+        style: {
+          'width': 1.6,
+          'line-style': 'dashed',
+          'line-color': '#94a3b8',
+          'target-arrow-color': '#64748b',
+          'target-arrow-shape': 'triangle',
+          'arrow-scale': 1.1,
+          'curve-style': 'bezier',
+          'label': '',
+          'overlay-opacity': 0
         }
       }
     ];
 
     this.cyInstance = cytoscape({
       container: this.cyContainerRef.nativeElement,
-      elements: elements,
+      elements: sanitizedElements,
       style: cytoscapeStyles,
       layout: {
-        name: this.graphLayout,
-        animate: true,
-        animationDuration: 500,
+        name: this.graphLayout || 'breadthfirst',
+        directed: true,
         padding: 50
       } as any
     });
@@ -1600,7 +1719,7 @@ ecom:referencesProduct a owl:ObjectProperty ;
       }
     });
 
-    // Double tap on empty canvas opens Create Class Modal directly from Graphical Ontology
+    // Double tap on empty canvas opens Create Class Modal
     this.cyInstance.on('dbltap', (evt) => {
       if (evt.target === this.cyInstance) {
         this.openCreateClassModal();

@@ -493,180 +493,305 @@ function switchViewerSubTab(tabName) {
   }
 }
 
-// Cytoscape Canvas Visualizer for Sandbox
+// Cytoscape Canvas Visualizer for Sandbox (Graphical Ontology Design System)
 function initViewerCytoscape() {
   const container = document.getElementById('cy-ontology-viewer');
   if (!container || !viewerOntologyData) return;
 
-  const elements = [];
-  const nodes = viewerOntologyData.graph?.nodes || [];
-  const edges = viewerOntologyData.graph?.edges || [];
+  if (cyViewerInstance) {
+    try { cyViewerInstance.stop(); } catch(e){}
+    try { cyViewerInstance.destroy(); } catch(e){}
+    cyViewerInstance = null;
+  }
 
-  nodes.forEach(n => {
+  const elements = [];
+  const rawNodes = viewerOntologyData.graph?.nodes || [];
+  const rawEdges = viewerOntologyData.graph?.edges || [];
+  const classes = viewerOntologyData.classes || [];
+  const properties = viewerOntologyData.properties || [];
+
+  const validClassMap = new Map();
+
+  // 1. Root Base Class: owl:Thing Node
+  const rootIri = 'http://www.w3.org/2002/07/owl#Thing';
+  validClassMap.set('owl:Thing', rootIri);
+  validClassMap.set('owl:thing', rootIri);
+  validClassMap.set('Thing', rootIri);
+  validClassMap.set('thing', rootIri);
+  validClassMap.set(rootIri, rootIri);
+
+  const rootCardWidth = 140;
+  const rootCardHeight = 46;
+  const rootSvgUri = typeof generateBaseClassCardSvg === 'function' 
+    ? generateBaseClassCardSvg({ label: 'owl:Thing', width: rootCardWidth, height: rootCardHeight })
+    : generateViewerBaseClassSvg({ label: 'owl:Thing', width: rootCardWidth, height: rootCardHeight });
+
+  elements.push({
+    group: 'nodes',
+    data: {
+      id: rootIri,
+      label: 'owl:Thing',
+      domainType: 'Base Class',
+      isBaseClass: true,
+      cardWidth: rootCardWidth,
+      cardHeight: rootCardHeight,
+      svgCard: rootSvgUri,
+      nodeType: 'ontologyClass',
+      isRoot: true,
+      raw: { id: rootIri, label: 'owl:Thing', comment: 'Universal Top-Level Base Class in W3C OWL 2.0' }
+    },
+    position: { x: 500, y: 60 }
+  });
+
+  // Map known class labels and IRIs
+  classes.forEach(c => {
+    const pascalLabel = c.label || c.name || 'Class';
+    validClassMap.set(c.iri || c.id, c.iri || c.id);
+    validClassMap.set(pascalLabel, c.iri || c.id);
+    validClassMap.set(pascalLabel.toLowerCase(), c.iri || c.id);
+  });
+
+  rawNodes.forEach(n => {
+    if (n.id !== rootIri && n.label !== 'owl:Thing' && n.label !== 'Thing') {
+      validClassMap.set(n.id, n.id);
+      validClassMap.set(n.label, n.id);
+    }
+  });
+
+  // Build SVG Card Nodes for Classes
+  rawNodes.forEach(n => {
+    if (n.id === rootIri || n.label === 'owl:Thing' || n.label === 'Thing') return;
+
+    const label = n.label || n.id;
+    const domainType = n.domain_type || n.type || 'Dimension';
+    const cardWidth = Math.max(140, label.length * 9.5 + 44);
+    const cardHeight = 46;
+
+    const svgUri = typeof generateOntologyClassCardSvg === 'function'
+      ? generateOntologyClassCardSvg({ label: label, domainType: domainType, isExpanded: false, width: cardWidth, height: cardHeight })
+      : generateViewerClassSvg({ label: label, domainType: domainType, width: cardWidth, height: cardHeight });
+
     elements.push({
       group: 'nodes',
       data: {
         id: n.id,
-        label: n.label,
-        type: n.type,
-        domainType: n.domain_type || 'Dimension',
+        label: label,
+        domainType: domainType,
+        cardWidth: cardWidth,
+        cardHeight: cardHeight,
+        svgCard: svgUri,
+        nodeType: 'ontologyClass',
         raw: n
       }
     });
   });
 
-  edges.forEach(e => {
-    elements.push({
-      group: 'edges',
-      data: {
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        label: e.label,
-        edgeType: e.type,
-        raw: e
+  // Build Edges
+  const addedEdgeKeys = new Set();
+
+  rawEdges.forEach(e => {
+    const srcIri = validClassMap.get(e.source) || e.source;
+    const tgtIri = validClassMap.get(e.target) || e.target;
+
+    if (srcIri && tgtIri && srcIri !== tgtIri) {
+      const edgeKey = `${srcIri}->${tgtIri}:${e.label}`;
+      if (!addedEdgeKeys.has(edgeKey)) {
+        addedEdgeKeys.add(edgeKey);
+        const isSubclass = (e.type === 'subClassOf' || e.label === 'subClassOf');
+        elements.push({
+          group: 'edges',
+          data: {
+            id: e.id || `edge_${edgeKey}`,
+            source: srcIri,
+            target: tgtIri,
+            label: isSubclass ? '' : (e.label || 'relatesTo'),
+            edgeType: isSubclass ? 'SubClassOf' : 'ObjectProperty',
+            raw: e
+          }
+        });
       }
-    });
+    }
   });
 
-  // Filter elements to ensure all edge source and target nodes exist in the node set
+  // Ensure SubClassOf edges to root owl:Thing for top-level classes
+  classes.forEach(c => {
+    const cId = validClassMap.get(c.iri || c.id || c.label) || c.id || c.label;
+    if (cId && cId !== rootIri) {
+      const rawSub = c.subclass_of && c.subclass_of.length > 0 ? c.subclass_of[0] : 'owl:Thing';
+      let parentIri = rootIri;
+
+      if (rawSub && rawSub !== 'owl:Thing' && rawSub !== 'Thing' && rawSub !== rootIri) {
+        const found = validClassMap.get(rawSub) || validClassMap.get(String(rawSub).toLowerCase());
+        if (found && found !== cId) parentIri = found;
+      }
+
+      const subKey = `${cId}->${parentIri}:subClassOf`;
+      if (!addedEdgeKeys.has(subKey)) {
+        addedEdgeKeys.add(subKey);
+        elements.push({
+          group: 'edges',
+          data: {
+            id: `sub_${cId}_${parentIri}`,
+            source: cId,
+            target: parentIri,
+            label: '',
+            edgeType: 'SubClassOf'
+          }
+        });
+      }
+    }
+  });
+
+  // Filter elements to ensure source and target exist
   const validNodeIds = new Set(elements.filter(e => e.group === 'nodes').map(e => e.data.id));
   const sanitizedElements = elements.filter(e => {
     if (e.group === 'nodes') return true;
     return validNodeIds.has(e.data.source) && validNodeIds.has(e.data.target);
   });
 
-  if (cyViewerInstance) {
-    try {
-      cyViewerInstance.elements().remove();
-      cyViewerInstance.add(sanitizedElements);
-      const layout = cyViewerInstance.layout({
-        name: 'cose',
-        animate: false,
-        padding: 50,
-        nodeOverlap: 20
-      });
-      layout.run();
-      return;
-    } catch (e) {
-      cyViewerInstance = null;
-    }
-  }
-
   cyViewerInstance = cytoscape({
     container: container,
     elements: sanitizedElements,
+    boxSelectionEnabled: false,
+    autoungrabify: false,
+    autolock: false,
+    userZoomingEnabled: true,
+    userPanningEnabled: true,
+    wheelSensitivity: 0.25,
     textureOnViewport: false,
     style: [
       {
         selector: 'node',
         style: {
-          'background-color': '#0284c7',
-          'label': 'data(label)',
-          'color': '#0f172a',
-          'font-size': '12px',
-          'font-family': 'Inter, sans-serif',
-          'font-weight': '600',
-          'text-valign': 'bottom',
-          'text-margin-y': '6px',
-          'width': '42px',
-          'height': '42px',
-          'border-width': 2,
-          'border-color': '#ffffff',
-          'shadow-blur': 8,
-          'shadow-color': 'rgba(2, 132, 199, 0.3)'
-        }
-      },
-      {
-        selector: 'node[domainType = "Fact"]',
-        style: {
-          'background-color': '#1e1b4b',
-          'border-color': '#ffffff',
-          'color': '#1e1b4b'
-        }
-      },
-      {
-        selector: 'node[domainType = "Lookup"]',
-        style: {
-          'background-color': '#059669',
-          'border-color': '#ffffff',
-          'color': '#059669'
-        }
-      },
-      {
-        selector: 'node[domainType = "Dimension"]',
-        style: {
-          'background-color': '#f97316',
-          'border-color': '#ffffff',
-          'color': '#ea580c'
-        }
-      },
-      {
-        selector: 'node[type = "SuperClass"]',
-        style: {
-          'background-color': '#ffffff',
-          'border-color': '#475569',
-          'border-width': 2,
-          'color': '#334155',
+          'width': 140,
+          'height': 46,
           'shape': 'round-rectangle',
-          'width': '65px',
-          'height': '32px'
+          'background-color': '#0284c7',
+          'border-width': 0
         }
       },
       {
-        selector: 'node:selected',
+        selector: 'node[nodeType = "ontologyClass"]',
         style: {
-          'border-width': 4,
+          'shape': 'round-rectangle',
+          'width': 'data(cardWidth)',
+          'height': 'data(cardHeight)',
+          'background-opacity': 0,
+          'background-image': 'data(svgCard)',
+          'background-fit': 'contain',
+          'background-clip': 'none',
+          'border-width': 0,
+          'label': '',
+          'overlay-padding': '4px',
+          'overlay-opacity': 0,
+          'transition-property': 'opacity',
+          'transition-duration': '0.18s'
+        }
+      },
+      {
+        selector: 'node:selected, node.highlighted',
+        style: {
+          'border-width': 2.5,
           'border-color': '#0284c7',
+          'border-opacity': 1,
           'shadow-blur': 16,
-          'shadow-color': '#0284c7'
-        }
-      },
-      {
-        selector: 'edge',
-        style: {
-          'width': 2,
-          'line-color': '#94a3b8',
-          'target-arrow-color': '#64748b',
-          'target-arrow-shape': 'triangle',
-          'curve-style': 'bezier',
-          'label': 'data(label)',
-          'color': '#475569',
-          'font-size': '11px',
-          'font-family': 'Inter, sans-serif',
-          'text-rotation': 'autorotate',
-          'text-background-color': '#ffffff',
-          'text-background-opacity': 0.9,
-          'text-background-padding': '3px',
-          'text-background-shape': 'roundrectangle',
-          'arrow-scale': 1.2
-        }
-      },
-      {
-        selector: 'edge[edgeType = "subClassOf"]',
-        style: {
-          'line-style': 'dashed',
-          'line-color': '#94a3b8',
-          'target-arrow-color': '#64748b',
-          'target-arrow-shape': 'triangle'
+          'shadow-color': 'rgba(2, 132, 199, 0.4)',
+          'opacity': 1
         }
       },
       {
         selector: 'edge[edgeType = "ObjectProperty"]',
         style: {
-          'line-color': '#0284c7',
-          'target-arrow-color': '#0284c7',
-          'color': '#0369a1'
+          'width': 1.8,
+          'line-color': '#4f46e5',
+          'target-arrow-color': '#4f46e5',
+          'target-arrow-shape': 'triangle',
+          'arrow-scale': 1.15,
+          'curve-style': 'bezier',
+          'label': 'data(label)',
+          'color': '#334155',
+          'font-size': '11px',
+          'font-family': 'Inter, sans-serif',
+          'font-weight': '500',
+          'text-rotation': 'autorotate',
+          'text-background-color': '#ffffff',
+          'text-background-opacity': 0.95,
+          'text-background-padding': '3px',
+          'text-background-shape': 'roundrectangle',
+          'text-border-color': '#e2e8f0',
+          'text-border-width': 1,
+          'text-border-opacity': 0.8,
+          'transition-property': 'line-color, width, opacity',
+          'transition-duration': '0.15s'
+        }
+      },
+      {
+        selector: 'edge[edgeType = "SubClassOf"]',
+        style: {
+          'width': 1.6,
+          'line-style': 'dashed',
+          'line-color': '#94a3b8',
+          'target-arrow-color': '#64748b',
+          'target-arrow-shape': 'triangle',
+          'arrow-scale': 1.1,
+          'curve-style': 'bezier',
+          'label': '',
+          'overlay-opacity': 0
         }
       }
     ],
     layout: {
-      name: viewerLayoutName,
-      animate: true,
-      animationDuration: 400,
-      padding: 40
+      name: (typeof viewerLayoutName !== 'undefined' && viewerLayoutName) ? viewerLayoutName : 'breadthfirst',
+      directed: true,
+      padding: 45
     }
   });
+
+  cyViewerInstance.on('tap', 'node', (evt) => {
+    const rawNode = evt.target.data('raw');
+    openViewerNodeInspector(rawNode);
+  });
+
+  cyViewerInstance.on('tap', (evt) => {
+    if (evt.target === cyViewerInstance) {
+      const card = document.getElementById('viewerNodeCard');
+      if (card) card.style.display = 'none';
+    }
+  });
+
+  // Open inspector for first class
+  const firstNode = rawNodes[0];
+  if (firstNode) {
+    openViewerNodeInspector(firstNode);
+  }
+}
+
+// Fallback SVG Generators if not present globally
+function generateViewerBaseClassSvg({ label, width, height }) {
+  return `data:image/svg+xml;utf8,` + encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <rect x="1.5" y="1.5" width="${width - 3}" height="${height - 3}" rx="10" ry="10" fill="#f8fafc" stroke="#475569" stroke-width="1.8" stroke-dasharray="4,2" />
+      <rect x="1.5" y="1.5" width="4.5" height="${height - 3}" rx="2" fill="#334155" />
+      <text x="14" y="${height / 2 + 5}" font-family="Inter, sans-serif" font-size="13.5" font-weight="700" fill="#1e293b">🏛️ ${label}</text>
+    </svg>
+  `);
+}
+
+function generateViewerClassSvg({ label, domainType, width, height }) {
+  let accentColor = '#0284c7';
+  let icon = '🟠';
+  if (domainType === 'Fact') { accentColor = '#4338ca'; icon = '🧬'; }
+  else if (domainType === 'Lookup') { accentColor = '#d97706'; icon = '📦'; }
+  else if (domainType === 'SCD') { accentColor = '#059669'; icon = '🏛️'; }
+
+  return `data:image/svg+xml;utf8,` + encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <rect x="1.5" y="1.5" width="${width - 3}" height="${height - 3}" rx="10" ry="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+      <rect x="1.5" y="1.5" width="4.5" height="${height - 3}" rx="2" fill="${accentColor}" />
+      <text x="14" y="${height / 2 + 5}" font-family="Inter, sans-serif" font-size="13.5" font-weight="600" fill="#0f172a">${icon} ${label}</text>
+    </svg>
+  `);
+}
 
   cyViewerInstance.on('tap', 'node', (evt) => {
     const rawNode = evt.target.data('raw');
