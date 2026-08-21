@@ -13,7 +13,7 @@ def run_profiling(project_id: str, connection_id: str = Query(...), db: Session 
     svc = ProfilingService(db)
     try:
         return svc.profile_project_tables(project_id, connection_id)
-    except ValueError as e:
+    except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 

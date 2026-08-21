@@ -43,6 +43,14 @@ export class ApiService {
     return this.http.get<any[]>(`${this.baseUrl}/projects/${projectId}/metadata`);
   }
 
+  deleteMetadataTable(projectId: string, tableId: string): Observable<any> {
+    return this.http.delete<any>(`${this.baseUrl}/projects/${projectId}/metadata/tables/${tableId}`);
+  }
+
+  clearMetadata(projectId: string): Observable<any> {
+    return this.http.delete<any>(`${this.baseUrl}/projects/${projectId}/metadata`);
+  }
+
   runProfiling(projectId: string, connId: string): Observable<any[]> {
     const params = new HttpParams().set('connection_id', connId);
     return this.http.post<any[]>(`${this.baseUrl}/projects/${projectId}/profiling/run`, {}, { params });

@@ -74,31 +74,6 @@ app.add_middleware(
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
-@app.get("/", include_in_schema=False)
-def root_index():
-    from fastapi.responses import RedirectResponse
-    return RedirectResponse(url="/app")
-
-
-import os
-from fastapi.staticfiles import StaticFiles
-
-static_dir = os.path.join(os.path.dirname(__file__), "static")
-if os.path.exists(static_dir):
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
-@app.get("/app", response_class=HTMLResponse, tags=["Web Application UI"])
-def serve_web_app():
-    html_path = os.path.join(static_dir, "index.html")
-    with open(html_path, "r", encoding="utf-8") as f:
-        content = f.read()
-    response = HTMLResponse(content=content)
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-    return response
-
-
 @app.get("/health", tags=["Health Monitoring"])
 def health_check():
     return {
@@ -107,6 +82,43 @@ def health_check():
         "version": settings.APP_VERSION,
         "environment": settings.ENVIRONMENT
     }
+
+
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+@app.get("/{file_path:path}", include_in_schema=False)
+def serve_spa_or_static(file_path: str = ""):
+    # 1. Direct SPA root or /app request
+    if not file_path or file_path in ["app", "index.html"]:
+        html_path = os.path.join(static_dir, "index.html")
+        if os.path.exists(html_path):
+            return FileResponse(html_path, headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            })
+
+    # 2. Check if requested static file exists (e.g. main-*.js, polyfills-*.js, styles-*.css, favicon.ico)
+    target_file = os.path.join(static_dir, file_path)
+    if os.path.isfile(target_file):
+        return FileResponse(target_file)
+
+    # 3. Fallback to SPA index.html for Angular client-side routes
+    html_path = os.path.join(static_dir, "index.html")
+    if os.path.exists(html_path):
+        return FileResponse(html_path, headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        })
+
+    return HTMLResponse("<h1>404 Not Found</h1>", status_code=404)
 
 
 if __name__ == "__main__":

@@ -367,7 +367,7 @@ export class GraphVisualizerComponent implements OnInit, AfterViewInit, OnDestro
       },
       error: (err) => {
         this.isLoading = false;
-        console.error(err);
+        this.showToast('Failed to load knowledge graph: ' + (err.error?.detail || err.message || 'Server Error'));
       }
     });
   }

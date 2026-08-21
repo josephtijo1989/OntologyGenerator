@@ -82,11 +82,11 @@ function openAddConnectorModal() {
 
   document.getElementById('nc-name').value = '';
   document.getElementById('nc-type').value = 'MSSQL';
-  document.getElementById('nc-host').value = 'localhost';
+  document.getElementById('nc-host').value = '';
   document.getElementById('nc-port').value = '1433';
-  document.getElementById('nc-dbname').value = 'ERP_DB';
-  document.getElementById('nc-user').value = 'sa';
-  document.getElementById('nc-pass').value = '******';
+  document.getElementById('nc-dbname').value = '';
+  document.getElementById('nc-user').value = '';
+  document.getElementById('nc-pass').value = '';
 
   openModal('connModal');
 }
@@ -121,16 +121,20 @@ async function openEditConnectorModal(connId) {
 
 async function submitCreateConnector() {
   if (!currentProjectId) { alert('Select or create a project first'); return; }
-  const name = document.getElementById('nc-name').value;
+  const rawHost = document.getElementById('nc-host').value.trim();
+  const rawDbname = document.getElementById('nc-dbname').value.trim();
+  if (!rawHost || !rawDbname) {
+    alert('Host Name and Database Name are required.');
+    return;
+  }
   const type = document.getElementById('nc-type').value;
-  const host = document.getElementById('nc-host').value;
-  const port = parseInt(document.getElementById('nc-port').value);
-  const dbname = document.getElementById('nc-dbname').value;
-  const user = document.getElementById('nc-user').value;
+  const name = document.getElementById('nc-name').value.trim() || `${type} Database (${rawDbname})`;
+  const port = parseInt(document.getElementById('nc-port').value) || 1433;
+  const user = document.getElementById('nc-user').value.trim();
   const pass = document.getElementById('nc-pass').value;
 
   const payload = {
-    name, connector_type: type, host, port, database_name: dbname, username: user
+    name, connector_type: type, host: rawHost, port, database_name: rawDbname, username: user
   };
   if (pass && pass !== '******') {
     payload.password = pass;
@@ -197,11 +201,11 @@ async function deleteConnector(connId, name) {
 
 async function submitTargetGraph() {
   if (!currentProjectId) { alert('Select or create a project first'); return; }
-  const name = document.getElementById('ng-name').value;
+  const name = document.getElementById('ng-name').value.trim() || 'Production Neo4j Instance';
   const type = document.getElementById('ng-type').value;
-  const host = document.getElementById('ng-host').value;
-  const port = parseInt(document.getElementById('ng-port').value);
-  const username = document.getElementById('ng-user') ? document.getElementById('ng-user').value : 'neo4j';
+  const host = document.getElementById('ng-host').value.trim() || 'bolt://localhost:7687';
+  const port = parseInt(document.getElementById('ng-port').value) || 7687;
+  const username = document.getElementById('ng-user') ? (document.getElementById('ng-user').value.trim() || 'neo4j') : 'neo4j';
   const password = document.getElementById('ng-pass') ? document.getElementById('ng-pass').value : '';
 
   try {

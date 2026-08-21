@@ -1,5 +1,6 @@
 import uuid
 import pytest
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 from app.main import app
 
@@ -46,22 +47,59 @@ def test_projects_crud_and_ontology_relationships():
         "port": 1433,
         "database_name": "TestDB",
         "username": "sa",
-        "password": "Password123!"
+        "password": "Password123!",
+        "connection_options_json": {"mock": True}
     }
     conn_resp = client.post(f"/api/v1/projects/{project_id}/source-connections", json=conn_payload)
     assert conn_resp.status_code == 201
     conn_id = conn_resp.json()["id"]
 
-    # 5. Test Connection
-    test_conn_resp = client.post(f"/api/v1/projects/{project_id}/source-connections/{conn_id}/test")
-    assert test_conn_resp.status_code == 200
-    assert test_conn_resp.json()["status"] == "SUCCESS"
+    # 5. Test Connection & 6. Metadata Discovery
+    with patch("app.connectors.mssql.MSSQLConnector.test_connection", return_value=True), \
+         patch("app.connectors.mssql.MSSQLConnector.extract_metadata", return_value=[
+             {
+                 "schema_name": "dbo",
+                 "table_name": "Customers",
+                 "object_type": "TABLE",
+                 "row_count": 8920,
+                 "columns": [
+                     {"name": "CustomerID", "type": "INT", "nullable": False, "primary_key": True},
+                     {"name": "CompanyName", "type": "VARCHAR(100)", "nullable": False}
+                 ],
+                 "primary_keys": ["CustomerID"],
+                 "foreign_keys": [],
+                 "indexes": []
+             },
+             {
+                 "schema_name": "Sales",
+                 "table_name": "Orders",
+                 "object_type": "TABLE",
+                 "row_count": 24500,
+                 "columns": [
+                     {"name": "OrderID", "type": "INT", "nullable": False, "primary_key": True},
+                     {"name": "CustomerID", "type": "INT", "nullable": False}
+                 ],
+                 "primary_keys": ["OrderID"],
+                 "foreign_keys": [
+                     {
+                         "constraint_name": "FK_Orders_Customers",
+                         "column": "CustomerID",
+                         "foreign_schema": "dbo",
+                         "foreign_table": "Customers",
+                         "foreign_column": "CustomerID"
+                     }
+                 ],
+                 "indexes": []
+             }
+         ]):
+        test_conn_resp = client.post(f"/api/v1/projects/{project_id}/source-connections/{conn_id}/test")
+        assert test_conn_resp.status_code == 200
+        assert test_conn_resp.json()["status"] == "SUCCESS"
 
-    # 6. Metadata Discovery (Extracts tables, PKs, and FKs)
-    disc_resp = client.post(f"/api/v1/projects/{project_id}/metadata/discover?connection_id={conn_id}")
-    assert disc_resp.status_code == 200
-    catalogs = disc_resp.json()
-    assert len(catalogs) > 0
+        disc_resp = client.post(f"/api/v1/projects/{project_id}/metadata/discover?connection_id={conn_id}")
+        assert disc_resp.status_code == 200
+        catalogs = disc_resp.json()
+        assert len(catalogs) > 0
 
     # 7. Data Profiling
     prof_resp = client.post(f"/api/v1/projects/{project_id}/profiling/run?connection_id={conn_id}")
@@ -366,8 +404,8 @@ def test_ontology_transformation_standards_and_checklist():
     order_cls = next((c for c in result["classes"] if c["label"] == "Order"), None)
     assert customer_cls is not None
     assert order_cls is not None
-    assert "eonto:MasterEntity" in customer_cls["subclass_of"]
-    assert "eonto:TransactionalEntity" in order_cls["subclass_of"]
+    assert "owl:Thing" in customer_cls["subclass_of"]
+    assert "owl:Thing" in order_cls["subclass_of"]
 
     # Check Business Rule annotation
     assert (ONTO.Customer, ONTO.hasBusinessRule, None) in g

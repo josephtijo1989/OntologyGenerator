@@ -264,20 +264,6 @@ class OntologyGenerator:
         g.add((ONTO.hasBusinessRule, RDFS.label, Literal("hasBusinessRule")))
         g.add((ONTO.hasBusinessRule, RDFS.comment, Literal("Articulates an active business rule constraint applied to this class.")))
 
-        # Define Enterprise Top-Level Taxonomy Concepts
-        taxonomies = [
-            (ONTO.MasterEntity, "MasterEntity", "Master Entity", "Core foundational business master entities (e.g. Customers, Products, Profiles, Parties)."),
-            (ONTO.TransactionalEntity, "TransactionalEntity", "Transactional Entity", "Operational business transactions, events, and measurement records (e.g. Orders, Invoices, Assays)."),
-            (ONTO.ReferenceEntity, "ReferenceEntity", "Reference Entity", "Standardized lookup codes, classification taxonomies, and reference categories."),
-            (ONTO.AssociativeEntity, "AssociativeEntity", "Associative Entity", "Bridge and junction entities representing many-to-many relationship mappings.")
-        ]
-        for tax_uri, tax_code, tax_label, tax_comment in taxonomies:
-            g.add((tax_uri, RDF.type, OWL.Class))
-            g.add((tax_uri, RDFS.subClassOf, OWL.Thing))
-            g.add((tax_uri, RDFS.label, Literal(tax_label)))
-            g.add((tax_uri, SKOS.prefLabel, Literal(tax_code)))
-            g.add((tax_uri, RDFS.comment, Literal(tax_comment)))
-
         classes = []
         properties = []
         registered_prop_iris = set()
@@ -294,20 +280,9 @@ class OntologyGenerator:
             subclass = cat.get("custom_subclass_of")
 
             # Determine appropriate taxonomy parent if default
-            if not subclass or str(subclass).strip().lower() in ["owl:thing", "thing", ""]:
-                dom_lower = str(domain_type).lower()
-                if "dim" in dom_lower or "master" in dom_lower or "customer" in dom_lower or "product" in dom_lower:
-                    subclass_uri = ONTO.MasterEntity
-                    subclass_str = "eonto:MasterEntity"
-                elif "lookup" in dom_lower or "ref" in dom_lower or "type" in dom_lower:
-                    subclass_uri = ONTO.ReferenceEntity
-                    subclass_str = "eonto:ReferenceEntity"
-                elif "bridge" in dom_lower or "associative" in dom_lower or "map" in table_name.lower():
-                    subclass_uri = ONTO.AssociativeEntity
-                    subclass_str = "eonto:AssociativeEntity"
-                else:
-                    subclass_uri = ONTO.TransactionalEntity
-                    subclass_str = "eonto:TransactionalEntity"
+            if not subclass or str(subclass).strip().lower() in ["owl:thing", "thing", "", "eonto:masterentity", "eonto:transactionalentity", "eonto:referenceentity", "eonto:associativeentity"]:
+                subclass_uri = OWL.Thing
+                subclass_str = "owl:Thing"
             else:
                 subclass_clean = str(subclass).strip()
                 if subclass_clean.startswith("http"):
@@ -316,10 +291,6 @@ class OntologyGenerator:
                 elif ":" in subclass_clean and not subclass_clean.startswith("eonto:"):
                     subclass_uri = OWL.Thing
                     subclass_str = "owl:Thing"
-                elif subclass_clean in ["eonto:MasterEntity", "eonto:TransactionalEntity", "eonto:ReferenceEntity", "eonto:AssociativeEntity"]:
-                    tax_name = subclass_clean.split(":")[-1]
-                    subclass_uri = ONTO[tax_name]
-                    subclass_str = subclass_clean
                 else:
                     p_cname = subclass_clean.split(":")[-1] if ":" in subclass_clean else subclass_clean
                     p_cname_pascal = resolve_class_name(p_cname, p_cname)

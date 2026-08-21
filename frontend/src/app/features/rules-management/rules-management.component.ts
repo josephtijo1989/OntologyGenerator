@@ -188,7 +188,7 @@ export class RulesManagementComponent implements OnInit, OnDestroy {
   loadRules() {
     this.apiService.getRules(this.projectId).subscribe({
       next: (res) => this.rules = res,
-      error: (err) => console.error(err)
+      error: (err) => this.showToast('Failed to load business rules: ' + (err.error?.detail || err.message || 'Server Error'))
     });
   }
 

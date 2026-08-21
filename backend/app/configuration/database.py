@@ -4,8 +4,15 @@ from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from app.configuration.config import settings
 from app.utilities.logger import logger
 
+import sys
+import os
+
 # Create SQLAlchemy Engine (Defaults to SQLite for local development; supports MSSQL when configured)
-if settings.DATABASE_URL.startswith("sqlite"):
+if os.environ.get("TESTING") == "True" or any("pytest" in arg for arg in sys.argv):
+    sqlite_test_url = "sqlite:///C:/Users/TIJO/Documents/antigravity/quick-pasteur/backend/test_quick_pasteur_app.db"
+    engine = create_engine(sqlite_test_url, connect_args={"check_same_thread": False})
+    logger.info("Initialized isolated SQLite test database: test_quick_pasteur_app.db")
+elif settings.DATABASE_URL.startswith("sqlite"):
     engine = create_engine(
         settings.DATABASE_URL,
         connect_args={"check_same_thread": False},

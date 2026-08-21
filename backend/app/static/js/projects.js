@@ -6,9 +6,9 @@ async function loadProjects() {
       projectsList = await res.json();
       if (projectsList.length > 0) {
         if (!currentProjectId) {
-          const demoProj = projectsList.find(p => p.code === 'DEMO_ERP');
-          currentProjectId = demoProj ? demoProj.id : projectsList[0].id;
-          currentProjectObj = demoProj || projectsList[0];
+          const mainProj = projectsList.find(p => p.code === 'MAIN') || projectsList[0];
+          currentProjectId = mainProj ? mainProj.id : projectsList[0].id;
+          currentProjectObj = mainProj || projectsList[0];
         } else {
           currentProjectObj = projectsList.find(p => p.id === currentProjectId);
         }
@@ -56,7 +56,7 @@ async function submitAutoDefaultProject() {
     const res = await fetch(`${API_BASE}/projects`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Enterprise ERP Transformation', code: 'DEMO_ERP', description: 'Default Enterprise Transformation Project' })
+      body: JSON.stringify({ name: 'Enterprise Knowledge Platform', code: 'MAIN', description: 'Enterprise Data & Ontology Knowledge Platform' })
     });
     if (res.ok) { await loadProjects(); }
   } catch (e) {}

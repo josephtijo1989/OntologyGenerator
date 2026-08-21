@@ -926,7 +926,7 @@ export class OntologyEditorComponent implements OnInit, AfterViewInit, OnDestroy
       },
       error: (err) => {
         this.isLoading = false;
-        console.error(err);
+        this.showToast('Failed to load ontology model: ' + (err.error?.detail || err.message || 'Server Error'));
       }
     });
   }
@@ -1232,7 +1232,7 @@ export class OntologyEditorComponent implements OnInit, AfterViewInit, OnDestroy
         a.click();
         this.showToast(`📥 Exported ontology format: ${format.toUpperCase()}`);
       },
-      error: (err) => alert('Export failed')
+      error: (err) => this.showToast('Export failed: ' + (err.error?.detail || err.message || 'Server Error'))
     });
   }
 

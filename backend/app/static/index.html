@@ -136,10 +136,11 @@
               <option value="ALL">All Mapped Source Connectors</option>
             </select>
             <button class="btn-primary" onclick="triggerDiscovery()">⚡ Run Auto Discovery</button>
+            <button class="btn-secondary" style="color: #f43f5e; border-color: rgba(244, 63, 94, 0.3);" onclick="clearAllMetadataCatalog()">🗑️ Clear Catalog</button>
             <button class="btn-secondary" onclick="switchToTab('profiling')">📈 Run Data Profiling &rarr;</button>
           </div>
         </div>
-        <div class="glass-card" style="padding: 0; overflow: hidden;">
+        <div class="glass-card" style="padding: 0; overflow-x: auto;">
           <table class="data-table">
             <thead>
               <tr>
@@ -827,27 +828,27 @@
         </div>
         <div class="form-group half">
           <label>Database Port</label>
-          <input type="number" id="nc-port" value="1433">
+          <input type="number" id="nc-port" placeholder="1433">
         </div>
       </div>
       <div class="form-row">
         <div class="form-group half">
           <label>Host Name / IP</label>
-          <input type="text" id="nc-host" value="localhost">
+          <input type="text" id="nc-host" placeholder="e.g. DESKTOP-43S0L2R or 192.168.1.10">
         </div>
         <div class="form-group half">
           <label>Database Name</label>
-          <input type="text" id="nc-dbname" value="ERP_DB">
+          <input type="text" id="nc-dbname" placeholder="e.g. FouridsAnalytics">
         </div>
       </div>
       <div class="form-row">
         <div class="form-group half">
           <label>Username</label>
-          <input type="text" id="nc-user" value="sa">
+          <input type="text" id="nc-user" placeholder="e.g. sa or domain user (leave blank for Windows Auth)">
         </div>
         <div class="form-group half">
           <label>Password</label>
-          <input type="password" id="nc-pass" value="******">
+          <input type="password" id="nc-pass" placeholder="••••••••">
         </div>
       </div>
       <div class="flex-between" style="margin-top: 12px;">
@@ -866,7 +867,7 @@
       </div>
       <div class="form-group">
         <label>Graph Config Name</label>
-        <input type="text" id="ng-name" value="Production Neo4j Instance">
+        <input type="text" id="ng-name" placeholder="e.g. Production Neo4j Instance">
       </div>
       <div class="form-row">
         <div class="form-group half">
@@ -879,21 +880,21 @@
         </div>
         <div class="form-group half">
           <label>Bolt / HTTP Port</label>
-          <input type="number" id="ng-port" value="7687">
+          <input type="number" id="ng-port" placeholder="7687">
         </div>
       </div>
       <div class="form-group">
         <label>Host Name / URI</label>
-        <input type="text" id="ng-host" value="bolt://localhost:7687">
+        <input type="text" id="ng-host" placeholder="e.g. bolt://localhost:7687">
       </div>
       <div class="form-row">
         <div class="form-group half">
           <label>Username / Auth User</label>
-          <input type="text" id="ng-user" value="neo4j" placeholder="e.g. neo4j">
+          <input type="text" id="ng-user" placeholder="e.g. neo4j">
         </div>
         <div class="form-group half">
           <label>Password</label>
-          <input type="password" id="ng-pass" value="password" placeholder="••••••••">
+          <input type="password" id="ng-pass" placeholder="••••••••">
         </div>
       </div>
       <div class="flex-between" style="margin-top: 12px;">

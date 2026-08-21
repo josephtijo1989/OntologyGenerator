@@ -8,6 +8,12 @@ import { ApiService } from '../../core/services/api.service';
   imports: [CommonModule],
   template: `
     <div class="audit-container">
+      <!-- Toast Notification -->
+      <div class="toast-notification" *ngIf="toastMessage">
+        <span class="toast-icon">✨</span>
+        <span class="toast-text">{{ toastMessage }}</span>
+      </div>
+
       <div class="flex-between">
         <div>
           <h2>Immutable Enterprise Audit Trail Explorer</h2>
@@ -46,7 +52,7 @@ import { ApiService } from '../../core/services/api.service';
     </div>
   `,
   styles: [`
-    .audit-container { display: flex; flex-direction: column; gap: 16px; }
+    .audit-container { display: flex; flex-direction: column; gap: 16px; position: relative; }
     .subtitle { color: var(--text-secondary); font-size: 14px; }
     .btn-secondary { background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 8px; cursor: pointer; }
     .data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
@@ -57,10 +63,26 @@ import { ApiService } from '../../core/services/api.service';
     .outcome-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px; background: rgba(244, 63, 94, 0.2); color: var(--accent-rose); }
     .outcome-badge.success { background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); }
     .empty-msg { text-align: center; color: var(--text-secondary); padding: 40px; }
+
+    /* Toast Notification */
+    .toast-notification {
+      position: fixed; bottom: 24px; right: 24px;
+      background: linear-gradient(135deg, #0284c7, #4f46e5); color: white;
+      padding: 12px 20px; border-radius: 8px; display: flex; align-items: center; gap: 10px;
+      font-size: 13px; font-weight: 600; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      z-index: 9999; animation: slideInToast 0.3s ease-out;
+    }
+    @keyframes slideInToast {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .toast-icon { font-size: 18px; }
   `]
 })
 export class AuditLogsComponent implements OnInit {
   auditLogs: any[] = [];
+  toastMessage: string | null = null;
+  private toastTimer: any = null;
 
   constructor(private apiService: ApiService) {}
 
@@ -68,10 +90,16 @@ export class AuditLogsComponent implements OnInit {
     this.loadAuditLogs();
   }
 
+  showToast(msg: string) {
+    this.toastMessage = msg;
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => this.toastMessage = null, 3500);
+  }
+
   loadAuditLogs() {
     this.apiService.getAuditLogs().subscribe({
       next: (res) => this.auditLogs = res,
-      error: (err) => console.error(err)
+      error: (err) => this.showToast('Failed to load audit logs: ' + (err.error?.detail || err.message || 'Server Error'))
     });
   }
 }

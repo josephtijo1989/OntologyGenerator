@@ -151,7 +151,7 @@ export class WorkflowDesignerComponent implements OnInit, OnDestroy {
   loadWorkflows() {
     this.apiService.getWorkflows(this.projectId).subscribe({
       next: (res) => this.workflows = res,
-      error: (err) => console.error(err)
+      error: (err) => this.showToast('Failed to load workflows: ' + (err.error?.detail || err.message || 'Server Error'))
     });
   }
 

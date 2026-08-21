@@ -259,16 +259,11 @@ function updateProfilingProgress(percent, statusText, subtext) {
 async function triggerProfiling() {
   if (!currentProjectId) { showToast('Please select a project first.', 'error'); return; }
 
-  // Instantly Open Profiling Progress Modal for Instant User Feedback
-  openModal('profilingProgressModal');
-  updateProfilingProgress(15, '📈 Initializing Statistical Data Profiling Engine...', 'Phase 1 of 4: Introspecting Column Metrics & Row Counts');
-
-  // Check metadata catalogs existence
+  // Check metadata catalogs existence first
   const metaRes = await fetch(`${API_BASE}/projects/${currentProjectId}/metadata`);
   if (metaRes.ok) {
     const metaList = await metaRes.json();
     if (metaList.length === 0) {
-      closeModal('profilingProgressModal');
       showToast('No metadata cataloged yet. Please click "Run Auto Discovery" first under Metadata Discovery tab.', 'warning');
       return;
     }
@@ -276,55 +271,61 @@ async function triggerProfiling() {
 
   const connsRes = await fetch(`${API_BASE}/projects/${currentProjectId}/source-connections`);
   if (!connsRes.ok) {
-    closeModal('profilingProgressModal');
     showToast('Failed to fetch project source connections.', 'error');
     return;
   }
 
   const conns = await connsRes.json();
   if (conns.length === 0) {
-    closeModal('profilingProgressModal');
     showToast('Please add at least one Source Database Connector first under Database Connectors tab.', 'warning');
     return;
   }
 
-  await delayMs(400);
+  // Instantly Open Profiling Progress Modal for Instant User Feedback
+  openModal('profilingProgressModal');
+  updateProfilingProgress(15, '📈 Initializing Statistical Data Profiling Engine...', 'Phase 1 of 4: Introspecting Column Metrics & Row Counts');
 
-  let successCount = 0;
-  let connIdx = 0;
+  try {
+    await delayMs(400);
 
-  for (const c of conns) {
-    connIdx++;
-    updateProfilingProgress(
-      45,
-      `📊 Calculating Null Ratios & Distinct Ratios for "<strong>${c.name}</strong>"...`,
-      `Phase 2 of 4: Statistical Null Percentage Analysis (${connIdx}/${conns.length})`
-    );
-    await delayMs(700);
+    let successCount = 0;
+    let connIdx = 0;
 
-    try {
-      const res = await fetch(`${API_BASE}/projects/${currentProjectId}/profiling/run?connection_id=${c.id}`, { method: 'POST' });
-      if (res.ok) {
-        successCount++;
-        updateProfilingProgress(
-          85,
-          `🛡️ Running Automated PII Classification Scan for "<strong>${c.name}</strong>"...`,
-          `Phase 3 of 4: Automated Privacy Classification & PII Tagging`
-        );
-        await delayMs(700);
-      } else {
-        const err = await res.json();
-        showToast(`Profiling failed for "${c.name}": ${err.detail || 'Error'}`, 'error');
+    for (const c of conns) {
+      connIdx++;
+      updateProfilingProgress(
+        45,
+        `📊 Calculating Null Ratios & Distinct Ratios for "<strong>${c.name}</strong>"...`,
+        `Phase 2 of 4: Statistical Null Percentage Analysis (${connIdx}/${conns.length})`
+      );
+      await delayMs(100);
+
+      try {
+        const res = await fetch(`${API_BASE}/projects/${currentProjectId}/profiling/run?connection_id=${c.id}`, { method: 'POST' });
+        if (res.ok) {
+          successCount++;
+          updateProfilingProgress(
+            85,
+            `🛡️ Running Automated PII Classification Scan for "<strong>${c.name}</strong>"...`,
+            `Phase 3 of 4: Automated Privacy Classification & PII Tagging`
+          );
+          await delayMs(100);
+        } else {
+          const err = await res.json();
+          showToast(`Profiling failed for "${c.name}": ${err.detail || 'Error'}`, 'error');
+        }
+      } catch (e) {
+        showToast(`Network error during profiling for "${c.name}"`, 'error');
       }
-    } catch (e) {
-      showToast(`Network error during profiling for "${c.name}"`, 'error');
     }
+
+    updateProfilingProgress(100, '✅ Data Profiling Completed Successfully!', 'Phase 4 of 4: Statistical Metrics Persisted & Ready');
+    closeModal('profilingProgressModal');
+    showToast('Data Profiling & Quality Scan Completed Successfully!', 'success');
+  } finally {
+    closeModal('profilingProgressModal');
+    const modalEl = document.getElementById('profilingProgressModal');
+    if (modalEl) modalEl.style.display = 'none';
+    await loadProfiling();
   }
-
-  updateProfilingProgress(100, '✅ Data Profiling Completed Successfully!', 'Phase 4 of 4: Statistical Metrics Persisted & Ready');
-  await delayMs(800);
-
-  closeModal('profilingProgressModal');
-  showToast('Data Profiling & Quality Scan Completed Successfully!', 'success');
-  await loadProfiling();
 }

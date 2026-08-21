@@ -249,18 +249,20 @@ class OntologyService:
             (func.lower(MetadataTable.table_name) == class_name.lower())
         ).first()
 
-        if matched_c:
-            if "label" in update_data and update_data["label"]:
-                matched_c.class_name = update_data["label"]
-            if "domain_type" in update_data and update_data["domain_type"]:
-                matched_c.domain_type = update_data["domain_type"]
-            if "subclass_of" in update_data and update_data["subclass_of"]:
-                s_val = update_data["subclass_of"]
-                if isinstance(s_val, list):
-                    s_val = s_val[0] if len(s_val) > 0 else "owl:Thing"
-                matched_c.subclass_of = str(s_val)
-            if "comment" in update_data and update_data["comment"]:
-                matched_c.comment = update_data["comment"]
+        if not matched_c:
+            raise ValueError(f"Ontology class '{class_name}' not found in project.")
+
+        if "label" in update_data and update_data["label"]:
+            matched_c.class_name = update_data["label"]
+        if "domain_type" in update_data and update_data["domain_type"]:
+            matched_c.domain_type = update_data["domain_type"]
+        if "subclass_of" in update_data and update_data["subclass_of"]:
+            s_val = update_data["subclass_of"]
+            if isinstance(s_val, list):
+                s_val = s_val[0] if len(s_val) > 0 else "owl:Thing"
+            matched_c.subclass_of = str(s_val)
+        if "comment" in update_data and update_data["comment"]:
+            matched_c.comment = update_data["comment"]
 
             # Save updated properties if provided
             if "properties" in update_data and isinstance(update_data["properties"], list):

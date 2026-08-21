@@ -1,5 +1,6 @@
 // Core Application Entry Point & State Initializer
 const API_BASE = '/api/v1';
+const delayMs = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 let currentProjectId = null;
 let currentProjectObj = null;
 let projectsList = [];

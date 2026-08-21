@@ -25,10 +25,15 @@ import { Subscription } from 'rxjs';
             </div>
             <p class="subtitle">Discovered schemas, primary keys, foreign key constraints, and ML-inferred business domain roles</p>
           </div>
-          <button class="btn-primary glow-btn" (click)="runDiscovery()" [disabled]="isDiscovering">
-            <span *ngIf="!isDiscovering">⚡ Trigger Auto Discovery</span>
-            <span *ngIf="isDiscovering">⏳ Discovering Schemas...</span>
-          </button>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="btn-primary glow-btn" (click)="runDiscovery()" [disabled]="isDiscovering">
+              <span *ngIf="!isDiscovering">⚡ Trigger Auto Discovery</span>
+              <span *ngIf="isDiscovering">⏳ Discovering Schemas...</span>
+            </button>
+            <button class="btn-secondary danger-btn" (click)="clearCatalog()" [disabled]="catalogs.length === 0">
+              🗑️ Clear Catalog
+            </button>
+          </div>
         </div>
       </div>
 
@@ -43,6 +48,7 @@ import { Subscription } from 'rxjs';
               <th>Columns Count</th>
               <th>Primary Keys</th>
               <th>Foreign Keys</th>
+              <th style="text-align: right;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -55,12 +61,19 @@ import { Subscription } from 'rxjs';
                   {{ cat.inferred_domain_type || 'Transactional' }}
                 </span>
               </td>
-              <td class="font-mono text-emerald">{{ getColumnsCount(cat) }} columns</td>
-              <td class="font-mono text-amber">{{ getPrimaryKeysDisplay(cat) }}</td>
-              <td class="font-mono text-violet">{{ getForeignKeysCount(cat) }} FK(s)</td>
+              <td class="font-mono text-emerald" style="white-space: nowrap;">{{ getColumnsCount(cat) }} columns</td>
+              <td class="font-mono text-amber" style="max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" [title]="'🔑 ' + getPrimaryKeysDisplay(cat)">
+                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; max-width: 100%;">🔑 {{ getPrimaryKeysDisplay(cat) }}</span>
+              </td>
+              <td class="font-mono text-violet" style="white-space: nowrap;">{{ getForeignKeysCount(cat) }} FK(s)</td>
+              <td style="text-align: right; white-space: nowrap;">
+                <button class="btn-danger-sm" (click)="deleteTable(cat)" title="Remove Table from Catalog" style="white-space: nowrap;">
+                  🗑️ Delete
+                </button>
+              </td>
             </tr>
             <tr *ngIf="catalogs.length === 0">
-              <td colspan="7" class="empty-msg">
+              <td colspan="8" class="empty-msg">
                 No metadata catalogs discovered yet for this project. Click "Trigger Auto Discovery" above.
               </td>
             </tr>
@@ -86,6 +99,18 @@ import { Subscription } from 'rxjs';
     .btn-primary:hover { opacity: 0.95; transform: translateY(-1px); }
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
     .glow-btn { box-shadow: 0 0 16px rgba(6, 182, 212, 0.35); }
+    .btn-secondary {
+      background: var(--bg-surface); color: var(--text-primary);
+      border: 1px solid var(--border-color); padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; transition: all 0.2s;
+    }
+    .danger-btn { color: #f43f5e; border-color: rgba(244, 63, 94, 0.4); background: rgba(244, 63, 94, 0.08); }
+    .danger-btn:hover { background: rgba(244, 63, 94, 0.18); }
+    .danger-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-danger-sm {
+      background: rgba(244, 63, 94, 0.12); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3);
+      padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-danger-sm:hover { background: #f43f5e; color: white; }
 
     .table-card { padding: 0; overflow-x: auto; }
     .data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
@@ -159,7 +184,7 @@ export class MetadataComponent implements OnInit, OnDestroy {
   loadMetadata() {
     this.apiService.getMetadata(this.projectId).subscribe({
       next: (res) => this.catalogs = res,
-      error: (err) => console.error(err)
+      error: (err) => this.showToast('Failed to load metadata: ' + (err.error?.detail || err.message || 'Server Error'))
     });
   }
 
@@ -193,6 +218,36 @@ export class MetadataComponent implements OnInit, OnDestroy {
       return Array.isArray(parsed) ? parsed.length : 0;
     } catch {
       return 0;
+    }
+  }
+
+  deleteTable(cat: any) {
+    const tableName = cat.table_name || 'table';
+    if (confirm(`Are you sure you want to delete table "${tableName}" from the catalog? This will also remove mapped OWL ontology classes.`)) {
+      const tableId = cat.id;
+      this.apiService.deleteMetadataTable(this.projectId, tableId).subscribe({
+        next: () => {
+          this.showToast(`Table "${tableName}" deleted successfully.`);
+          this.loadMetadata();
+        },
+        error: (err) => {
+          this.showToast('Failed to delete table: ' + (err.error?.detail || err.message));
+        }
+      });
+    }
+  }
+
+  clearCatalog() {
+    if (confirm('Are you sure you want to clear ALL cataloged tables for this project?')) {
+      this.apiService.clearMetadata(this.projectId).subscribe({
+        next: () => {
+          this.showToast('All metadata catalog tables cleared successfully.');
+          this.loadMetadata();
+        },
+        error: (err) => {
+          this.showToast('Failed to clear catalog: ' + (err.error?.detail || err.message));
+        }
+      });
     }
   }
 

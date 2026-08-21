@@ -79,16 +79,8 @@ class MetadataService:
             # 2. Semantic Ontology Class mapped to Physical Table (Singular PascalCase)
             cls_name = to_pascal_case_singular(tbl_name) if tbl_name else "AnonymousClass"
 
-            # Determine taxonomy subclass
-            dom_lower = str(dom_type).lower()
-            if "dim" in dom_lower or "master" in dom_lower or "customer" in dom_lower or "product" in dom_lower:
-                subclass_str = "eonto:MasterEntity"
-            elif "lookup" in dom_lower or "ref" in dom_lower or "type" in dom_lower:
-                subclass_str = "eonto:ReferenceEntity"
-            elif "bridge" in dom_lower or "associative" in dom_lower or "map" in tbl_name.lower():
-                subclass_str = "eonto:AssociativeEntity"
-            else:
-                subclass_str = "eonto:TransactionalEntity"
+            # Determine taxonomy subclass (defaulting to owl:Thing directly)
+            subclass_str = "owl:Thing"
 
             onto_class = OntologyClass(
                 project_id=project_id,
@@ -245,4 +237,11 @@ class MetadataService:
         self.db.commit()
 
         logger.info(f"Successfully deleted MetadataTable {tbl.schema_name}.{tbl.table_name} (ID: {table_id})")
+        return True
+
+    def clear_all_metadata(self, project_id: str) -> bool:
+        tables = self.db.query(MetadataTable).filter(MetadataTable.project_id == project_id).all()
+        for tbl in tables:
+            self.delete_metadata_table(project_id, tbl.id)
+        logger.info(f"Successfully cleared all metadata tables for project {project_id}")
         return True

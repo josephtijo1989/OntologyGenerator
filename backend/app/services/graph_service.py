@@ -58,9 +58,11 @@ class GraphService:
         from app.repositories.connection_repository import GraphConfigRepository
         g_repo = GraphConfigRepository(self.db)
         configs = g_repo.get_by_project(project_id)
-        target_name = configs[-1].name if configs else "Enterprise Neo4j Cluster"
-        target_type = configs[-1].target_type.value if configs else "NEO4J"
-        host = configs[-1].host if configs else "bolt://localhost:7687"
+        if not configs:
+            raise ValueError("No target graph database configured for this project.")
+        target_name = configs[-1].name
+        target_type = configs[-1].target_type.value
+        host = configs[-1].host
 
         logger.info(f"Syncing {graph_model.node_count} nodes and {graph_model.relationship_count} edges to {target_name} ({target_type}) at {host}")
 

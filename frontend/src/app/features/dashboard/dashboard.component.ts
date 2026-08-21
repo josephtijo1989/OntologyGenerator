@@ -10,6 +10,12 @@ import { Subscription } from 'rxjs';
   imports: [CommonModule],
   template: `
     <div class="dashboard-container">
+      <!-- Toast Notification -->
+      <div class="toast-notification" *ngIf="toastMessage">
+        <span class="toast-icon">✨</span>
+        <span class="toast-text">{{ toastMessage }}</span>
+      </div>
+
       <div class="header-section glass-card">
         <div class="flex-between">
           <div>
@@ -102,11 +108,27 @@ import { Subscription } from 'rxjs';
     }
     .domain-name { font-weight: 600; color: var(--accent-cyan); }
     .domain-count { color: var(--text-secondary); }
+
+    /* Toast Notification */
+    .toast-notification {
+      position: fixed; bottom: 24px; right: 24px;
+      background: linear-gradient(135deg, #0284c7, #4f46e5); color: white;
+      padding: 12px 20px; border-radius: 8px; display: flex; align-items: center; gap: 10px;
+      font-size: 13px; font-weight: 600; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      z-index: 9999; animation: slideInToast 0.3s ease-out;
+    }
+    @keyframes slideInToast {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .toast-icon { font-size: 18px; }
   `]
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   projectId: string = '11111111-1111-1111-1111-111111111111';
   metrics: any = null;
+  toastMessage: string | null = null;
+  private toastTimer: any = null;
   private projectSub: Subscription | null = null;
 
   constructor(
@@ -129,10 +151,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (this.projectSub) this.projectSub.unsubscribe();
   }
 
+  showToast(msg: string) {
+    this.toastMessage = msg;
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => this.toastMessage = null, 3500);
+  }
+
   loadMetrics() {
     this.apiService.getDashboardMetrics(this.projectId).subscribe({
       next: (res) => this.metrics = res,
-      error: (err) => console.error(err)
+      error: (err) => this.showToast('Failed to load metrics: ' + (err.error?.detail || err.message || 'Server Error'))
     });
   }
 }

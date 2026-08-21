@@ -149,7 +149,7 @@ export class ProfilingComponent implements OnInit, OnDestroy {
   loadProfiling() {
     this.apiService.getProfilingResults(this.projectId).subscribe({
       next: (res) => this.profilingResults = res,
-      error: (err) => console.error(err)
+      error: (err) => this.showToast('Failed to load profiling results: ' + (err.error?.detail || err.message || 'Server Error'))
     });
   }
 

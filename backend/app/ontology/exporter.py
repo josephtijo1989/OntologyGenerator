@@ -11,6 +11,8 @@ class OntologyExporter:
         fmt_map = {
             "turtle": "turtle",
             "ttl": "turtle",
+            "owl/xml": "xml",
+            "owl": "xml",
             "rdf": "xml",
             "rdf/xml": "xml",
             "xml": "xml",
@@ -18,10 +20,12 @@ class OntologyExporter:
             "jsonld": "json-ld",
             "n3": "n3"
         }
-        target_fmt = fmt_map.get(format_str.lower(), "turtle")
+        target_fmt = fmt_map.get(format_str.lower())
+        if not target_fmt:
+            raise ValueError(f"Unsupported export format: '{format_str}'. Supported formats: Turtle, OWL/XML, RDF/XML, JSON-LD, N3.")
         try:
             serialized_data = rdf_graph.serialize(format=target_fmt)
             return serialized_data
         except Exception as e:
             logger.error(f"Failed to serialize ontology in format {format_str}: {e}")
-            return rdf_graph.serialize(format="turtle")
+            raise ValueError(f"Failed to serialize ontology in format {format_str}: {str(e)}")

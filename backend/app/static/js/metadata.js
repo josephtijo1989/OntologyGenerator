@@ -50,9 +50,9 @@ async function loadMetadata() {
           <td><span class="badge badge-info">${tbl.object_type}</span></td>
           <td><span class="badge badge-success">Transactional</span></td>
           <td class="font-mono">${tbl.columns ? tbl.columns.length : 0}</td>
-          <td class="font-mono">${pks ? `<span class="badge badge-warning">🔑 ${pks}</span>` : '<span style="color: var(--text-secondary); font-size: 11px;">None</span>'}</td>
-          <td style="text-align: right;">
-            <button class="btn-danger" style="padding: 4px 10px; font-size: 11px;" onclick="deleteTable('${tbl.id}', '${fullTableName}')">🗑️ Delete Table</button>
+          <td class="font-mono" style="max-width: 260px;">${pks ? `<span class="badge badge-warning" style="max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle;" title="🔑 ${pks}">🔑 ${pks}</span>` : '<span style="color: var(--text-secondary); font-size: 11px;">None</span>'}</td>
+          <td style="text-align: right; white-space: nowrap;">
+            <button class="btn-danger" style="padding: 5px 12px; font-size: 11px; font-weight: 600; white-space: nowrap; cursor: pointer;" onclick="deleteTable('${tbl.id}', '${fullTableName}')">🗑️ Delete</button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -117,8 +117,6 @@ function updateDiscoveryProgress(percent, statusText, subtext) {
   if (pStatus) pStatus.innerHTML = statusText;
   if (pSubtext) pSubtext.innerText = subtext;
 }
-
-const delayMs = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function triggerDiscovery() {
   if (!currentProjectId) { showToast('Please select a project first.', 'error'); return; }
@@ -187,4 +185,34 @@ async function triggerDiscovery() {
 
   await loadMetadata();
   await loadDashboard();
+}
+
+async function clearAllMetadataCatalog() {
+  if (!currentProjectId) { showToast('Please select a project first.', 'error'); return; }
+  let confirmed = false;
+  if (typeof showConfirm === 'function') {
+    confirmed = await showConfirm(
+      'Are you sure you want to clear ALL cataloged tables for this project? This will delete all discovered schemas, columns, profiling stats, and mapped ontology classes.',
+      'Clear All Catalog Metadata',
+      '🗑️ Clear Entire Catalog'
+    );
+  } else {
+    confirmed = confirm('Are you sure you want to clear ALL cataloged tables for this project?');
+  }
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/projects/${currentProjectId}/metadata`, { method: 'DELETE' });
+    if (res.ok) {
+      showToast('All metadata catalog tables cleared successfully!', 'success');
+      await loadMetadata();
+      await loadDashboard();
+      if (typeof loadProfiling === 'function') loadProfiling();
+      if (typeof loadOntology === 'function') loadOntology();
+    } else {
+      showToast('Failed to clear metadata catalog.', 'error');
+    }
+  } catch (e) {
+    showToast('Network error while clearing metadata catalog.', 'error');
+  }
 }

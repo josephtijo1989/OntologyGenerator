@@ -66,7 +66,7 @@ import { Subscription } from 'rxjs';
           </div>
           <div class="form-group">
             <label>Connector Type</label>
-            <select [(ngModel)]="newConn.connector_type" class="form-select">
+            <select [(ngModel)]="newConn.connector_type" (change)="onConnectorTypeChange()" class="form-select">
               <option value="MSSQL">Microsoft SQL Server / Azure Synapse</option>
               <option value="POSTGRESQL">PostgreSQL / Amazon Redshift</option>
               <option value="MYSQL">MySQL / MariaDB</option>
@@ -74,6 +74,9 @@ import { Subscription } from 'rxjs';
               <option value="SNOWFLAKE">Snowflake Cloud Data Warehouse</option>
               <option value="SQLITE">SQLite File DB</option>
             </select>
+          </div>
+          <div class="driver-hint font-mono" *ngIf="driverHint">
+            <span>💡 Driver: {{ driverHint }}</span>
           </div>
           <div class="form-row">
             <div class="form-group half">
@@ -148,6 +151,15 @@ import { Subscription } from 'rxjs';
     .form-input, .form-select { background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; font-family: inherit; font-size: 13px; outline: none; }
     .form-input:focus, .form-select:focus { border-color: var(--accent-cyan); }
 
+    .driver-hint {
+      font-size: 11px;
+      color: var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.08);
+      border: 1px dashed rgba(6, 182, 212, 0.3);
+      padding: 6px 10px;
+      border-radius: 6px;
+    }
+
     /* Toast Notification */
     .toast-notification {
       position: fixed; bottom: 24px; right: 24px;
@@ -167,6 +179,7 @@ export class ConnectorsComponent implements OnInit, OnDestroy {
   projectId: string = '11111111-1111-1111-1111-111111111111';
   connections: any[] = [];
   showModal = false;
+  driverHint: string = 'PyODBC / PyMSSQL (ODBC Driver 17/18 for SQL Server)';
   newConn = {
     name: 'Production SQL Server',
     connector_type: 'MSSQL',
@@ -195,6 +208,38 @@ export class ConnectorsComponent implements OnInit, OnDestroy {
     });
     this.projectId = this.projectStateService.currentProjectId;
     this.loadConnections();
+    this.onConnectorTypeChange();
+  }
+
+  onConnectorTypeChange() {
+    switch (this.newConn.connector_type) {
+      case 'MSSQL':
+        this.newConn.port = 1433;
+        this.driverHint = 'PyODBC / PyMSSQL (SQL Server sys catalog & metadata views)';
+        break;
+      case 'MYSQL':
+        this.newConn.port = 3306;
+        this.driverHint = 'PyMySQL (MySQL / MariaDB information_schema engine)';
+        break;
+      case 'POSTGRESQL':
+        this.newConn.port = 5432;
+        this.driverHint = 'Psycopg2-binary (PostgreSQL / Redshift catalog engine)';
+        break;
+      case 'ORACLE':
+        this.newConn.port = 1521;
+        this.driverHint = 'oracledb / cx_Oracle (Oracle ALL_TABLES & ALL_TAB_COLUMNS)';
+        break;
+      case 'SNOWFLAKE':
+        this.newConn.port = 443;
+        this.driverHint = 'snowflake-connector-python';
+        break;
+      case 'SQLITE':
+        this.newConn.port = 0;
+        this.driverHint = 'sqlite3 (Embedded lightweight file DB driver)';
+        break;
+      default:
+        this.driverHint = '';
+    }
   }
 
   ngOnDestroy() {
@@ -210,7 +255,7 @@ export class ConnectorsComponent implements OnInit, OnDestroy {
   loadConnections() {
     this.apiService.getSourceConnections(this.projectId).subscribe({
       next: (res) => this.connections = res,
-      error: (err) => console.error(err)
+      error: (err) => this.showToast('Failed to load database connections: ' + (err.error?.detail || err.message || 'Server Error'))
     });
   }
 

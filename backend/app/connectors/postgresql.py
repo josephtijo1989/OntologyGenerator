@@ -186,179 +186,116 @@ class PostgreSQLConnector(BaseConnector):
             conn.close()
 
             logger.info(f"Live PostgreSQL Metadata Extraction retrieved {len(catalogs)} tables across non-system schemas")
-            if catalogs:
-                return catalogs
+            return catalogs
 
         except Exception as e:
-            logger.warning(f"Live PostgreSQL metadata query failed: {e}. Falling back to multi-schema catalog generation.")
-
-        # Rich multi-table, multi-column enterprise fallback schema
-        return [
-            {
-                "schema_name": "public",
-                "table_name": "products",
-                "object_type": "TABLE",
-                "row_count": 1477,
-                "columns": [
-                    {"name": "product_id", "type": "INTEGER", "nullable": False, "primary_key": True},
-                    {"name": "product_name", "type": "VARCHAR(255)", "nullable": False},
-                    {"name": "sku_code", "type": "VARCHAR(50)", "nullable": False},
-                    {"name": "category", "type": "VARCHAR(100)", "nullable": True},
-                    {"name": "unit_price", "type": "NUMERIC(10,2)", "nullable": False},
-                    {"name": "created_at", "type": "TIMESTAMP", "nullable": False}
-                ],
-                "primary_keys": ["product_id"],
-                "foreign_keys": [],
-                "indexes": []
-            },
-            {
-                "schema_name": "sales",
-                "table_name": "orders",
-                "object_type": "TABLE",
-                "row_count": 18450,
-                "columns": [
-                    {"name": "order_id", "type": "INTEGER", "nullable": False, "primary_key": True},
-                    {"name": "customer_id", "type": "INTEGER", "nullable": False},
-                    {"name": "order_date", "type": "TIMESTAMP", "nullable": False},
-                    {"name": "order_status", "type": "VARCHAR(50)", "nullable": False},
-                    {"name": "total_amount", "type": "NUMERIC(12,2)", "nullable": False}
-                ],
-                "primary_keys": ["order_id"],
-                "foreign_keys": [
-                    {"constraint_name": "fk_orders_customers", "column": "customer_id", "foreign_schema": "customers", "foreign_table": "customer_profiles", "foreign_column": "customer_id"}
-                ],
-                "indexes": []
-            },
-            {
-                "schema_name": "customers",
-                "table_name": "customer_profiles",
-                "object_type": "TABLE",
-                "row_count": 8920,
-                "columns": [
-                    {"name": "customer_id", "type": "INTEGER", "nullable": False, "primary_key": True},
-                    {"name": "full_name", "type": "VARCHAR(150)", "nullable": False},
-                    {"name": "email_address", "type": "VARCHAR(255)", "nullable": False},
-                    {"name": "phone_number", "type": "VARCHAR(50)", "nullable": True},
-                    {"name": "account_created", "type": "TIMESTAMP", "nullable": False}
-                ],
-                "primary_keys": ["customer_id"],
-                "foreign_keys": [],
-                "indexes": []
-            },
-            {
-                "schema_name": "rad",
-                "table_name": "assay",
-                "object_type": "TABLE",
-                "row_count": 2840,
-                "columns": [
-                    {"name": "assayid", "type": "INTEGER", "nullable": False, "primary_key": True},
-                    {"name": "assaytype_id", "type": "INTEGER", "nullable": False},
-                    {"name": "expmodel_id", "type": "INTEGER", "nullable": False},
-                    {"name": "assayname", "type": "VARCHAR(255)", "nullable": False}
-                ],
-                "primary_keys": ["assayid"],
-                "foreign_keys": [],
-                "indexes": []
-            },
-            {
-                "schema_name": "rad",
-                "table_name": "assay_biotarget_map",
-                "object_type": "TABLE",
-                "row_count": 14120,
-                "columns": [
-                    {"name": "assayid", "type": "INTEGER", "nullable": False, "primary_key": True},
-                    {"name": "biologicaltargetid", "type": "INTEGER", "nullable": False, "primary_key": True}
-                ],
-                "primary_keys": ["assayid", "biologicaltargetid"],
-                "foreign_keys": [],
-                "indexes": []
-            },
-            {
-                "schema_name": "rad",
-                "table_name": "biologicaltarget",
-                "object_type": "TABLE",
-                "row_count": 5420,
-                "columns": [
-                    {"name": "biologicaltargetid", "type": "INTEGER", "nullable": False, "primary_key": True},
-                    {"name": "speciesid", "type": "INTEGER", "nullable": False},
-                    {"name": "targetname", "type": "VARCHAR(200)", "nullable": False},
-                    {"name": "chembl_target_id", "type": "VARCHAR(50)", "nullable": True}
-                ],
-                "primary_keys": ["biologicaltargetid"],
-                "foreign_keys": [],
-                "indexes": []
-            }
-        ]
+            logger.error(f"Live PostgreSQL metadata extraction failed: {e}")
+            raise RuntimeError(f"PostgreSQL metadata query failed: {str(e)}")
 
     def profile_table(self, schema_name: str, table_name: str, columns: Optional[List[Dict[str, Any]]] = None, sample_size: int = 10000) -> Dict[str, Any]:
-        """Live data profiling and quality metrics calculation for a target table."""
-        name_hash = abs(hash(f"{schema_name}.{table_name}"))
-        rows = (name_hash % 18000) + 450
-        q_score = round(100.0 - ((name_hash % 40) / 10.0), 1)
+        conn = None
+        rows = 0
+        column_stats = {}
+        col_list = columns or []
 
         try:
             conn = self._get_connection()
-            cur = conn.cursor()
-            query = f'SELECT COUNT(1) FROM "{schema_name}"."{table_name}";'
-            cur.execute(query)
-            f_res = cur.fetchone()
-            if f_res is not None:
-                rows = f_res[0]
-            cur.close()
+            if conn:
+                cur = conn.cursor()
+                query = f'SELECT COUNT(1) FROM "{schema_name}"."{table_name}";'
+                cur.execute(query)
+                f_res = cur.fetchone()
+                if f_res is not None:
+                    rows = f_res[0] or 0
 
-        except Exception:
-            pass
+                for col in col_list:
+                    col_name = col.get("name") if isinstance(col, dict) else str(col)
+                    col_type = col.get("type", "VARCHAR") if isinstance(col, dict) else "VARCHAR"
+                    null_pct = 0.0
+                    distinct = 0
+                    try:
+                        prof_sql = f"""
+                            SELECT 
+                                SUM(CASE WHEN "{col_name}" IS NULL THEN 1 ELSE 0 END) AS null_cnt,
+                                COUNT(DISTINCT "{col_name}") AS dist_cnt
+                            FROM "{schema_name}"."{table_name}";
+                        """
+                        cur.execute(prof_sql)
+                        row_stat = cur.fetchone()
+                        if row_stat:
+                            null_cnt = row_stat[0] or 0
+                            dist_cnt = row_stat[1] or 0
+                            null_pct = round((null_cnt / rows) * 100.0, 1) if rows > 0 else 0.0
+                            distinct = int(dist_cnt)
+                    except Exception as e:
+                        logger.debug(f"Failed to profile column {col_name} on [{schema_name}].[{table_name}]: {e}")
 
-        column_stats = {}
-        col_list = columns or []
-        if not col_list:
-            col_list = [
-                {"name": f"{table_name}_id", "type": "INTEGER"},
-                {"name": f"{table_name}_name", "type": "VARCHAR(255)"},
-                {"name": "created_at", "type": "TIMESTAMP"}
-            ]
+                    pii_tagged = False
+                    pii_type = None
+                    c_lower = col_name.lower()
+                    if any(k in c_lower for k in ["email", "mail"]):
+                        pii_tagged, pii_type = True, "EMAIL"
+                    elif any(k in c_lower for k in ["phone", "mobile", "tel"]):
+                        pii_tagged, pii_type = True, "PHONE"
+                    elif any(k in c_lower for k in ["ssn", "tax", "tin"]):
+                        pii_tagged, pii_type = True, "SSN"
+                    elif any(k in c_lower for k in ["name", "fname", "lname"]):
+                        pii_tagged, pii_type = True, "NAME"
 
-        for col in col_list:
-            col_name = col.get("name") if isinstance(col, dict) else str(col)
-            col_type = col.get("type", "VARCHAR") if isinstance(col, dict) else "VARCHAR"
-            c_hash = abs(hash(f"{schema_name}.{table_name}.{col_name}"))
+                    stat_entry = {
+                        "data_type": col_type,
+                        "null_pct": null_pct,
+                        "distinct_count": distinct,
+                        "pii_tagged": pii_tagged
+                    }
+                    if pii_type:
+                        stat_entry["pii_type"] = pii_type
+                    column_stats[col_name] = stat_entry
 
-            null_pct = round((c_hash % 50) / 10.0, 1) if (c_hash % 3 == 0) else 0.0
-            distinct = rows if "id" in col_name.lower() else max(1, int(rows * ((c_hash % 90 + 10) / 100.0)))
+                cur.close()
+                conn.close()
 
-            pii_tagged = False
-            pii_type = None
-            c_lower = col_name.lower()
-            if any(k in c_lower for k in ["email", "mail"]):
-                pii_tagged, pii_type = True, "EMAIL"
-            elif any(k in c_lower for k in ["phone", "mobile", "tel"]):
-                pii_tagged, pii_type = True, "PHONE"
-            elif any(k in c_lower for k in ["ssn", "tax", "tin"]):
-                pii_tagged, pii_type = True, "SSN"
-            elif any(k in c_lower for k in ["name", "fname", "lname"]):
-                pii_tagged, pii_type = True, "NAME"
+                null_pcts = [s["null_pct"] for s in column_stats.values()] if column_stats else [0.0]
+                avg_null = sum(null_pcts) / len(null_pcts) if null_pcts else 0.0
+                q_score = round(max(0.0, 100.0 - avg_null), 1)
 
-            stat_entry = {
-                "data_type": col_type,
-                "null_pct": null_pct,
-                "distinct_count": distinct,
-                "pii_tagged": pii_tagged
-            }
-            if pii_type:
-                stat_entry["pii_type"] = pii_type
-
-            column_stats[col_name] = stat_entry
+                return {
+                    "row_count": rows,
+                    "column_stats": column_stats,
+                    "quality_score": q_score
+                }
+        except Exception as e:
+            logger.error(f"Live PostgreSQL table profiling failed for [{schema_name}].[{table_name}]: {e}")
+        finally:
+            if conn and hasattr(conn, "close"):
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
         return {
             "row_count": rows,
             "column_stats": column_stats,
-            "quality_score": q_score
+            "quality_score": 100.0
         }
 
     def fetch_data(self, query: str, limit: Optional[int] = None) -> pd.DataFrame:
-        data = {
-            "product_id": [101, 102],
-            "product_name": ["Laptop", "Monitor"],
-            "unit_price": [1200.0, 350.0]
-        }
-        return pd.DataFrame(data)
+        conn = None
+        try:
+            conn = self._get_connection()
+            if conn:
+                df = pd.read_sql(query, conn)
+                conn.close()
+                if limit and len(df) > limit:
+                    df = df.head(limit)
+                return df
+        except Exception as e:
+            logger.error(f"PostgreSQL fetch_data query failed: {e}")
+            raise RuntimeError(f"Failed to execute query on PostgreSQL: {e}")
+        finally:
+            if conn and hasattr(conn, "close"):
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+        return pd.DataFrame()

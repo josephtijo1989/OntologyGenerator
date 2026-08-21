@@ -195,7 +195,7 @@ export class ProjectsComponent implements OnInit {
           this.selectProject(res[0]);
         }
       },
-      error: (err) => console.error(err)
+      error: (err) => this.showToast('Failed to load projects: ' + (err.error?.detail || err.message || 'Server Error'))
     });
   }
 

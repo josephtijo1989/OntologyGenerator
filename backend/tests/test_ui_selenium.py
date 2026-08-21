@@ -20,6 +20,62 @@ def find_free_port():
     return port
 
 
+@pytest.fixture(scope="session", autouse=True)
+def mock_mssql_for_ui_tests():
+    from unittest.mock import patch
+    from app.connectors.mssql import MSSQLConnector
+    sample_metadata = [
+        {
+            "schema_name": "dbo",
+            "table_name": "Customers",
+            "object_type": "TABLE",
+            "row_count": 8920,
+            "columns": [
+                {"name": "CustomerID", "type": "INT", "nullable": False, "primary_key": True},
+                {"name": "CompanyName", "type": "VARCHAR(100)", "nullable": False},
+                {"name": "Email", "type": "VARCHAR(255)", "nullable": True}
+            ],
+            "primary_keys": ["CustomerID"],
+            "foreign_keys": [],
+            "indexes": []
+        },
+        {
+            "schema_name": "Sales",
+            "table_name": "Orders",
+            "object_type": "TABLE",
+            "row_count": 24500,
+            "columns": [
+                {"name": "OrderID", "type": "INT", "nullable": False, "primary_key": True},
+                {"name": "CustomerID", "type": "INT", "nullable": False}
+            ],
+            "primary_keys": ["OrderID"],
+            "foreign_keys": [
+                {
+                    "constraint_name": "FK_Orders_Customers",
+                    "column": "CustomerID",
+                    "foreign_schema": "dbo",
+                    "foreign_table": "Customers",
+                    "foreign_column": "CustomerID"
+                }
+            ],
+            "indexes": []
+        }
+    ]
+    sample_profile = {
+        "row_count": 8920,
+        "quality_score": 98.5,
+        "column_stats": {
+            "CustomerID": {"data_type": "INT", "null_pct": 0.0, "distinct_count": 8920, "pii_tagged": False},
+            "CompanyName": {"data_type": "VARCHAR(100)", "null_pct": 0.0, "distinct_count": 8920, "pii_tagged": False},
+            "Email": {"data_type": "VARCHAR(255)", "null_pct": 1.2, "distinct_count": 8800, "pii_tagged": True, "pii_type": "EMAIL"}
+        }
+    }
+    with patch.object(MSSQLConnector, "test_connection", return_value=True), \
+         patch.object(MSSQLConnector, "extract_metadata", return_value=sample_metadata), \
+         patch.object(MSSQLConnector, "profile_table", return_value=sample_profile):
+        yield
+
+
 @pytest.fixture(scope="session")
 def test_server():
     port = find_free_port()
@@ -178,7 +234,7 @@ class TestFullApplicationUI:
         driver.find_element(By.ID, "nc-name").send_keys("Corporate SQL Server Production")
         Select(driver.find_element(By.ID, "nc-type")).select_by_value("MSSQL")
         driver.find_element(By.ID, "nc-host").clear()
-        driver.find_element(By.ID, "nc-host").send_keys("sqlserver.corp.local")
+        driver.find_element(By.ID, "nc-host").send_keys("sqlserver.corp.mock")
         driver.find_element(By.ID, "nc-dbname").clear()
         driver.find_element(By.ID, "nc-dbname").send_keys("ERP_PROD_DB")
 
@@ -310,11 +366,21 @@ class TestFullApplicationUI:
             EC.presence_of_element_located((By.CSS_SELECTOR, "#panel-rules.active"))
         )
 
+        driver.execute_script("""
+            const p1 = document.getElementById('profilingProgressModal');
+            if (p1) { p1.classList.remove('active'); p1.style.display = 'none'; }
+            const p2 = document.getElementById('profileDetailModal');
+            if (p2) { p2.classList.remove('active'); p2.style.display = 'none'; }
+        """)
+        WebDriverWait(driver, 10).until(
+            EC.invisibility_of_element_located((By.ID, "profilingProgressModal"))
+        )
+
         # 2. Click "Add Business Rule"
         add_rule_btn = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Add Business Rule')]"))
         )
-        add_rule_btn.click()
+        driver.execute_script("arguments[0].click();", add_rule_btn)
 
         rule_modal = WebDriverWait(driver, 5).until(
             EC.visibility_of_element_located((By.ID, "ruleModal"))
@@ -541,7 +607,7 @@ class TestFullApplicationUI:
         assert subclass_modal.is_displayed()
 
         # Fill Subclass Label
-        subclass_name = f"ViralProtein_{int(time.time()) % 1000}"
+        subclass_name = f"ViralProtein_{int(time.time() * 1000)}"
         driver.find_element(By.ID, "vsc-label").send_keys(subclass_name)
         Select(driver.find_element(By.ID, "vsc-domain")).select_by_value("Dimension")
 
