@@ -289,7 +289,7 @@ async function loadOntology() {
                 <button class="btn-primary" style="font-size: 11px; padding: 2px 8px;" onclick="addInlinePropRow(${idx}, 'ObjectProperty')">🔗 Add Relationship</button>
               </div>
             </div>
-            <div style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 6px;">
+            <div style="max-height: 380px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 6px;">
               <table class="data-table" style="font-size: 11px;">
                 <thead>
                   <tr>
@@ -403,12 +403,22 @@ async function submitInlineUpdate(idx) {
     }
   });
 
+  const seenUpdatedKeys = new Set();
+  const deduplicatedProps = [];
+  updatedProps.forEach(p => {
+    const key = `${(p.property_type || 'DatatypeProperty').toLowerCase()}:${(p.label || '').toLowerCase()}`;
+    if (p.label && !seenUpdatedKeys.has(key)) {
+      seenUpdatedKeys.add(key);
+      deduplicatedProps.push(p);
+    }
+  });
+
   const payload = {
     label: newLabel,
     subclass_of: [newSubclass],
     comment: newComment,
     domain_type: newDomain,
-    properties: updatedProps
+    properties: deduplicatedProps
   };
 
   try {
@@ -549,12 +559,22 @@ async function submitUpdateOntologyClass() {
     }
   });
 
+  const seenModalKeys = new Set();
+  const deduplicatedModalProps = [];
+  updatedProps.forEach(p => {
+    const key = `${(p.property_type || 'DatatypeProperty').toLowerCase()}:${(p.label || '').toLowerCase()}`;
+    if (p.label && !seenModalKeys.has(key)) {
+      seenModalKeys.add(key);
+      deduplicatedModalProps.push(p);
+    }
+  });
+
   const payload = {
     label: newLabel,
     subclass_of: [subclass],
     comment: comment,
     domain_type: domain,
-    properties: updatedProps
+    properties: deduplicatedModalProps
   };
 
   try {
