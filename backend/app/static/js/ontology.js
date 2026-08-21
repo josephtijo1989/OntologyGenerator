@@ -236,7 +236,7 @@ async function loadOntology() {
               ${pkBadge}
             </div>
             <div style="display: flex; gap: 8px;">
-              <button class="btn-primary glow-btn" style="font-size: 11px; padding: 4px 12px;" onclick="openOntologyClassModal(${idx})">✏️ Quick Edit Class & Properties</button>
+              <button class="btn-primary glow-btn" style="font-size: 11px; padding: 4px 12px;" onclick="openOntologyClassModal(${idx})">✏️ Quick Edit / Full Modal & Properties</button>
             </div>
           </div>
 
