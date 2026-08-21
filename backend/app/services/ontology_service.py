@@ -127,15 +127,18 @@ class OntologyService:
         for c in onto_result["classes"]:
             c_name = c["label"]
             node_ids.add(c_name)
-            class_attrs = [
-                {
-                    "name": p.get("name") or p.get("label"),
-                    "range": p.get("range", "xsd:string"),
-                    "is_primary_key": p.get("is_primary_key", False)
-                }
-                for p in onto_result["properties"]
-                if p.get("property_type") == "DatatypeProperty" and (p.get("parent_class") == c_name or p.get("table_name") == c.get("mapped_table_name"))
-            ]
+            seen_attr_names = set()
+            class_attrs = []
+            for p in onto_result["properties"]:
+                if p.get("property_type") == "DatatypeProperty" and (p.get("parent_class") == c_name or (c.get("mapped_table_name") and p.get("table_name") == c.get("mapped_table_name"))):
+                    attr_name = p.get("name") or p.get("label")
+                    if attr_name and attr_name.lower() not in seen_attr_names:
+                        seen_attr_names.add(attr_name.lower())
+                        class_attrs.append({
+                            "name": attr_name,
+                            "range": p.get("range", "xsd:string"),
+                            "is_primary_key": p.get("is_primary_key", False)
+                        })
             graph_nodes.append({
                 "id": c_name,
                 "label": c_name,
@@ -270,11 +273,17 @@ class OntologyService:
                 base_iri = onto_config.base_iri if onto_config else "http://enterprise.org/ontology#"
 
                 self.db.query(OntologyAttribute).filter(OntologyAttribute.class_id == matched_c.id).delete()
+                seen_props_in_update = set()
                 for p in update_data["properties"]:
                     p_name = p.get("label") or p.get("name")
                     if not p_name:
                         continue
                     p_type = p.get("property_type") or "DatatypeProperty"
+                    prop_key = (p_name.lower(), p_type.lower())
+                    if prop_key in seen_props_in_update:
+                        continue
+                    seen_props_in_update.add(prop_key)
+
                     p_range = p.get("range") or "xsd:string"
                     is_pk = bool(p.get("is_primary_key", False))
                     p_comment = p.get("comment") or f"{p_type} for {p_name}"
@@ -385,11 +394,16 @@ class OntologyService:
 
         # Add initial properties if provided
         properties = create_data.get("properties") or []
+        seen_props_in_create = set()
         for p in properties:
             p_name = p.get("label") or p.get("name")
             if not p_name:
                 continue
             p_type = p.get("property_type") or "DatatypeProperty"
+            prop_key = (p_name.lower(), p_type.lower())
+            if prop_key in seen_props_in_create:
+                continue
+            seen_props_in_create.add(prop_key)
             p_range = p.get("range") or "xsd:string"
             is_pk = bool(p.get("is_primary_key", False))
             p_comment = p.get("comment") or f"{p_type} for {p_name}"

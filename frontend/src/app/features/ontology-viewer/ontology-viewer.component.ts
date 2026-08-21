@@ -1933,7 +1933,16 @@ ecom:referencesProduct a owl:ObjectProperty ;
     this.parsedData.classes.sort((a: any, b: any) => a.label.localeCompare(b.label));
 
     if (!this.parsedData.properties) this.parsedData.properties = [];
-    newProps.forEach((p: any) => this.parsedData.properties.push(p));
+    newProps.forEach((p: any) => {
+      const exists = this.parsedData.properties.some(
+        (existing: any) =>
+          (existing.parent_class || '').toLowerCase() === (p.parent_class || '').toLowerCase() &&
+          (existing.name || existing.label || '').toLowerCase() === (p.name || p.label || '').toLowerCase()
+      );
+      if (!exists) {
+        this.parsedData.properties.push(p);
+      }
+    });
 
     // Graph elements
     if (!this.parsedData.graph) {

@@ -691,9 +691,21 @@ class OntologyGenerator:
                 Collection(g, key_list_node, pk_prop_uris)
                 g.add((class_uri, OWL.hasKey, key_list_node))
 
+        # Deduplicate properties before return to guarantee no attribute duplication
+        unique_properties = []
+        seen_keys = set()
+        for p in properties:
+            p_name = (p.get("name") or p.get("label") or "").lower()
+            p_parent = (p.get("parent_class") or p.get("domain") or "").lower()
+            p_type = (p.get("property_type") or "DatatypeProperty").lower()
+            key = (p_parent, p_name, p_type)
+            if key not in seen_keys:
+                seen_keys.add(key)
+                unique_properties.append(p)
+
         return {
             "graph": g,
             "classes": classes,
-            "properties": properties
+            "properties": unique_properties
         }
 

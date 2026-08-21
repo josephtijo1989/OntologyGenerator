@@ -1,5 +1,6 @@
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.models.domain import (
     MetadataTable, MetadataColumn, OntologyClass, OntologyAttribute, ProfilingResult
 )
@@ -134,18 +135,23 @@ class MetadataService:
                 xsd_range = map_sql_to_xsd(c_type)
                 pk_prefix = "[PRIMARY KEY] " if is_pk else ""
 
-                onto_attr = OntologyAttribute(
-                    class_id=onto_class.id,
-                    mapped_column_id=meta_col.id,
-                    attribute_name=attr_prop_name,
-                    attribute_iri=f"http://enterprise.org/ontology#{attr_prop_name}",
-                    property_type="DatatypeProperty",
-                    range_datatype=xsd_range,
-                    is_primary_key=is_pk,
-                    parent_class_name=cls_name,
-                    comment=f"{pk_prefix}Datatype property mapped to column {c_name} ({c_type})"
-                )
-                self.db.add(onto_attr)
+                existing_attr = self.db.query(OntologyAttribute).filter(
+                    OntologyAttribute.class_id == onto_class.id,
+                    func.lower(OntologyAttribute.attribute_name) == attr_prop_name.lower()
+                ).first()
+                if not existing_attr:
+                    onto_attr = OntologyAttribute(
+                        class_id=onto_class.id,
+                        mapped_column_id=meta_col.id,
+                        attribute_name=attr_prop_name,
+                        attribute_iri=f"http://enterprise.org/ontology#{attr_prop_name}",
+                        property_type="DatatypeProperty",
+                        range_datatype=xsd_range,
+                        is_primary_key=is_pk,
+                        parent_class_name=cls_name,
+                        comment=f"{pk_prefix}Datatype property mapped to column {c_name} ({c_type})"
+                    )
+                    self.db.add(onto_attr)
 
             self.db.commit()
             saved_tables.append(meta_table)
@@ -170,40 +176,50 @@ class MetadataService:
                 )
 
                 # Forward relationship attribute
-                fwd_attr = OntologyAttribute(
-                    class_id=s_onto.id,
-                    target_class_id=t_onto.id,
-                    attribute_name=fwd_name,
-                    attribute_iri=f"http://enterprise.org/ontology#{fwd_name}",
-                    property_type="ObjectProperty",
-                    range_datatype=t_onto.class_name,
-                    is_primary_key=False,
-                    parent_class_name=s_onto.class_name,
-                    target_class_name=t_onto.class_name,
-                    relationship_name=fwd_name,
-                    inverse_property_name=inv_name,
-                    is_inverse=False,
-                    comment=f"Object relationship property linking {s_onto.class_name} to {t_onto.class_name}"
-                )
-                self.db.add(fwd_attr)
+                existing_fwd = self.db.query(OntologyAttribute).filter(
+                    OntologyAttribute.class_id == s_onto.id,
+                    func.lower(OntologyAttribute.attribute_name) == fwd_name.lower()
+                ).first()
+                if not existing_fwd:
+                    fwd_attr = OntologyAttribute(
+                        class_id=s_onto.id,
+                        target_class_id=t_onto.id,
+                        attribute_name=fwd_name,
+                        attribute_iri=f"http://enterprise.org/ontology#{fwd_name}",
+                        property_type="ObjectProperty",
+                        range_datatype=t_onto.class_name,
+                        is_primary_key=False,
+                        parent_class_name=s_onto.class_name,
+                        target_class_name=t_onto.class_name,
+                        relationship_name=fwd_name,
+                        inverse_property_name=inv_name,
+                        is_inverse=False,
+                        comment=f"Object relationship property linking {s_onto.class_name} to {t_onto.class_name}"
+                    )
+                    self.db.add(fwd_attr)
 
                 # Inverse relationship attribute
-                inv_attr = OntologyAttribute(
-                    class_id=t_onto.id,
-                    target_class_id=s_onto.id,
-                    attribute_name=inv_name,
-                    attribute_iri=f"http://enterprise.org/ontology#{inv_name}",
-                    property_type="ObjectProperty",
-                    range_datatype=s_onto.class_name,
-                    is_primary_key=False,
-                    parent_class_name=t_onto.class_name,
-                    target_class_name=s_onto.class_name,
-                    relationship_name=inv_name,
-                    inverse_property_name=fwd_name,
-                    is_inverse=True,
-                    comment=f"Inverse object relationship property linking {t_onto.class_name} back to {s_onto.class_name}"
-                )
-                self.db.add(inv_attr)
+                existing_inv = self.db.query(OntologyAttribute).filter(
+                    OntologyAttribute.class_id == t_onto.id,
+                    func.lower(OntologyAttribute.attribute_name) == inv_name.lower()
+                ).first()
+                if not existing_inv:
+                    inv_attr = OntologyAttribute(
+                        class_id=t_onto.id,
+                        target_class_id=s_onto.id,
+                        attribute_name=inv_name,
+                        attribute_iri=f"http://enterprise.org/ontology#{inv_name}",
+                        property_type="ObjectProperty",
+                        range_datatype=s_onto.class_name,
+                        is_primary_key=False,
+                        parent_class_name=t_onto.class_name,
+                        target_class_name=s_onto.class_name,
+                        relationship_name=inv_name,
+                        inverse_property_name=fwd_name,
+                        is_inverse=True,
+                        comment=f"Inverse object relationship property linking {t_onto.class_name} back to {s_onto.class_name}"
+                    )
+                    self.db.add(inv_attr)
 
         self.db.commit()
         logger.info(f"Discovered and saved {len(saved_tables)} physical tables, mapped ontology classes, and FK relationships for project {project_id}")
