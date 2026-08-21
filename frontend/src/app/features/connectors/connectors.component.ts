@@ -80,26 +80,26 @@ import { Subscription } from 'rxjs';
           </div>
           <div class="form-row">
             <div class="form-group half">
-              <label>Host</label>
-              <input type="text" [(ngModel)]="newConn.host" class="form-input font-mono">
+              <label>Host Name / IP</label>
+              <input type="text" [(ngModel)]="newConn.host" placeholder="e.g. localhost or 192.168.1.10" class="form-input font-mono">
             </div>
             <div class="form-group half">
-              <label>Port</label>
-              <input type="number" [(ngModel)]="newConn.port" class="form-input font-mono">
+              <label>Database Port</label>
+              <input type="number" [(ngModel)]="newConn.port" placeholder="e.g. 1433" class="form-input font-mono">
             </div>
           </div>
           <div class="form-group">
             <label>Database Name</label>
-            <input type="text" [(ngModel)]="newConn.database_name" class="form-input font-mono">
+            <input type="text" [(ngModel)]="newConn.database_name" placeholder="e.g. AnalyticsDB" class="form-input font-mono">
           </div>
           <div class="form-row">
             <div class="form-group half">
               <label>Username</label>
-              <input type="text" [(ngModel)]="newConn.username" class="form-input font-mono">
+              <input type="text" [(ngModel)]="newConn.username" placeholder="e.g. sa or domain user" class="form-input font-mono">
             </div>
             <div class="form-group half">
               <label>Password</label>
-              <input type="password" [(ngModel)]="newConn.password" class="form-input font-mono">
+              <input type="password" [(ngModel)]="newConn.password" placeholder="Enter database password" class="form-input font-mono">
             </div>
           </div>
           <div class="modal-actions flex-between" style="margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border-color);">
@@ -181,13 +181,13 @@ export class ConnectorsComponent implements OnInit, OnDestroy {
   showModal = false;
   driverHint: string = 'PyODBC / PyMSSQL (ODBC Driver 17/18 for SQL Server)';
   newConn = {
-    name: 'Production SQL Server',
+    name: '',
     connector_type: 'MSSQL',
-    host: 'localhost',
-    port: 1433,
-    database_name: 'QuickPasteurDB',
-    username: 'sa',
-    password: 'YourStrongPass123!'
+    host: '',
+    port: null as any,
+    database_name: '',
+    username: '',
+    password: ''
   };
 
   toastMessage: string | null = null;
@@ -214,27 +214,21 @@ export class ConnectorsComponent implements OnInit, OnDestroy {
   onConnectorTypeChange() {
     switch (this.newConn.connector_type) {
       case 'MSSQL':
-        this.newConn.port = 1433;
         this.driverHint = 'PyODBC / PyMSSQL (SQL Server sys catalog & metadata views)';
         break;
       case 'MYSQL':
-        this.newConn.port = 3306;
         this.driverHint = 'PyMySQL (MySQL / MariaDB information_schema engine)';
         break;
       case 'POSTGRESQL':
-        this.newConn.port = 5432;
         this.driverHint = 'Psycopg2-binary (PostgreSQL / Redshift catalog engine)';
         break;
       case 'ORACLE':
-        this.newConn.port = 1521;
         this.driverHint = 'oracledb / cx_Oracle (Oracle ALL_TABLES & ALL_TAB_COLUMNS)';
         break;
       case 'SNOWFLAKE':
-        this.newConn.port = 443;
         this.driverHint = 'snowflake-connector-python';
         break;
       case 'SQLITE':
-        this.newConn.port = 0;
         this.driverHint = 'sqlite3 (Embedded lightweight file DB driver)';
         break;
       default:

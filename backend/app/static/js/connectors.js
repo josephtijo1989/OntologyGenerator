@@ -83,7 +83,7 @@ function openAddConnectorModal() {
   document.getElementById('nc-name').value = '';
   document.getElementById('nc-type').value = 'MSSQL';
   document.getElementById('nc-host').value = '';
-  document.getElementById('nc-port').value = '1433';
+  document.getElementById('nc-port').value = '';
   document.getElementById('nc-dbname').value = '';
   document.getElementById('nc-user').value = '';
   document.getElementById('nc-pass').value = '';
