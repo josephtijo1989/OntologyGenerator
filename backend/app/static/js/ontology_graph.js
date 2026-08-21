@@ -1432,7 +1432,15 @@ function applyOntoGraphFilters() {
       let match = true;
 
       if (ontoConceptFilter === 'classes') {
-        match = false;
+        // Classes filter: Show SubClassOf hierarchy edges connecting classes, parent classes, and subclasses; hide ObjectProperty relationships.
+        if (eData.edgeType === 'ObjectProperty') {
+          match = false;
+        }
+      } else if (ontoConceptFilter === 'relationships') {
+        // Relationships filter: Show ObjectProperty relationship edges; hide SubClassOf hierarchy edges.
+        if (eData.edgeType === 'SubClassOf') {
+          match = false;
+        }
       }
 
       const srcVisible = edge.source().style('display') !== 'none';
