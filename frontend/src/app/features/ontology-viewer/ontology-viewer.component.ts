@@ -232,12 +232,15 @@ interface PresetOption {
             </button>
           </div>
 
-          <div class="search-filter-box" *ngIf="activeViewTab === 'classes' || activeViewTab === 'properties'">
-            <input
-              type="text"
-              [(ngModel)]="searchQuery"
-              placeholder="Search classes or properties..."
-              class="search-input" />
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button class="btn-primary btn-sm glow-btn" (click)="openCreateClassModal()" title="Add Subclass to Hierarchy">➕ Add Subclass</button>
+            <div class="search-filter-box" *ngIf="activeViewTab === 'classes' || activeViewTab === 'properties'">
+              <input
+                type="text"
+                [(ngModel)]="searchQuery"
+                placeholder="Search classes or properties..."
+                class="search-input" />
+            </div>
           </div>
         </div>
 
@@ -252,8 +255,6 @@ interface PresetOption {
               </span>
             </div>
             <div class="toolbar-right">
-              <button class="btn-primary btn-sm glow-btn" (click)="openCreateClassModal()" title="Create New Semantic Class">➕ Create Class</button>
-              <button class="btn-sm btn-subclass-nav" (click)="openCreateClassModal()" title="Add Subclass to Hierarchy">➕ Add Subclass</button>
               <button class="btn-icon" (click)="zoomIn()" title="Zoom In">🔍+</button>
               <button class="btn-icon" (click)="zoomOut()" title="Zoom Out">🔍-</button>
               <button class="btn-icon" (click)="fitGraph()" title="Fit to Screen">⛶ Fit</button>
