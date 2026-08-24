@@ -474,6 +474,26 @@ def create_document():
     add_bullet(doc, "Interactive Sub-Tabs: ", "Features 4 dedicated sub-views: (1) Knowledge Graph with physics-based layout engine selector (CoSE, Concentric, Breadth-First, Circle, Grid), (2) OWL Classes Grid, (3) Properties & Relationships Table, and (4) Formatted Raw Turtle Source Viewer with copy and download utilities.")
     add_bullet(doc, "Preset Demonstrations: ", "Includes pre-loaded biological/assay knowledge graphs (Pasteur Model) and e-commerce supply chain graphs for rapid evaluation.")
 
+    # Module 7
+    p3_7 = doc.add_paragraph()
+    style_heading_2(p3_7, "3.7 Data Movement & Migration Engine")
+    add_body_p(doc, "The Data Movement Engine streams relational database records into Target Knowledge Graph instances (Neo4j, Memgraph, Apache AGE, AWS Neptune) mapped against W3C OWL 2.0 ontology topologies.")
+
+    add_bullet(doc, "Automated Record Ingestion: ", "Extracts source database records and materializes graph nodes (:Label) with datatype properties and Object Property relationship edges (:RELATIONSHIP).")
+    add_bullet(doc, "Visual 6-Stage Execution Stepper: ", "Live progress indicator tracking Extraction ➔ Ontology ➔ Validation ➔ Nodes ➔ Edges ➔ Commit stages.")
+    add_bullet(doc, "Real-Time Terminal Monitor: ", "Streamed console logs displaying row extraction counts, node creation stats, validation pass rates, and total execution time in milliseconds.")
+    add_bullet(doc, "Execution History Audit Trail: ", "Historical job execution table featuring inline 📜 Logs viewer and 🗑️ single/bulk audit record deletion.")
+
+    # Module 8
+    p3_8 = doc.add_paragraph()
+    style_heading_2(p3_8, "3.8 AI Knowledge Graph Insights & Approved Cypher Repository")
+    add_body_p(doc, "The AI Graph Insights subsystem translates natural language questions into schema-accurate Cypher queries, executing live against target graph databases to yield executive intelligence summaries.")
+
+    add_bullet(doc, "Natural Language to Cypher: ", "Converts natural language questions (e.g. 'List all vendors') into optimized Cypher graph queries.")
+    add_bullet(doc, "Dynamic Ontology Prompt Pills: ", "Live suggestion pills dynamically synthesized from project W3C OWL classes (e.g. :Vendor, :Invoice, :Contract, :Product).")
+    add_bullet(doc, "Approved Few-Shot Repository: ", "Managed knowledge base storing approved Cypher queries for exact question matching.")
+    add_bullet(doc, "Executive AI Summaries: ", "Synthesizes structured intelligence summaries with domain governance analysis and target graph topology metrics.")
+
     # =========================================================================
     # SECTION 4: COMPLETE USER OPERATING MANUAL
     # =========================================================================
@@ -527,19 +547,31 @@ def create_document():
          "3. Inspect each class card to review its superclass taxonomy, primary key, datatype attributes, and object relationships.\n"
          "4. Use the inline editor to modify class comments, rename attributes, or add custom properties."),
 
-        ("Step 8: Exploring in Graphical Ontology & Mapping Modes",
+        ("Step 8: Executing Data Movement Pipeline",
+         "1. Navigate to '⚡ Data Movement Engine'.\n"
+         "2. Select the source connector, migration mode (Full Refresh or Incremental), and batch size.\n"
+         "3. Click '⚡ Launch Data Movement Pipeline' to stream relational data into the Target Knowledge Graph.\n"
+         "4. Monitor the live 6-stage stepper, view real-time terminal output, and review audit history logs."),
+
+        ("Step 9: Generating AI Graph Insights",
+         "1. Navigate to '💡 AI Graph Insights'.\n"
+         "2. Select a dynamic prompt pill (e.g. ':Vendor', ':Invoice') or type a custom question.\n"
+         "3. Click '⚡ Generate AI Insights' to synthesize Cypher queries and analyze live data records.\n"
+         "4. Review executive intelligence summaries, domain governance findings, and Cypher execution results."),
+
+        ("Step 10: Exploring in Graphical Ontology & Mapping Modes",
          "1. Navigate to '🌐 Graphical Ontology'.\n"
          "2. Use the mode toggle at the top to switch between 'Semantic Ontology', 'Source Metadata', and 'Mapping View'.\n"
          "3. Use the search bar to locate specific entities or use chip filters to isolate Classes, Properties, or Relationships.\n"
          "4. Click any node to open the Right-Side Inspection Drawer for deep-dive lineage analysis and instant subclass creation."),
 
-        ("Step 9: Utilizing the Stateless Upload & Sandbox Viewer",
+        ("Step 11: Utilizing the Stateless Upload & Sandbox Viewer",
          "1. Navigate to '📤 Upload & View Ontology'.\n"
          "2. Drag and drop any external .ttl, .owl, .rdf, .xml, .jsonld, or .nt file into the dropzone (or paste raw code).\n"
          "3. Click '⚡ Parse & Visualize Ontology'. Explore the 4 sub-views (Knowledge Graph, Classes Grid, Properties Table, Raw Turtle Source).\n"
          "4. Download sanitized W3C Turtle exports or copy source markup directly to the clipboard."),
 
-        ("Step 10: Exporting Artifacts & Syncing with Target Graph",
+        ("Step 12: Exporting Artifacts & Syncing with Target Graph",
          "1. From the Ontology Editor or Graphical Ontology view, click '📥 Turtle (.ttl)' or '📥 OWL/XML (.owl)' to download standardized ontology files.\n"
          "2. Navigate to '🕸️ Knowledge Graph' and click '⚡ Export Cypher (.cypher)' to generate Neo4j constraint and node creation scripts.\n"
          "3. Click '🚀 Export & Sync to Target DB' to execute direct Bolt synchronization into the live target graph database.")
@@ -581,6 +613,14 @@ def create_document():
         ["POST", "/api/v1/projects/{id}/ontology/classes", "Ontology Engine", "Creates custom ontology concept class"],
         ["PUT", "/api/v1/projects/{id}/ontology/classes/{name}", "Ontology Engine", "Updates ontology class details and properties"],
         ["POST", "/api/v1/projects/{id}/ontology/export", "Ontology Engine", "Exports ontology in Turtle or OWL/XML format"],
+        ["GET", "/api/v1/projects/{id}/data-movement/mapping", "Data Movement", "Retrieves table-to-class data movement topology"],
+        ["POST", "/api/v1/projects/{id}/data-movement/execute", "Data Movement", "Executes data movement pipeline and returns metrics"],
+        ["GET", "/api/v1/projects/{id}/data-movement/history", "Data Movement", "Retrieves historical data movement audit logs"],
+        ["DELETE", "/api/v1/projects/{id}/data-movement/history/{jid}", "Data Movement", "Deletes single or all execution audit logs"],
+        ["POST", "/api/v1/projects/{id}/llm/insights", "AI Insights", "Generates Cypher and executive AI summary for prompt"],
+        ["GET", "/api/v1/projects/{id}/llm/approved-cyphers", "AI Insights", "Lists approved few-shot Cypher query repository"],
+        ["POST", "/api/v1/projects/{id}/llm/approved-cyphers", "AI Insights", "Saves approved Cypher query for few-shot learning"],
+        ["DELETE", "/api/v1/projects/{id}/llm/approved-cyphers/{id}", "AI Insights", "Deletes entry from approved Cypher repository"],
         ["POST", "/api/v1/ontology/parse-preview", "Sandbox Viewer", "Stateless in-memory parser for raw RDF/Turtle strings"],
         ["POST", "/api/v1/ontology/upload-preview", "Sandbox Viewer", "Stateless multi-format file upload parser"],
         ["GET", "/api/v1/projects/{id}/graph/generate", "Knowledge Graph", "Generates property graph nodes and lineage edges"],
@@ -589,7 +629,7 @@ def create_document():
         ["POST", "/api/v1/projects/{id}/workflows", "Workflows", "Creates automated transformation pipeline"],
         ["GET", "/api/v1/dashboard/stats", "Dashboard", "System-wide metrics on projects, tables, rules & graphs"]
     ]
-    create_styled_table(doc, api_endpoints[0], api_endpoints[1:], col_widths=[0.9, 2.3, 1.3, 2.0])
+    create_styled_table(doc, api_endpoints[0], api_endpoints[1:], col_widths=[0.8, 2.3, 1.2, 2.2])
 
     # =========================================================================
     # SECTION 6: DATABASE SCHEMA & DATA MODEL REFERENCE

@@ -177,6 +177,18 @@ flowchart TD
   3. *Properties & Relationships*: Filterable table of scalar attributes and relationship edges.
   4. *Raw Turtle Source*: Formatted RDF syntax highlighting with one-click copy and download.
 
+### 3.7 Data Movement & Migration Engine
+- **Automated Record Ingestion**: Transforms relational database records into Target Knowledge Graph nodes (`:Label`) and relationship edges (`:RELATIONSHIP`).
+- **Live Execution Stepper**: Visual 6-step progress monitor tracking Extraction ➔ Ontology ➔ Validation ➔ Nodes ➔ Edges ➔ Commit stages.
+- **Real-Time Terminal Console**: Streamed execution metrics displaying extracted record counts, node creation stats, and total duration in milliseconds.
+- **Execution Audit Trail**: Historical log audit table with inline `📜 Logs` inspector and `🗑️` single/bulk log entry deletion.
+
+### 3.8 AI Knowledge Graph Insights & Approved Cypher Repository
+- **Natural Language Cypher Generation**: Converts plain English prompts (e.g. "List all vendors") into schema-accurate Cypher graph queries (`POST /api/v1/projects/{id}/llm/insights`).
+- **Dynamic Ontology Prompt Pills**: Live suggestion pills dynamically synthesized from project W3C OWL classes (e.g. `:Vendor`, `:Invoice`, `:Contract`, `:Product`).
+- **Approved Few-Shot Repository**: Managed repository (`/llm/approved-cyphers`) storing vetted Cypher queries for high-precision exact matching.
+- **Executive AI Summaries**: Synthesizes executive intelligence summaries with domain governance analysis and target graph topology stats.
+
 ---
 
 ## 4. Step-by-Step User Operating Guide
@@ -188,9 +200,11 @@ flowchart TD
 5. **Inspect Profiling & PII**: Go to `📈 Data Profiling & Quality` and click `⚡ Run Data Profiling` to examine null distributions and PII tags.
 6. **Formulate Business Rules**: Open `⚙️ Business Rules Engine`, click `➕ Add Business Rule`, define rule semantics, and bind to target entities.
 7. **Synthesize Ontology**: Open `🧠 OWL Ontology Editor`, click `🔄 Re-Generate Ontology` to synthesize W3C OWL 2.0 DL models.
-8. **Explore Visually**: Open `🌐 Graphical Ontology` to interact with the concept graph, search nodes, filter taxonomy paths, and inspect properties in the right-side drawer.
-9. **Sandbox Testing**: Go to `📤 Upload & View Ontology` to drag-and-drop external RDF files for real-time in-memory visualization.
-10. **Export & Target Sync**: Export `.ttl`, `.owl`, `.cypher`, or `.graphml` files, or click `🚀 Export & Sync to Target DB` to synchronize live to Neo4j.
+8. **Execute Data Movement**: Go to `⚡ Data Movement Engine`, select migration strategy mode, and click `⚡ Launch Data Movement Pipeline` to stream relational data into the Target Knowledge Graph.
+9. **AI Graph Analytics**: Go to `💡 AI Graph Insights`, select dynamic prompt pills or type natural language questions, and click `⚡ Generate AI Insights`.
+10. **Explore Visually**: Open `🌐 Graphical Ontology` to interact with the concept graph, search nodes, filter taxonomy paths, and inspect properties in the right-side drawer.
+11. **Sandbox Testing**: Go to `📤 Upload & View Ontology` to drag-and-drop external RDF files for real-time in-memory visualization.
+12. **Export & Target Sync**: Export `.ttl`, `.owl`, `.cypher`, or `.graphml` files, or click `🚀 Export & Sync to Target DB` to synchronize live to Neo4j.
 
 ---
 
@@ -202,6 +216,8 @@ flowchart TD
 - **Discovery & Profiling**: `POST /api/v1/projects/{id}/metadata/discover`, `POST /api/v1/projects/{id}/profiling/run`
 - **Business Rules**: `GET/POST /api/v1/projects/{id}/rules`
 - **Ontology Engine**: `GET /api/v1/projects/{id}/ontology/generate`, `POST .../classes`, `PUT .../classes/{name}`, `POST .../export`
+- **Data Movement Engine**: `GET /api/v1/projects/{id}/data-movement/mapping`, `POST /api/v1/projects/{id}/data-movement/execute`, `GET/DELETE /api/v1/projects/{id}/data-movement/history`
+- **AI Graph Insights**: `POST /api/v1/projects/{id}/llm/insights`, `GET/POST/DELETE /api/v1/projects/{id}/llm/approved-cyphers`
 - **Stateless Sandbox**: `POST /api/v1/ontology/parse-preview`, `POST /api/v1/ontology/upload-preview`
 - **Knowledge Graph**: `GET /api/v1/projects/{id}/graph/generate`, `POST .../export`, `POST .../sync-to-target`
 - **Workflows & Dashboard**: `POST /api/v1/projects/{id}/workflows`, `GET /api/v1/dashboard/stats`

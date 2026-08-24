@@ -9,8 +9,20 @@ Quick-Pasteur Enterprise is a data modeling and ontology governance platform tha
 ## 🌟 Key Features & Capabilities
 
 - **📁 Multi-Project & Source Connector Isolation**:
-  - Connect to PostgreSQL, MS SQL Server, Oracle, and MySQL databases.
+  - Connect to PostgreSQL, MS SQL Server, Oracle, MySQL, and SQLite databases.
   - Complete project-level isolation; switching active projects dynamically updates all tabs and clears state.
+
+- **⚡ Data Movement Engine & Pipeline Execution**:
+  - Automated extraction of relational database records into Target Knowledge Graph nodes and edges.
+  - Live 6-stage Pipeline Stepper (Extraction ➔ Ontology ➔ Validation ➔ Nodes ➔ Edges ➔ Commit).
+  - Terminal Monitor with real-time log output, row extraction counts, and execution duration metrics.
+  - Comprehensive Execution History Audit Trail table with inline execution log details and audit log deletion.
+
+- **🧠 AI Knowledge Graph Insights & Approved Cypher Repository**:
+  - Natural language query to Cypher graph engine (`POST /api/v1/projects/{id}/llm/insights`).
+  - Dynamic prompt pill suggestions generated live from project W3C OWL ontology classes (e.g. `:Vendor`, `:Invoice`, `:Contract`, `:Product`).
+  - Approved Few-Shot Cypher Query Repository (`/llm/approved-cyphers`) with exact question matching.
+  - Formatted executive AI intelligence summaries with domain governance findings and target DB topology metrics.
 
 - **🔍 Automated Metadata Discovery & Profiling**:
   - Automatically inspects relational schemas, tables, primary keys, and foreign key relationships.
@@ -34,7 +46,7 @@ Quick-Pasteur Enterprise is a data modeling and ontology governance platform tha
 - **🕸️ Knowledge Graph Lineage & Target DB Sync**:
   - Lineage visualization with CoSE force-directed layout.
   - Export lineage to **Neo4j Cypher (`.cypher`)** and **GraphML (`.graphml`)**.
-  - Direct target database synchronization.
+  - Direct live target database synchronization for Neo4j, Memgraph, Apache AGE, and AWS Neptune.
 
 ---
 
@@ -45,12 +57,14 @@ Quick-Pasteur Enterprise is a data modeling and ontology governance platform tha
 - **ASGI Server**: Uvicorn
 - **ORM & Database**: SQLAlchemy (SQLite application DB / PostgreSQL target DB)
 - **OWL Processing**: RDFLib 7.0+
+- **LLM & Insights**: Cypher Synthesizer & Approved Few-Shot Knowledge Repository
 - **Validation**: Pydantic v2
 
 ### Frontend Stack
 - **Core Logic**: HTML5, Vanilla JavaScript (ES6+ Modules)
 - **Styling**: Executive Light-Mode CSS Design System (Inter / Google Fonts, Glassmorphism)
 - **Graph Visualization**: Cytoscape.js
+
 
 ---
 
