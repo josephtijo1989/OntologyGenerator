@@ -8,6 +8,7 @@ import { ConnectorsComponent } from './features/connectors/connectors.component'
 import { MetadataComponent } from './features/metadata/metadata.component';
 import { ProfilingComponent } from './features/profiling/profiling.component';
 import { GraphVisualizerComponent } from './features/graph-visualizer/graph-visualizer.component';
+import { DataMovementComponent } from './features/data-movement/data-movement.component';
 import { OntologyEditorComponent } from './features/ontology-editor/ontology-editor.component';
 import { OntologyViewerComponent } from './features/ontology-viewer/ontology-viewer.component';
 import { RulesManagementComponent } from './features/rules-management/rules-management.component';
@@ -27,6 +28,7 @@ import { AuditLogsComponent } from './features/audit-logs/audit-logs.component';
     MetadataComponent,
     ProfilingComponent,
     GraphVisualizerComponent,
+    DataMovementComponent,
     OntologyEditorComponent,
     OntologyViewerComponent,
     RulesManagementComponent,
@@ -45,6 +47,7 @@ import { AuditLogsComponent } from './features/audit-logs/audit-logs.component';
           <app-metadata *ngIf="activeTab === 'metadata'"></app-metadata>
           <app-profiling *ngIf="activeTab === 'profiling'"></app-profiling>
           <app-graph-visualizer *ngIf="activeTab === 'graph-visualizer'"></app-graph-visualizer>
+          <app-data-movement *ngIf="activeTab === 'data-movement'"></app-data-movement>
           <app-ontology-editor *ngIf="activeTab === 'ontology-editor'"></app-ontology-editor>
           <app-ontology-viewer *ngIf="activeTab === 'ontology-viewer'"></app-ontology-viewer>
           <app-rules-management *ngIf="activeTab === 'rules-management'"></app-rules-management>

@@ -611,6 +611,14 @@ export class GraphVisualizerComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   syncToTarget() {
-    this.showToast('Target Graph DB sync triggered successfully.');
+    this.apiService.syncToTargetGraph(this.projectId).subscribe({
+      next: (res) => {
+        const msg = res.message || `Successfully synced ${res.synced_nodes || 0} nodes and ${res.synced_relationships || 0} relationships to target DB ${res.target_name || ''} at ${res.host || ''}!`;
+        this.showToast(msg);
+      },
+      error: (err) => {
+        this.showToast('Target DB sync failed: ' + (err.error?.detail || err.message || 'Server Error'));
+      }
+    });
   }
 }

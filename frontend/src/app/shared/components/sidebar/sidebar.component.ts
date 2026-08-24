@@ -80,6 +80,7 @@ export class SidebarComponent {
     { id: 'metadata', label: 'Metadata Discovery', icon: '🔍' },
     { id: 'profiling', label: 'Data Profiling & Quality', icon: '📈' },
     { id: 'graph-visualizer', label: 'Knowledge Graph', icon: '🕸️' },
+    { id: 'data-movement', label: 'Data Movement & ETL', icon: '🚀' },
     { id: 'ontology-editor', label: 'OWL Ontology Studio', icon: '🧠' },
     { id: 'ontology-viewer', label: 'OWL Graphical Sandbox', icon: '🌐' },
     { id: 'rules-management', label: 'Business Rules Engine', icon: '⚙️' },

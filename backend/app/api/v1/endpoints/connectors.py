@@ -51,8 +51,34 @@ def test_source_connection(project_id: str, connection_id: str, db: Session = De
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+@router.post("/source-connections/test-draft")
+def test_source_connection_draft(project_id: str, conn_in: SourceConnectionCreate, db: Session = Depends(get_db)):
+    from app.connectors.factory import ConnectorFactory
+    try:
+        params = {
+            "host": conn_in.host,
+            "port": conn_in.port,
+            "database_name": conn_in.database_name,
+            "username": conn_in.username,
+            "password": conn_in.password,
+            "options": conn_in.connection_options_json
+        }
+        connector = ConnectorFactory.get_connector(conn_in.connector_type, params)
+        success = connector.test_connection()
+        return {"status": "SUCCESS" if success else "FAILED", "message": f"Successfully verified connection to {conn_in.connector_type} database '{conn_in.database_name}' at {conn_in.host}:{conn_in.port}." if success else f"Failed to connect to {conn_in.connector_type} database at {conn_in.host}:{conn_in.port}."}
+    except Exception as e:
+        return {"status": "FAILED", "message": f"Connection test failed: {str(e)}"}
+
+
+
 @router.post("/graph-configs", response_model=GraphConfigResponse, status_code=status.HTTP_201_CREATED)
 def create_graph_config(project_id: str, graph_in: GraphConfigCreate, db: Session = Depends(get_db)):
+    svc = ConnectorService(db)
+    return svc.create_graph_config(project_id, graph_in)
+
+
+@router.put("/graph-configs", response_model=GraphConfigResponse)
+def update_graph_config(project_id: str, graph_in: GraphConfigCreate, db: Session = Depends(get_db)):
     svc = ConnectorService(db)
     return svc.create_graph_config(project_id, graph_in)
 
@@ -61,6 +87,7 @@ def create_graph_config(project_id: str, graph_in: GraphConfigCreate, db: Sessio
 def get_graph_configs(project_id: str, db: Session = Depends(get_db)):
     svc = ConnectorService(db)
     return svc.get_graph_configs(project_id)
+
 
 
 @router.post("/ontology-config", response_model=OntologyConfigResponse)

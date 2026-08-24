@@ -429,3 +429,37 @@ def test_ontology_transformation_standards_and_checklist():
     assert (ONTO.hasOrder, OWL.inverseOf, ONTO.placedBy) in g
 
 
+def test_data_movement_execution_and_deletion():
+    # 1. Create project
+    create_resp = client.post("/api/v1/projects", json={"name": "Data Movement Test", "code": f"DM_{uuid.uuid4().hex[:6]}", "description": "Test"})
+    assert create_resp.status_code == 201
+    pid = create_resp.json()["id"]
+
+    # 2. Execute Data Movement Pipeline
+    exec_resp = client.post(f"/api/v1/projects/{pid}/data-movement/execute", json={
+        "migration_mode": "FULL_REFRESH",
+        "batch_size": 1000,
+        "enforce_business_rules": True
+    })
+    assert exec_resp.status_code == 200
+    job_data = exec_resp.json()
+    assert "id" in job_data
+    job_id = job_data["id"]
+
+    # 3. Get History
+    hist_resp = client.get(f"/api/v1/projects/{pid}/data-movement/history")
+    assert hist_resp.status_code == 200
+    history = hist_resp.json()
+    assert any(j["id"] == job_id for j in history)
+
+    # 4. Delete Single Job Execution History
+    del_resp = client.delete(f"/api/v1/projects/{pid}/data-movement/history/{job_id}")
+    assert del_resp.status_code == 200
+    assert del_resp.json()["status"] == "SUCCESS"
+
+    # Verify deleted
+    hist_after = client.get(f"/api/v1/projects/{pid}/data-movement/history").json()
+    assert not any(j["id"] == job_id for j in hist_after)
+
+
+

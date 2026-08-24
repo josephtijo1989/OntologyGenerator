@@ -57,7 +57,6 @@ async function loadProfiling() {
         card.innerHTML = `
           <div class="flex-between">
             <span class="font-bold" style="font-size: 15px; color: var(--text-primary);">${tableNameDisplay}</span>
-            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: ${scoreColor}; font-weight: 700;">Score: ${prof.quality_score}%</span>
           </div>
           <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
             🔑 Primary Key: <strong class="font-mono" style="color: var(--accent-amber); font-weight: 700;">${pkDisplay}</strong>
@@ -99,7 +98,8 @@ function openProfilingDetail(idx) {
 
   document.getElementById('pdm-title').innerText = `Table Profiling & PII Management: ${fullTableName}`;
   document.getElementById('pdm-subtitle').innerText = `Catalog ID: ${prof.metadata_catalog_id} | Profiled at: ${new Date(prof.profiled_at).toLocaleString()}`;
-  document.getElementById('pdm-score').innerText = `${prof.quality_score}%`;
+  const pdmScore = document.getElementById('pdm-score');
+  if (pdmScore) pdmScore.innerText = `${prof.quality_score}%`;
   const pdmPk = document.getElementById('pdm-pk');
   if (pdmPk) {
     pdmPk.innerText = pkDisplay;

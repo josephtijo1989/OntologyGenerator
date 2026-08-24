@@ -938,3 +938,71 @@ body {
   gap: 6px;
 }
 
+/* ==========================================================================
+   Data Movement Engine Stepper Cards & Terminal Output
+   ========================================================================== */
+.dm-step-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.dm-step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dm-step-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.dm-step-card.active {
+  border-color: #0284c7;
+  background: #f0f9ff;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+}
+
+.dm-step-card.active .dm-step-num {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.dm-step-card.active .dm-step-title {
+  color: #0284c7;
+  font-weight: 700;
+}
+
+.dm-step-card.completed {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+.dm-step-card.completed .dm-step-num {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.dm-step-card.completed .dm-step-title {
+  color: #059669;
+  font-weight: 700;
+}
+
+

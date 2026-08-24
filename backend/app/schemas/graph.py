@@ -27,3 +27,13 @@ class EnterpriseGraphModel(BaseModel):
 
 class GraphExportRequest(BaseModel):
     format: str  # JSON, GraphML, Cypher
+
+
+class GraphTestConnectionRequest(BaseModel):
+    host: Optional[str] = "127.0.0.1"
+    port: Optional[int] = 7687
+    target_type: Optional[str] = "NEO4J"
+    database_name: Optional[str] = "neo4j"
+    username: Optional[str] = "neo4j"
+    password: Optional[str] = None
+

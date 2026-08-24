@@ -13,6 +13,18 @@ def to_upper_snake_case(name: str) -> str:
     result = re.sub(r'_+', '_', clean).strip('_').upper()
     return result or "RELATES_TO"
 
+def to_camel_case(name: str) -> str:
+    """Converts snake_case, PascalCase, or mixed-case string into standard camelCase."""
+    if not name:
+        return ""
+    parts = re.split(r'[^a-zA-Z0-9]+', name)
+    parts = [p for p in parts if p]
+    if not parts:
+        return ""
+    first = parts[0].lower()
+    rest = "".join(p.capitalize() for p in parts[1:])
+    return first + rest
+
 def infer_foreign_key_relationship(source_table: str, col_name: str, target_table: str) -> str:
     """Infers meaningful, human-readable enterprise semantic relationship name for FK / inferred connections."""
     c_clean = (col_name or "").lower().replace("_", "")

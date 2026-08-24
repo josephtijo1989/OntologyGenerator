@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (viewId === 'graph') initCytoscapeGraph();
       if (viewId === 'ontology-graph') initOntologyGraph();
       if (viewId === 'ontology-viewer') initOntologyViewer();
+      if (viewId === 'data-movement') initDataMovementView();
       if (viewId === 'metadata') loadMetadata();
       if (viewId === 'profiling') loadProfiling();
       if (viewId === 'ontology') loadOntology();
@@ -41,6 +42,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (viewId === 'rules') loadRules();
       if (viewId === 'audit') loadAuditLogs();
       if (viewId === 'projects') renderProjectsGrid();
+      if (viewId === 'llm-insights') {
+        if (typeof loadPresetQueryPills === 'function') loadPresetQueryPills();
+      }
+      if (viewId === 'saved-cyphers') {
+        if (typeof loadSavedCypherQueries === 'function') loadSavedCypherQueries();
+      }
     });
   });
 
@@ -50,7 +57,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function switchToTab(viewId) {
   const navBtn = document.querySelector(`.nav-btn[data-view="${viewId}"]`);
-  if (navBtn) navBtn.click();
+  if (navBtn) {
+    navBtn.click();
+  } else {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+    const targetPanel = document.getElementById('panel-' + viewId);
+    if (targetPanel) targetPanel.classList.add('active');
+  }
 }
 
 function openModal(id) {

@@ -321,7 +321,7 @@ function isPropertyForClass(p, c, pascalLabel, tblName) {
 
       if (srcIri && tgtIri && srcIri !== tgtIri) {
         const relLabel = formatSemanticCamelCase(p.relationship_name || p.label || p.name || 'relatesTo');
-        const edgeKey = `${srcIri}->${tgtIri}:${relLabel}`;
+        const edgeKey = `${srcIri.toLowerCase()}->${tgtIri.toLowerCase()}:${relLabel.toLowerCase()}`;
 
         if (!addedEdgeKeys.has(edgeKey)) {
           addedEdgeKeys.add(edgeKey);

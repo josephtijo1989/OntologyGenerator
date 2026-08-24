@@ -30,8 +30,32 @@ export class ApiService {
     return this.http.post<any>(`${this.baseUrl}/projects/${projectId}/source-connections`, payload);
   }
 
+  updateSourceConnection(projectId: string, connId: string, payload: any): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/projects/${projectId}/source-connections/${connId}`, payload);
+  }
+
+  deleteSourceConnection(projectId: string, connId: string): Observable<any> {
+    return this.http.delete<any>(`${this.baseUrl}/projects/${projectId}/source-connections/${connId}`);
+  }
+
   testSourceConnection(projectId: string, connId: string): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/projects/${projectId}/source-connections/${connId}/test`, {});
+  }
+
+  getGraphConfigs(projectId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/projects/${projectId}/graph-configs`);
+  }
+
+  saveGraphConfig(projectId: string, payload: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/projects/${projectId}/graph-configs`, payload);
+  }
+
+  testGraphConnection(projectId: string, payload: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/projects/${projectId}/graph/test-connection`, payload);
+  }
+
+  syncToTargetGraph(projectId: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/projects/${projectId}/graph/sync-to-target`, {});
   }
 
   discoverMetadata(projectId: string, connId: string): Observable<any[]> {

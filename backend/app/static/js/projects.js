@@ -70,15 +70,34 @@ function updateSelectedProjectHeaders() {
   if (connHeader) connHeader.innerText = pName;
 }
 
-function refreshAllProjectViews() {
+async function refreshAllProjectViews() {
+  const activeBtn = document.querySelector('.nav-btn.active');
+  const activeView = activeBtn ? activeBtn.getAttribute('data-view') : 'connectors';
+
   if (typeof loadConnectors === 'function') loadConnectors();
   if (typeof loadMetadata === 'function') loadMetadata();
   if (typeof loadProfiling === 'function') loadProfiling();
   if (typeof loadRules === 'function') loadRules();
   if (typeof loadOntology === 'function') loadOntology();
 
-  const activeBtn = document.querySelector('.nav-btn.active');
-  const activeView = activeBtn ? activeBtn.getAttribute('data-view') : 'connectors';
+  // Priority refresh for currently open active tab
+  if (activeView === 'data-movement' && typeof initDataMovementView === 'function') {
+    await initDataMovementView();
+  } else if (typeof initDataMovementView === 'function') {
+    initDataMovementView();
+  }
+
+  if (activeView === 'llm-insights' && typeof loadPresetQueryPills === 'function') {
+    await loadPresetQueryPills();
+  } else if (typeof loadPresetQueryPills === 'function') {
+    loadPresetQueryPills();
+  }
+
+  if (activeView === 'saved-cyphers' && typeof loadSavedCypherQueries === 'function') {
+    await loadSavedCypherQueries();
+  } else if (typeof loadSavedCypherQueries === 'function') {
+    loadSavedCypherQueries();
+  }
 
   if (activeView === 'ontology-graph' && typeof initOntologyGraph === 'function') {
     initOntologyGraph();
@@ -86,9 +105,15 @@ function refreshAllProjectViews() {
   if (activeView === 'graph' && typeof initCytoscapeGraph === 'function') {
     initCytoscapeGraph();
   }
+  if (activeView === 'ontology-viewer' && typeof initOntologyViewer === 'function') {
+    initOntologyViewer();
+  }
+  if (typeof loadTargetGraphConfig === 'function') {
+    loadTargetGraphConfig();
+  }
 }
 
-function onProjectChanged(pid) {
+async function onProjectChanged(pid) {
   if (pid === 'CREATE_NEW') {
     const select = document.getElementById('projectSelect');
     if (select) select.value = currentProjectId || (projectsList[0] ? projectsList[0].id : '');
@@ -101,6 +126,7 @@ function onProjectChanged(pid) {
   // Clear global model caches to prevent stale data cross-contamination
   if (typeof currentOntologyModel !== 'undefined') currentOntologyModel = null;
   if (typeof currentProfilingData !== 'undefined') currentProfilingData = [];
+  if (typeof currentDataMovementMapping !== 'undefined') currentDataMovementMapping = null;
   if (typeof cyOntologyInstance !== 'undefined' && cyOntologyInstance) {
     try { cyOntologyInstance.destroy(); cyOntologyInstance = null; } catch(e){}
   }
@@ -112,7 +138,7 @@ function onProjectChanged(pid) {
   if (typeof loadDashboard === 'function') loadDashboard();
 
   // Refresh all page grids and active data views for the newly selected project
-  refreshAllProjectViews();
+  await refreshAllProjectViews();
   renderProjectsGrid();
 }
 

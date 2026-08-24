@@ -116,6 +116,8 @@ class Project(Base):
     ontology_classes = relationship('OntologyClass', back_populates='project', cascade='all, delete-orphan')
     business_rules = relationship('BusinessRule', back_populates='project', cascade='all, delete-orphan')
     workflows = relationship('Workflow', back_populates='project', cascade='all, delete-orphan')
+    data_movement_jobs = relationship('DataMovementJob', back_populates='project', cascade='all, delete-orphan')
+    approved_cypher_queries = relationship('ApprovedCypherQuery', back_populates='project', cascade='all, delete-orphan')
 
 
 class SourceConnection(Base):
@@ -325,3 +327,43 @@ class SystemSetting(Base):
     value = Column(Text, nullable=False)
     description = Column(String(255), nullable=True)
     updated_at = Column(DateTime, default=current_utc_time, onupdate=current_utc_time, nullable=False)
+
+
+class DataMovementJob(Base):
+    __tablename__ = 'data_movement_jobs'
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    project_id = Column(String(36), ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    job_name = Column(String(150), nullable=False)
+    source_connection_id = Column(String(36), ForeignKey('source_connections.id', ondelete='SET NULL'), nullable=True)
+    target_graph_id = Column(String(36), ForeignKey('graph_configs.id', ondelete='SET NULL'), nullable=True)
+    migration_mode = Column(String(50), default="FULL_REFRESH", nullable=False)
+    status = Column(String(50), default="COMPLETED", nullable=False)
+    records_extracted = Column(Integer, default=0, nullable=False)
+    nodes_created = Column(Integer, default=0, nullable=False)
+    relationships_created = Column(Integer, default=0, nullable=False)
+    quality_checks_passed = Column(Integer, default=0, nullable=False)
+    execution_time_ms = Column(Float, default=0.0, nullable=False)
+    log_output = Column(Text, nullable=True)
+    started_at = Column(DateTime, default=current_utc_time, nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+
+    project = relationship('Project', back_populates='data_movement_jobs')
+    source_connection = relationship('SourceConnection')
+    target_graph = relationship('GraphConfig')
+
+
+class ApprovedCypherQuery(Base):
+    __tablename__ = 'approved_cypher_queries'
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    project_id = Column(String(36), ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    question_prompt = Column(Text, nullable=False)
+    approved_cypher = Column(Text, nullable=False)
+    model_name = Column(String(100), default="gemini-1.5-pro", nullable=False)
+    usage_count = Column(Integer, default=1, nullable=False)
+    created_at = Column(DateTime, default=current_utc_time, nullable=False)
+    updated_at = Column(DateTime, default=current_utc_time, onupdate=current_utc_time, nullable=False)
+
+    project = relationship('Project', back_populates='approved_cypher_queries')
+

@@ -1,5 +1,6 @@
 // Connectors & Target Topology Management
 let currentConnectorsList = [];
+let currentTargetGraphConfig = null;
 let editingConnectionId = null;
 
 async function loadConnectors() {
@@ -63,16 +64,66 @@ async function loadConnectors() {
       const tgHost = document.getElementById('tg-host');
       if (gCfgs.length > 0) {
         const g = gCfgs[gCfgs.length - 1];
+        currentTargetGraphConfig = g;
         if (tgName) tgName.innerText = g.name;
         if (tgType) tgType.innerText = g.target_type;
-        if (tgHost) tgHost.innerText = `Host: ${g.host}:${g.port} | User: ${g.username || 'neo4j'}`;
+        if (tgHost) tgHost.innerText = `Host: ${g.host}:${g.port} | Database: ${g.database_name || 'neo4j'} | User: ${g.username || 'neo4j'}`;
       } else {
+        currentTargetGraphConfig = null;
         if (tgName) tgName.innerText = 'Target Graph Database';
         if (tgType) tgType.innerText = 'Unconfigured';
         if (tgHost) tgHost.innerText = 'Click "Configure Target Graph DB" to set destination';
       }
     }
+    bindTargetGraphEditButtons();
   } catch (e) { console.log(e); }
+}
+
+async function testTargetGraphCard() {
+  if (!currentProjectId) {
+    if (typeof showToast === 'function') showToast('Select or create a project first', 'warning');
+    else alert('Select or create a project first');
+    return;
+  }
+  if (typeof showToast === 'function') showToast('⚡ Testing connection to Target Graph Database...', 'info');
+
+  const g = currentTargetGraphConfig || { host: '127.0.0.1', port: 7687, target_type: 'NEO4J', database_name: 'neo4j', username: 'neo4j' };
+  try {
+    const res = await fetch(`${API_BASE}/projects/${currentProjectId}/graph/test-connection`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        host: g.host || '127.0.0.1',
+        port: g.port || 7687,
+        target_type: g.target_type || 'NEO4J',
+        database_name: g.database_name || 'neo4j',
+        username: g.username || 'neo4j',
+        password: g.password || ''
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const statusBadge = document.getElementById('tg-status-badge');
+      if (data.status === 'ONLINE') {
+        if (statusBadge) {
+          statusBadge.style.color = 'var(--accent-emerald)';
+          statusBadge.innerHTML = `<span style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent-emerald); display: inline-block;"></span> Status: ONLINE & READY`;
+        }
+        if (typeof showToast === 'function') showToast(data.message || 'Target Graph Database is ONLINE!', 'success');
+        else alert(data.message || 'Target Graph Database is ONLINE!');
+      } else {
+        if (statusBadge) {
+          statusBadge.style.color = 'var(--accent-amber)';
+          statusBadge.innerHTML = `<span style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent-amber); display: inline-block;"></span> Status: OFFLINE / UNREACHABLE`;
+        }
+        if (typeof showToast === 'function') showToast(data.message || 'Target Graph Database is offline', 'warning');
+        else alert(data.message || 'Target Graph Database is offline');
+      }
+    }
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('Target Graph DB Test Failed', 'error');
+  }
 }
 
 function openAddConnectorModal() {
@@ -88,6 +139,11 @@ function openAddConnectorModal() {
   document.getElementById('nc-user').value = '';
   document.getElementById('nc-pass').value = '';
 
+  const statusDiv = document.getElementById('nc-test-status');
+  if (statusDiv) {
+    statusDiv.style.display = 'none';
+    statusDiv.innerHTML = '';
+  }
   openModal('connModal');
 }
 
@@ -116,6 +172,11 @@ async function openEditConnectorModal(connId) {
   document.getElementById('nc-user').value = c.username || '';
   document.getElementById('nc-pass').value = '******';
 
+  const statusDiv = document.getElementById('nc-test-status');
+  if (statusDiv) {
+    statusDiv.style.display = 'none';
+    statusDiv.innerHTML = '';
+  }
   openModal('connModal');
 }
 
@@ -199,27 +260,236 @@ async function deleteConnector(connId, name) {
   }
 }
 
+function openTargetGraphModal() {
+  const statusDiv = document.getElementById('ng-test-status');
+  if (statusDiv) {
+    statusDiv.style.display = 'none';
+    statusDiv.innerHTML = '';
+  }
+
+  if (currentTargetGraphConfig) {
+    if (document.getElementById('ng-name')) document.getElementById('ng-name').value = currentTargetGraphConfig.name || 'Enterprise Target Graph Cluster';
+    if (document.getElementById('ng-type')) document.getElementById('ng-type').value = currentTargetGraphConfig.target_type || 'NEO4J';
+    if (document.getElementById('ng-host')) document.getElementById('ng-host').value = currentTargetGraphConfig.host || '127.0.0.1';
+    if (document.getElementById('ng-port')) document.getElementById('ng-port').value = currentTargetGraphConfig.port || 7687;
+    if (document.getElementById('ng-dbname')) document.getElementById('ng-dbname').value = currentTargetGraphConfig.database_name || 'neo4j';
+    if (document.getElementById('ng-user')) document.getElementById('ng-user').value = currentTargetGraphConfig.username || 'neo4j';
+    if (document.getElementById('ng-pass')) document.getElementById('ng-pass').value = '******';
+  } else {
+    if (document.getElementById('ng-name')) document.getElementById('ng-name').value = 'Enterprise Target Graph Cluster';
+    if (document.getElementById('ng-type')) document.getElementById('ng-type').value = 'NEO4J';
+    if (document.getElementById('ng-host')) document.getElementById('ng-host').value = '127.0.0.1';
+    if (document.getElementById('ng-port')) document.getElementById('ng-port').value = 7687;
+    if (document.getElementById('ng-dbname')) document.getElementById('ng-dbname').value = 'neo4j';
+    if (document.getElementById('ng-user')) document.getElementById('ng-user').value = 'neo4j';
+    if (document.getElementById('ng-pass')) document.getElementById('ng-pass').value = '';
+  }
+
+  openModal('graphModal');
+}
+
 async function submitTargetGraph() {
   if (!currentProjectId) { alert('Select or create a project first'); return; }
   const name = document.getElementById('ng-name').value.trim() || 'Production Neo4j Instance';
   const type = document.getElementById('ng-type').value;
   const host = document.getElementById('ng-host').value.trim() || 'bolt://localhost:7687';
   const port = parseInt(document.getElementById('ng-port').value) || 7687;
+  const dbname = document.getElementById('ng-dbname') ? (document.getElementById('ng-dbname').value.trim() || 'neo4j') : 'neo4j';
   const username = document.getElementById('ng-user') ? (document.getElementById('ng-user').value.trim() || 'neo4j') : 'neo4j';
   const password = document.getElementById('ng-pass') ? document.getElementById('ng-pass').value : '';
+
+  const payload = { name, target_type: type, host, port, database_name: dbname, username };
+  if (password && password !== '******') {
+    payload.password = password;
+  }
 
   try {
     const res = await fetch(`${API_BASE}/projects/${currentProjectId}/graph-configs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, target_type: type, host, port, username, password })
+      body: JSON.stringify(payload)
     });
     if (res.ok) {
       closeModal('graphModal');
       await loadConnectors();
-      alert('Target Graph Database Configured Successfully!');
+      if (typeof showToast === 'function') showToast('Target Graph Database Configured Successfully!', 'success');
+      else alert('Target Graph Database Configured Successfully!');
     } else {
-      alert('Failed to configure target graph database');
+      if (typeof showToast === 'function') showToast('Failed to configure target graph database', 'error');
+      else alert('Failed to configure target graph database');
     }
   } catch (e) { alert('Failed to configure target graph'); }
 }
+
+async function testTargetGraphModalConnection() {
+  if (!currentProjectId) {
+    alert('Select or create a project first');
+    return;
+  }
+  const statusDiv = document.getElementById('ng-test-status');
+  if (statusDiv) {
+    statusDiv.style.display = 'block';
+    statusDiv.style.background = 'rgba(6, 182, 212, 0.15)';
+    statusDiv.style.color = 'var(--accent-cyan)';
+    statusDiv.style.border = '1px solid var(--accent-cyan)';
+    statusDiv.innerHTML = '⏳ Testing connection to target graph database...';
+  }
+
+  const host = document.getElementById('ng-host').value.trim() || '127.0.0.1';
+  const port = parseInt(document.getElementById('ng-port').value) || 7687;
+  const type = document.getElementById('ng-type').value || 'NEO4J';
+  const dbname = document.getElementById('ng-dbname') ? (document.getElementById('ng-dbname').value.trim() || 'neo4j') : 'neo4j';
+  const user = document.getElementById('ng-user') ? (document.getElementById('ng-user').value.trim() || 'neo4j') : 'neo4j';
+  const pass = document.getElementById('ng-pass') ? document.getElementById('ng-pass').value : '';
+
+  try {
+    const res = await fetch(`${API_BASE}/projects/${currentProjectId}/graph/test-connection`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        host: host,
+        port: port,
+        target_type: type,
+        database_name: dbname,
+        username: user,
+        password: pass
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (statusDiv) {
+        if (data.status === 'ONLINE' || data.status === 'SUCCESS') {
+          statusDiv.style.background = 'rgba(16, 185, 129, 0.15)';
+          statusDiv.style.color = 'var(--accent-emerald)';
+          statusDiv.style.border = '1px solid var(--accent-emerald)';
+          statusDiv.innerHTML = `<strong>✅ Connection Status: ONLINE</strong><br>${data.message || 'Connected successfully'}`;
+        } else {
+          statusDiv.style.background = 'rgba(244, 63, 94, 0.15)';
+          statusDiv.style.color = 'var(--accent-rose)';
+          statusDiv.style.border = '1px solid var(--accent-rose)';
+          statusDiv.innerHTML = `<strong>❌ Connection Status: UNREACHABLE</strong><br>${data.message || 'Unable to connect to target graph database'}`;
+        }
+      }
+    } else {
+      if (statusDiv) {
+        statusDiv.style.background = 'rgba(244, 63, 94, 0.15)';
+        statusDiv.style.color = 'var(--accent-rose)';
+        statusDiv.style.border = '1px solid var(--accent-rose)';
+        statusDiv.innerHTML = '<strong>❌ Connection Failed:</strong> Unable to connect to target graph server.';
+      }
+    }
+  } catch (e) {
+    if (statusDiv) {
+      statusDiv.style.background = 'rgba(244, 63, 94, 0.15)';
+      statusDiv.style.color = 'var(--accent-rose)';
+      statusDiv.style.border = '1px solid var(--accent-rose)';
+      statusDiv.innerHTML = `<strong>❌ Error:</strong> ${e.message || 'Network error while testing connection.'}`;
+    }
+  }
+}
+
+async function testSourceModalConnection() {
+  if (!currentProjectId) {
+    alert('Select or create a project first');
+    return;
+  }
+  const statusDiv = document.getElementById('nc-test-status');
+  if (statusDiv) {
+    statusDiv.style.display = 'block';
+    statusDiv.style.background = 'rgba(6, 182, 212, 0.15)';
+    statusDiv.style.color = 'var(--accent-cyan)';
+    statusDiv.style.border = '1px solid var(--accent-cyan)';
+    statusDiv.innerHTML = '⏳ Testing connection to source database...';
+  }
+
+  const type = document.getElementById('nc-type').value;
+  const host = document.getElementById('nc-host').value.trim();
+  const port = parseInt(document.getElementById('nc-port').value) || 1433;
+  const dbname = document.getElementById('nc-dbname').value.trim();
+  const user = document.getElementById('nc-user').value.trim();
+  const pass = document.getElementById('nc-pass').value;
+
+  if (!host || !dbname) {
+    if (statusDiv) {
+      statusDiv.style.background = 'rgba(244, 63, 94, 0.15)';
+      statusDiv.style.color = 'var(--accent-rose)';
+      statusDiv.style.border = '1px solid var(--accent-rose)';
+      statusDiv.innerHTML = '<strong>⚠️ Validation Error:</strong> Host Name and Database Name are required to test connection.';
+    }
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/projects/${currentProjectId}/source-connections/test-draft`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Draft Test Connection',
+        connector_type: type,
+        host: host,
+        port: port,
+        database_name: dbname,
+        username: user,
+        password: pass
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (statusDiv) {
+        if (data.status === 'SUCCESS') {
+          statusDiv.style.background = 'rgba(16, 185, 129, 0.15)';
+          statusDiv.style.color = 'var(--accent-emerald)';
+          statusDiv.style.border = '1px solid var(--accent-emerald)';
+          statusDiv.innerHTML = `<strong>✅ Connection Status: SUCCESS</strong><br>${data.message || 'Connected successfully'}`;
+        } else {
+          statusDiv.style.background = 'rgba(244, 63, 94, 0.15)';
+          statusDiv.style.color = 'var(--accent-rose)';
+          statusDiv.style.border = '1px solid var(--accent-rose)';
+          statusDiv.innerHTML = `<strong>❌ Connection Status: FAILED</strong><br>${data.message || 'Connection failed'}`;
+        }
+      }
+    } else {
+      if (statusDiv) {
+        statusDiv.style.background = 'rgba(244, 63, 94, 0.15)';
+        statusDiv.style.color = 'var(--accent-rose)';
+        statusDiv.style.border = '1px solid var(--accent-rose)';
+        statusDiv.innerHTML = '<strong>❌ Connection Failed:</strong> Unable to connect to source database server.';
+      }
+    }
+  } catch (e) {
+    if (statusDiv) {
+      statusDiv.style.background = 'rgba(244, 63, 94, 0.15)';
+      statusDiv.style.color = 'var(--accent-rose)';
+      statusDiv.style.border = '1px solid var(--accent-rose)';
+      statusDiv.innerHTML = `<strong>❌ Error:</strong> ${e.message || 'Network error while testing connection.'}`;
+    }
+  }
+}
+
+// Bind DOM Click Event Listeners
+function bindTargetGraphEditButtons() {
+  const btn1 = document.getElementById('btn-edit-target-db');
+  if (btn1) {
+    btn1.onclick = function(e) {
+      if (e) e.preventDefault();
+      openTargetGraphModal();
+    };
+  }
+  const btn2 = document.getElementById('btn-edit-target-db-header');
+  if (btn2) {
+    btn2.onclick = function(e) {
+      if (e) e.preventDefault();
+      openTargetGraphModal();
+    };
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bindTargetGraphEditButtons);
+} else {
+  bindTargetGraphEditButtons();
+}
+
+

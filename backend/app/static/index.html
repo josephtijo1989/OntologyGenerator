@@ -40,14 +40,17 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="nav-title">PLATFORM NAVIGATOR</div>
-      <button class="nav-btn active" data-view="connectors">🔌 Database Connectors</button>
-      <button class="nav-btn" data-view="metadata">🔍 Metadata Discovery</button>
-      <button class="nav-btn" data-view="profiling">📈 Data Profiling & Quality</button>
-      <button class="nav-btn" data-view="rules">⚙️ Business Rules Engine</button>
-      <button class="nav-btn" data-view="ontology">🧠 OWL Ontology Editor</button>
-      <button class="nav-btn" data-view="ontology-graph">🌐 Graphical Ontology</button>
-      <button class="nav-btn" data-view="ontology-viewer">📤 Upload & View Ontology</button>
-      <button class="nav-btn" data-view="graph">🕸️ Knowledge Graph</button>
+      <button class="nav-btn active" data-view="connectors" onclick="switchToTab('connectors')">🔌 Database Connectors</button>
+      <button class="nav-btn" data-view="metadata" onclick="switchToTab('metadata')">🔍 Metadata Discovery</button>
+      <button class="nav-btn" data-view="profiling" onclick="switchToTab('profiling')">📈 Data Profiling & Quality</button>
+      <button class="nav-btn" data-view="rules" onclick="switchToTab('rules')">⚙️ Business Rules Engine</button>
+      <button class="nav-btn" data-view="ontology" onclick="switchToTab('ontology')">🧠 OWL Ontology Editor</button>
+      <button class="nav-btn" data-view="ontology-graph" onclick="switchToTab('ontology-graph')">🌐 Graphical Ontology</button>
+      <button class="nav-btn" data-view="ontology-viewer" onclick="switchToTab('ontology-viewer')">📤 Upload & View Ontology</button>
+      <button class="nav-btn" data-view="graph" onclick="switchToTab('graph')">🕸️ Knowledge Graph</button>
+      <button class="nav-btn" data-view="data-movement" onclick="switchToTab('data-movement')">🚀 Data Movement Engine</button>
+      <button class="nav-btn" data-view="llm-insights" onclick="switchToTab('llm-insights')">🤖 AI Graph Insights</button>
+      <button class="nav-btn" data-view="saved-cyphers" onclick="switchToTab('saved-cyphers')">⭐ Saved Cypher Queries</button>
     </aside>
 
     <!-- Main Content Area -->
@@ -60,8 +63,8 @@
             <p style="color: var(--text-secondary); font-size: 14px;">Ingest from multiple relational databases into a single unified enterprise target Knowledge Graph</p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap; flex-shrink: 0;">
-            <button class="btn-primary" onclick="openAddConnectorModal()">➕ Add Source Database</button>
-            <button class="btn-secondary" onclick="openModal('graphModal')">🎯 Configure Target Graph DB</button>
+            <button type="button" class="btn-primary" onclick="openAddConnectorModal()">➕ Add Source Database</button>
+            <button type="button" id="btn-edit-target-db-header" class="btn-secondary" onclick="openTargetGraphModal()">🎯 Edit Target DB Details</button>
           </div>
         </div>
 
@@ -92,33 +95,33 @@
           </div>
 
           <!-- Right Column: Single Unified Target Knowledge Graph Database -->
-          <div class="glass-card" style="display: flex; flex-direction: column; justify-content: space-between; border-top: 4px solid var(--accent-emerald);">
-            <div>
-              <div class="flex-between" style="border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
-                <div>
-                  <h3 style="margin: 0; font-size: 15px; color: var(--accent-emerald);">Single Target Knowledge Graph</h3>
-                  <p style="margin: 2px 0 0 0; font-size: 11px; color: var(--text-secondary);">Unified Enterprise Graph Destination</p>
-                </div>
-                <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); font-weight: 700;">🎯 UNIFIED TARGET</span>
+          <div class="glass-card" style="display: flex; flex-direction: column; gap: 12px; border-top: 4px solid var(--accent-emerald);">
+            <div class="flex-between" style="border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
+              <div>
+                <h3 style="margin: 0; font-size: 15px; color: var(--accent-emerald);">Single Target Knowledge Graph</h3>
+                <p style="margin: 2px 0 0 0; font-size: 11px; color: var(--text-secondary);">Neo4j, Memgraph, Apache AGE, AWS Neptune</p>
               </div>
-
-              <div style="margin-top: 14px; padding: 16px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px;">
-                <div class="flex-between">
-                  <span class="font-bold" id="tg-name" style="font-size: 16px; color: var(--text-primary);">Enterprise Neo4j Cluster</span>
-                  <span class="badge" id="tg-type" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald);">NEO4J</span>
-                </div>
-                <div style="font-size: 12px; color: var(--text-secondary);" id="tg-host">Host: bolt://localhost:7687</div>
-                <div style="font-size: 11px; color: var(--accent-violet); font-family: var(--font-mono);" id="tg-status-detail">Direct Sync Protocol: Bolt / Cypher DDL</div>
-                <div style="display: flex; align-items: center; gap: 6px; color: var(--accent-emerald); font-size: 12px; font-weight: 600; margin-top: 4px;">
-                  <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-emerald); box-shadow: 0 0 8px var(--accent-emerald); display: inline-block;"></span>
-                  <span>Target Status: ONLINE & READY</span>
-                </div>
-              </div>
+              <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); font-weight: 700;">🎯 UNIFIED TARGET</span>
             </div>
 
-            <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 11px; color: var(--text-secondary);">Single Target instance per project</span>
-              <button class="btn-primary" style="font-size: 11px; padding: 6px 12px;" onclick="openModal('graphModal')">⚙️ Configure Target Graph</button>
+            <!-- Single Target DB Card (Structured Identically to Source Database Cards) -->
+            <div style="background: var(--bg-surface); padding: 14px; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 6px;">
+              <div class="flex-between">
+                <span class="font-bold" id="tg-name" style="font-size: 14px; color: var(--text-primary);">Mars Local</span>
+                <span class="badge" id="tg-type" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); font-weight: 700;">NEO4J</span>
+              </div>
+              <div style="font-size: 12px; color: var(--text-secondary);" id="tg-host">Host: bolt://localhost:7687 | Database: neo4j | User: neo4j</div>
+              <div style="font-size: 11px; color: var(--accent-violet); font-family: var(--font-mono);" id="tg-status-detail">Direct Sync Protocol: Bolt / Cypher DDL</div>
+              <div class="flex-between" style="margin-top: 6px; border-top: 1px dashed var(--border-color); padding-top: 8px;">
+                <span style="color: var(--accent-emerald); font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px;" id="tg-status-badge">
+                  <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent-emerald); display: inline-block;"></span>
+                  Status: ONLINE & READY
+                </span>
+                <div style="display: flex; gap: 6px;">
+                  <button type="button" class="btn-sm" onclick="testTargetGraphCard()">⚡ Test Connection</button>
+                  <button type="button" id="btn-edit-target-db" class="btn-sm" style="background: rgba(37, 99, 235, 0.1); color: var(--accent-blue); border: 1px solid rgba(37, 99, 235, 0.3); font-weight: 600;" onclick="openTargetGraphModal()">✏️ Edit Connection</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -704,6 +707,338 @@
         </div>
       </section>
 
+      <!-- 8. Data Movement Engine Panel -->
+      <section id="panel-data-movement" class="view-panel">
+        <div class="flex-between" style="align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <h2>Ontology & Knowledge Graph Data Movement Engine</h2>
+            <p style="color: var(--text-secondary); font-size: 14px;">Extract, transform, and load relational data into Target Knowledge Graph based on W3C OWL 2.0 ontology and lineage topology</p>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex-shrink: 0;">
+            <button class="btn-secondary" onclick="loadDataMovementMapping()">🔄 Refresh Mapping Lineage</button>
+            <button class="btn-primary" style="background: linear-gradient(135deg, #059669, #0284c7); font-weight: 700;" onclick="executeDataMovementPipeline()">⚡ Execute Data Movement Engine</button>
+          </div>
+        </div>
+
+        <!-- Top Pipeline Controls & Summary Grid -->
+        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; margin-top: 14px;">
+          <!-- Left: Visual Mapping Lineage Overview Card -->
+          <div class="glass-card" style="display: flex; flex-direction: column; gap: 12px; border-top: 4px solid var(--accent-cyan);">
+            <div class="flex-between" style="border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
+              <h3 style="margin: 0; font-size: 15px; color: var(--accent-cyan);">Pipeline Lineage & Topology Map</h3>
+              <span class="badge" id="dm-mapping-badge" style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan);">0 Tables Mapped</span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 30px 1fr 30px 1fr; gap: 6px; align-items: center; text-align: center; margin-top: 4px;">
+              <!-- Source -->
+              <div style="background: var(--bg-surface); padding: 10px 6px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <div style="font-size: 18px;">📁</div>
+                <div style="font-size: 12px; font-weight: 700; color: var(--text-primary); margin-top: 2px;" id="dm-stat-sources">0 Sources</div>
+                <div style="font-size: 10px; color: var(--text-secondary);" id="dm-stat-tables">0 Tables</div>
+              </div>
+              <div style="font-size: 16px; color: var(--accent-cyan); font-weight: bold;">➔</div>
+              <!-- Ontology -->
+              <div style="background: var(--bg-surface); padding: 10px 6px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <div style="font-size: 18px;">🧠</div>
+                <div style="font-size: 12px; font-weight: 700; color: var(--accent-violet); margin-top: 2px;" id="dm-stat-classes">0 Classes</div>
+                <div style="font-size: 10px; color: var(--text-secondary);" id="dm-stat-attrs">0 Attributes</div>
+              </div>
+              <div style="font-size: 16px; color: var(--accent-emerald); font-weight: bold;">➔</div>
+              <!-- Target DB -->
+              <div style="background: var(--bg-surface); padding: 10px 6px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <div style="font-size: 18px;">🎯</div>
+                <div style="font-size: 12px; font-weight: 700; color: var(--accent-emerald); margin-top: 2px;" id="dm-stat-target-type">NEO4J</div>
+                <div style="font-size: 10px; color: var(--text-secondary); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="dm-stat-target-host">bolt://localhost:7687</div>
+              </div>
+            </div>
+
+            <!-- Table-to-Class Detailed Mapping List -->
+            <div id="dm-mapping-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto; margin-top: 6px; padding-right: 4px;">
+              <!-- Dynamically populated table mappings -->
+            </div>
+          </div>
+
+          <!-- Right: Execution Configuration Card -->
+          <div class="glass-card" style="display: flex; flex-direction: column; justify-content: space-between; border-top: 4px solid var(--accent-violet);">
+            <div>
+              <div class="flex-between" style="border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
+                <h3 style="margin: 0; font-size: 15px; color: var(--accent-violet);">Migration Execution Parameters</h3>
+                <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: var(--accent-violet);">⚙️ READY</span>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Source Database Connection:</label>
+                  <select id="dmSourceConnSelect" class="project-selector" style="width: 100%; font-size: 12px; padding: 6px 10px;">
+                    <option value="">All Mapped Source Connectors</option>
+                  </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div>
+                    <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Migration Strategy Mode:</label>
+                    <select id="dmMigrationModeSelect" class="project-selector" style="width: 100%; font-size: 12px; padding: 6px 10px;">
+                      <option value="FULL_REFRESH">Full Refresh & Ingest</option>
+                      <option value="INCREMENTAL">Incremental Batch Ingestion</option>
+                      <option value="ONTOLOGY_MAPPED">Ontology-Mapped Cypher Sync</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Batch Batch Size (rows):</label>
+                    <input type="number" id="dmBatchSizeInput" value="1000" min="100" max="50000" style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-surface); color: var(--text-primary);">
+                  </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                  <input type="checkbox" id="dmEnforceRulesCheckbox" checked style="width: 16px; height: 16px; cursor: pointer;">
+                  <label for="dmEnforceRulesCheckbox" style="font-size: 12px; color: var(--text-primary); cursor: pointer; font-weight: 500;">Enforce Business Rules & Data Quality Validations</label>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+              <button class="btn-primary" style="width: 100%; padding: 10px; font-size: 13px; font-weight: 700; background: linear-gradient(135deg, #059669, #0284c7); display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="executeDataMovementPipeline()">
+                <span>🚀 Launch Data Movement Pipeline</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Execution Stepper & Terminal Log Console -->
+        <div class="glass-card" style="margin-top: 16px; padding: 18px; display: flex; flex-direction: column; gap: 16px;">
+          <div class="flex-between">
+            <h3 style="margin: 0; font-size: 15px; display: flex; align-items: center; gap: 8px; color: var(--text-primary);">
+              <span>⚡ Live Pipeline Execution Stepper & Terminal Monitor</span>
+            </h3>
+            <span class="badge" id="dm-status-badge" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); font-weight: 700;">IDLE / READY</span>
+          </div>
+
+          <!-- Progress Stepper Stepper Cards -->
+          <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;" id="dm-stepper-container">
+            <div class="dm-step-card" id="dm-step-1">
+              <span class="dm-step-num">1</span>
+              <span class="dm-step-title">Extraction</span>
+            </div>
+            <div class="dm-step-card" id="dm-step-2">
+              <span class="dm-step-num">2</span>
+              <span class="dm-step-title">Ontology</span>
+            </div>
+            <div class="dm-step-card" id="dm-step-3">
+              <span class="dm-step-num">3</span>
+              <span class="dm-step-title">Validation</span>
+            </div>
+            <div class="dm-step-card" id="dm-step-4">
+              <span class="dm-step-num">4</span>
+              <span class="dm-step-title">Nodes</span>
+            </div>
+            <div class="dm-step-card" id="dm-step-5">
+              <span class="dm-step-num">5</span>
+              <span class="dm-step-title">Edges</span>
+            </div>
+            <div class="dm-step-card" id="dm-step-6">
+              <span class="dm-step-num">6</span>
+              <span class="dm-step-title">Commit</span>
+            </div>
+          </div>
+
+          <!-- Animated Progress Bar Container -->
+          <div style="width: 100%; height: 8px; background: rgba(0, 0, 0, 0.06); border-radius: 4px; overflow: hidden;">
+            <div id="dm-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #0284c7, #10b981); transition: width 0.4s ease;"></div>
+          </div>
+
+          <!-- Execution Summary Metrics Row -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+            <div style="background: var(--bg-surface); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center;">
+              <span style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase;">Records Extracted</span>
+              <div id="dm-metric-extracted" style="font-size: 20px; font-weight: 700; font-family: var(--font-mono); color: var(--accent-cyan); margin-top: 2px;">0</div>
+            </div>
+            <div style="background: var(--bg-surface); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center;">
+              <span style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase;">Nodes Materialized</span>
+              <div id="dm-metric-nodes" style="font-size: 20px; font-weight: 700; font-family: var(--font-mono); color: var(--accent-violet); margin-top: 2px;">0</div>
+            </div>
+            <div style="background: var(--bg-surface); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center;">
+              <span style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase;">Relationships Linked</span>
+              <div id="dm-metric-edges" style="font-size: 20px; font-weight: 700; font-family: var(--font-mono); color: var(--accent-emerald); margin-top: 2px;">0</div>
+            </div>
+            <div style="background: var(--bg-surface); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center;">
+              <span style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase;">Quality Pass Rate</span>
+              <div id="dm-metric-quality" style="font-size: 20px; font-weight: 700; font-family: var(--font-mono); color: var(--accent-amber); margin-top: 2px;">100%</div>
+            </div>
+            <div style="background: var(--bg-surface); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center;">
+              <span style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase;">Execution Time</span>
+              <div id="dm-metric-time" style="font-size: 20px; font-weight: 700; font-family: var(--font-mono); color: var(--accent-rose); margin-top: 2px;">0ms</div>
+            </div>
+          </div>
+
+          <!-- Terminal Output Console Window -->
+          <div style="background: #0f172a; border-radius: 8px; border: 1px solid #1e293b; padding: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #38bdf8; height: 180px; overflow-y: auto;" id="dm-terminal-output">
+            <div style="color: #64748b;">// Pipeline Terminal Log Output Monitor - Awaiting execution...</div>
+          </div>
+        </div>
+
+        <!-- Historical Execution Audit Trail Table -->
+        <div class="glass-card" style="margin-top: 16px; padding: 0; overflow-x: auto;">
+          <div style="padding: 14px 18px; border-bottom: 1px solid var(--border-color);" class="flex-between">
+            <h3 style="margin: 0; font-size: 15px; color: var(--text-primary);">Data Movement Execution History Audit Trail</h3>
+            <button class="btn-sm" onclick="loadDataMovementJobHistory()">🔄 Refresh History</button>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Job Name / Time</th>
+                <th>Source Connection</th>
+                <th>Target Graph DB</th>
+                <th>Mode</th>
+                <th>Extracted</th>
+                <th>Nodes Created</th>
+                <th>Relationships</th>
+                <th>Time (ms)</th>
+                <th>Status</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="dm-history-tbody">
+              <!-- Dynamically populated job audit history -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 3.5. AI Knowledge Graph Insights & LLM Analytics Panel -->
+      <section id="panel-llm-insights" class="view-panel">
+        <div class="flex-between" style="align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <h2>🤖 AI Knowledge Graph Insights & RAG Analytics</h2>
+            <p style="color: var(--text-secondary); font-size: 14px;">Leverage W3C OWL 2.0 DL Ontology definitions and unified Target Graph Database topology to synthesize AI domain insights</p>
+          </div>
+          <div class="badge" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-violet); font-size: 12px; padding: 6px 12px; font-weight: 700;">
+            ✨ LLM REASONING ENGINE ACTIVE
+          </div>
+        </div>
+
+        <!-- Prompt Templates & User Query Card -->
+        <div class="glass-card" style="margin-top: 14px; padding: 20px; display: flex; flex-direction: column; gap: 16px; border-top: 4px solid var(--accent-violet);">
+          <div>
+            <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 8px;">
+              💡 Preset Query Templates (1-Click Analysis):
+            </label>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="llm-preset-pills">
+              <!-- Dynamically populated from Project Approved Cypher Queries or Metadata -->
+            </div>
+          </div>
+
+          <div>
+            <label for="llm-user-prompt" style="font-size: 13px; font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 6px;">
+              Ask Natural Language Question / Prompt Input:
+            </label>
+            <textarea id="llm-user-prompt" rows="3" placeholder="Type any natural language query about your domain, ontology classes, or target Knowledge Graph topology..." style="width: 100%; padding: 12px 14px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface); color: var(--text-primary); font-family: var(--font-sans); line-height: 1.5; resize: vertical; box-sizing: border-box;"></textarea>
+          </div>
+
+          <div class="flex-between" style="align-items: center; border-top: 1px dashed var(--border-color); padding-top: 12px;">
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <span style="font-size: 12px; color: var(--text-secondary);">Model:</span>
+              <select id="llmModelSelect" class="project-selector" style="font-size: 12px; padding: 4px 10px;">
+                <option value="gemini-1.5-pro">✨ Gemini 1.5 Pro (Enterprise RAG)</option>
+                <option value="gemini-1.5-flash">⚡ Gemini 1.5 Flash (Fast Reasoning)</option>
+                <option value="ontology-graph-llm">🧠 Ontology Graph AI Reasoning Engine</option>
+              </select>
+            </div>
+
+            <button class="btn-primary" id="btn-generate-llm-insights" style="padding: 10px 22px; font-size: 13px; font-weight: 700; background: linear-gradient(135deg, #8b5cf6, #0284c7); display: flex; align-items: center; gap: 8px;" onclick="runLLMInsight()">
+              <span>✨ Generate AI Graph Insights</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Loader Container -->
+        <div id="llm-loading-spinner" style="display: none; margin-top: 20px; text-align: center; padding: 40px; background: var(--bg-surface); border-radius: 12px; border: 1px dashed var(--accent-violet);">
+          <div style="font-size: 32px; animation: spin 1.2s infinite linear; display: inline-block;">✨</div>
+          <h3 style="margin: 12px 0 4px 0; color: var(--accent-violet);">Synthesizing Knowledge Graph RAG Intelligence...</h3>
+          <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">Traversing W3C OWL 2.0 DL Classes, Object Property edges, and Cypher target schema</p>
+        </div>
+
+        <!-- Generated Results Display Area -->
+        <div id="llm-results-container" style="display: none; margin-top: 16px; flex-direction: column; gap: 16px;">
+          <!-- 1. Synthesized Cypher Query Code Block (Placed First) -->
+          <div class="glass-card" style="padding: 18px; border-left: 4px solid var(--accent-cyan);">
+            <div class="flex-between" style="margin-bottom: 10px;">
+              <h3 style="margin: 0; font-size: 15px; color: var(--accent-cyan); display: flex; align-items: center; gap: 8px;">
+                <span>⚡ Synthesized Cypher Graph Query</span>
+              </h3>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn-sm" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700;" onclick="saveApprovedLLMCypher()">👍 Save & Approve Cypher</button>
+                <button class="btn-sm" onclick="copyLLMCypherQuery()">📋 Copy Cypher</button>
+              </div>
+            </div>
+            <pre id="llm-cypher-code-block" style="background: #0f172a; border-radius: 8px; border: 1px solid #1e293b; padding: 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #38bdf8; overflow-x: auto; margin: 0; line-height: 1.5;"></pre>
+          </div>
+
+          <!-- 2. Executive AI Intelligence Summary & Data Insights (Placed Second) -->
+          <div class="glass-card" style="padding: 18px; border-left: 4px solid var(--accent-violet);">
+            <div class="flex-between" style="margin-bottom: 8px;">
+              <h3 style="margin: 0; font-size: 15px; color: var(--accent-violet); display: flex; align-items: center; gap: 8px;">
+                <span>💡 Executive AI Intelligence Summary & Target Data Insights</span>
+              </h3>
+              <span id="llm-execution-time" class="badge" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-violet); font-family: var(--font-mono); font-size: 11px;">0ms</span>
+            </div>
+            <div id="llm-exec-summary-text" style="font-size: 13px; color: var(--text-primary); line-height: 1.6;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3.6. Saved Cypher Queries Repository Panel -->
+      <section id="panel-saved-cyphers" class="view-panel">
+        <div class="flex-between" style="align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <h2>⭐ Approved Cypher Knowledge Repository</h2>
+            <p style="color: var(--text-secondary); font-size: 14px;">Manage, edit, and test approved Cypher query templates used by the AI engine for Few-Shot prompt learning</p>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); font-size: 12px; padding: 6px 12px; font-weight: 700;">
+              🧠 FEW-SHOT REPOSITORY ACTIVE
+            </span>
+            <button class="btn-secondary" onclick="loadSavedCypherQueries()">🔄 Refresh Repository</button>
+          </div>
+        </div>
+
+        <!-- Metrics Row -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 14px;">
+          <div class="glass-card" style="padding: 14px 18px; border-left: 4px solid var(--accent-emerald);">
+            <span style="font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Approved Query Templates</span>
+            <div id="count-saved-cyphers" style="font-size: 26px; font-weight: 700; font-family: var(--font-mono); color: var(--accent-emerald); margin-top: 4px;">0</div>
+            <div style="font-size: 11px; color: var(--text-secondary);">Saved & verified queries</div>
+          </div>
+          <div class="glass-card" style="padding: 14px 18px; border-left: 4px solid var(--accent-violet);">
+            <span style="font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Few-Shot AI Re-use Hits</span>
+            <div id="count-saved-usages" style="font-size: 26px; font-weight: 700; font-family: var(--font-mono); color: var(--accent-violet); margin-top: 4px;">0</div>
+            <div style="font-size: 11px; color: var(--text-secondary);">Prompt match executions</div>
+          </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="glass-card" style="margin-top: 14px; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+          <input type="text" id="saved-cyphers-search" placeholder="🔍 Search saved prompts or Cypher code..." style="padding: 8px 14px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-surface); color: var(--text-primary); flex: 1;" oninput="filterSavedCypherQueries(this.value)">
+        </div>
+
+        <!-- Saved Cypher Queries Table -->
+        <div class="glass-card" style="margin-top: 14px; padding: 0; overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 25%;">Question Prompt</th>
+                <th style="width: 40%;">Approved Cypher Query</th>
+                <th style="width: 12%;">Model Used</th>
+                <th style="width: 10%;">Usage Count</th>
+                <th style="width: 13%; text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="saved-cyphers-tbody">
+              <!-- Dynamically populated saved cyphers -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <!-- 4. Business Rules Engine Panel (Before Ontology Creation) -->
       <section id="panel-rules" class="view-panel">
         <div class="flex-between">
@@ -843,8 +1178,15 @@
           <input type="password" id="nc-pass" placeholder="Password">
         </div>
       </div>
+
+      <!-- Connection Test Result Banner -->
+      <div id="nc-test-status" style="display: none; padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-top: 4px; font-weight: 500;"></div>
+
       <div class="flex-between" style="margin-top: 12px;">
-        <button class="btn-secondary" onclick="closeModal('connModal')">Cancel</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-secondary" onclick="closeModal('connModal')">Cancel</button>
+          <button class="btn-secondary" style="border-color: var(--accent-cyan); color: var(--accent-cyan); font-weight: 600;" onclick="testSourceModalConnection()">⚡ Check Connection Status</button>
+        </div>
         <button class="btn-primary" onclick="submitCreateConnector()">Save Connection</button>
       </div>
     </div>
@@ -867,6 +1209,7 @@
           <select id="ng-type">
             <option value="NEO4J">Neo4j</option>
             <option value="MEMGRAPH">Memgraph</option>
+            <option value="APACHE_AGE">Apache AGE (PostgreSQL Graph)</option>
             <option value="NEPTUNE">AWS Neptune</option>
           </select>
         </div>
@@ -875,9 +1218,15 @@
           <input type="number" id="ng-port" placeholder="Port Number">
         </div>
       </div>
-      <div class="form-group">
-        <label>Host Name / URI</label>
-        <input type="text" id="ng-host" placeholder="Host Name or URI">
+      <div class="form-row">
+        <div class="form-group half">
+          <label>Host Name / URI</label>
+          <input type="text" id="ng-host" placeholder="neo4j://127.0.0.1 or localhost">
+        </div>
+        <div class="form-group half">
+          <label>Database Name / Keyspace</label>
+          <input type="text" id="ng-dbname" placeholder="Database Name (e.g. neo4j, system)">
+        </div>
       </div>
       <div class="form-row">
         <div class="form-group half">
@@ -889,8 +1238,15 @@
           <input type="password" id="ng-pass" placeholder="Password">
         </div>
       </div>
+
+      <!-- Connection Test Result Banner -->
+      <div id="ng-test-status" style="display: none; padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-top: 4px; font-weight: 500;"></div>
+
       <div class="flex-between" style="margin-top: 12px;">
-        <button class="btn-secondary" onclick="closeModal('graphModal')">Cancel</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-secondary" onclick="closeModal('graphModal')">Cancel</button>
+          <button class="btn-secondary" style="border-color: var(--accent-cyan); color: var(--accent-cyan); font-weight: 600;" onclick="testTargetGraphModalConnection()">⚡ Check Connection Status</button>
+        </div>
         <button class="btn-primary" onclick="submitTargetGraph()">Save Graph Config</button>
       </div>
     </div>
@@ -1300,22 +1656,51 @@
     </div>
   </div>
 
+  <!-- Edit Approved Cypher Modal -->
+  <div id="editSavedCypherModal" class="modal-overlay">
+    <div class="modal-card" style="width: 650px;">
+      <div class="flex-between" style="border-bottom: 1px dashed var(--border-color); padding-bottom: 12px; margin-bottom: 14px;">
+        <h3 style="margin: 0; color: var(--accent-violet);">✏️ Edit Approved Cypher Template</h3>
+        <button style="background: transparent; border: none; font-size: 18px; cursor: pointer; color: var(--text-secondary);" onclick="closeModal('editSavedCypherModal')">&times;</button>
+      </div>
+
+      <input type="hidden" id="edit-saved-cypher-id">
+
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">Question Prompt / Intent:</label>
+        <input type="text" id="edit-saved-cypher-prompt" class="form-input" style="width: 100%; font-weight: 600;">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">Approved Cypher Code:</label>
+        <textarea id="edit-saved-cypher-code" class="form-input" rows="8" style="width: 100%; font-family: var(--font-mono); font-size: 12px; color: var(--accent-cyan); background: #0f172a; border: 1px solid #1e293b; padding: 12px;"></textarea>
+      </div>
+
+      <div class="flex-between">
+        <button class="btn-secondary" onclick="closeModal('editSavedCypherModal')">Cancel</button>
+        <button class="btn-primary" onclick="saveEditedCypherSubmit()">💾 Save Changes</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container (Bottom Right) -->
   <div id="toast-container" style="position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 10px; z-index: 999999; pointer-events: none;"></div>
 
   <!-- Modularized Application Scripts -->
-  <script src="/static/js/toast.js?v=8.5"></script>
-  <script src="/static/js/confirm.js?v=8.5"></script>
-  <script src="/static/js/app.js?v=8.5"></script>
-  <script src="/static/js/dashboard.js?v=8.5"></script>
-  <script src="/static/js/connectors.js?v=8.5"></script>
-  <script src="/static/js/metadata.js?v=8.5"></script>
-  <script src="/static/js/profiling.js?v=8.5"></script>
-  <script src="/static/js/rules.js?v=8.5"></script>
-  <script src="/static/js/ontology.js?v=8.5"></script>
-  <script src="/static/js/ontology_graph.js?v=8.5"></script>
-  <script src="/static/js/ontology_viewer.js?v=8.5"></script>
-  <script src="/static/js/graph.js?v=8.5"></script>
-  <script src="/static/js/projects.js?v=8.5"></script>
+  <script src="/static/js/toast.js?v=13.0"></script>
+  <script src="/static/js/confirm.js?v=13.0"></script>
+  <script src="/static/js/app.js?v=13.0"></script>
+  <script src="/static/js/dashboard.js?v=13.0"></script>
+  <script src="/static/js/connectors.js?v=13.0"></script>
+  <script src="/static/js/metadata.js?v=13.0"></script>
+  <script src="/static/js/profiling.js?v=13.0"></script>
+  <script src="/static/js/rules.js?v=13.0"></script>
+  <script src="/static/js/ontology.js?v=13.0"></script>
+  <script src="/static/js/ontology_graph.js?v=13.0"></script>
+  <script src="/static/js/ontology_viewer.js?v=13.0"></script>
+  <script src="/static/js/graph.js?v=13.0"></script>
+  <script src="/static/js/data_movement.js?v=13.0"></script>
+  <script src="/static/js/llm_insights.js?v=13.0"></script>
+  <script src="/static/js/projects.js?v=13.0"></script>
 </body>
 </html>

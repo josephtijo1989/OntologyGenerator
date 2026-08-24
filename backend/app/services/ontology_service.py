@@ -197,11 +197,18 @@ class OntologyService:
                         "relationship_type": "INHERITANCE"
                     })
 
+        seen_graph_edge_keys = set()
         for p in onto_result["properties"]:
             if p.get("property_type") == "ObjectProperty":
                 src = p.get("parent_class")
                 tgt = p.get("target_class")
-                if src and tgt:
+                lbl = p.get("label") or p.get("name")
+                if src and tgt and lbl:
+                    edge_key = (src.lower(), tgt.lower(), lbl.lower())
+                    if edge_key in seen_graph_edge_keys:
+                        continue
+                    seen_graph_edge_keys.add(edge_key)
+
                     if tgt not in node_ids:
                         node_ids.add(tgt)
                         graph_nodes.append({
@@ -226,12 +233,12 @@ class OntologyService:
                             "attributes": [],
                             "properties": {"type": "Class"}
                         })
-                    edge_id = f"rel_{src}_{p['label']}_{tgt}"
+                    edge_id = f"rel_{src}_{lbl}_{tgt}"
                     graph_edges.append({
                         "id": edge_id,
                         "source": src,
                         "target": tgt,
-                        "label": p["label"],
+                        "label": lbl,
                         "type": "ObjectProperty",
                         "relationship_type": "OBJECT_PROPERTY",
                         "inverse_property": p.get("inverse_property"),

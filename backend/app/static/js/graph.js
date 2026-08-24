@@ -68,16 +68,22 @@ async function initCytoscapeGraph() {
     }
 
     if (graphData.edges) {
+      const addedGraphEdgeKeys = new Set();
       graphData.edges.forEach(e => {
         if (validNodeIds.has(e.source_id) && validNodeIds.has(e.target_id)) {
-          cyElements.push({
-            data: {
-              id: e.id,
-              source: e.source_id,
-              target: e.target_id,
-              label: (e.relationship || 'references').toLowerCase()
-            }
-          });
+          const relLabel = (e.relationship || 'references').toLowerCase();
+          const edgeKey = `${e.source_id}->${e.target_id}:${relLabel}`;
+          if (!addedGraphEdgeKeys.has(edgeKey)) {
+            addedGraphEdgeKeys.add(edgeKey);
+            cyElements.push({
+              data: {
+                id: `edge_${e.id || edgeKey}`,
+                source: e.source_id,
+                target: e.target_id,
+                label: relLabel
+              }
+            });
+          }
         }
       });
     }

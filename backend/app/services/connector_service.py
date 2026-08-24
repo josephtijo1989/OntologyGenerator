@@ -86,19 +86,37 @@ class ConnectorService:
         return success
 
     def create_graph_config(self, project_id: str, graph_in: GraphConfigCreate) -> GraphConfig:
-        enc_pwd = cipher.encrypt(graph_in.password) if graph_in.password else None
-        cfg = GraphConfig(
-            project_id=project_id,
-            name=graph_in.name,
-            target_type=graph_in.target_type,
-            host=graph_in.host,
-            port=graph_in.port,
-            database_name=graph_in.database_name,
-            username=graph_in.username,
-            encrypted_password=enc_pwd,
-            options_json=graph_in.options_json
-        )
-        return self.graph_repo.create(cfg)
+        existing = self.graph_repo.get_by_project(project_id)
+        enc_pwd = cipher.encrypt(graph_in.password) if (graph_in.password and graph_in.password != "******") else None
+        if existing:
+            cfg = existing[-1]
+            update_data = {
+                "name": graph_in.name,
+                "target_type": graph_in.target_type,
+                "host": graph_in.host,
+                "port": graph_in.port,
+                "database_name": graph_in.database_name,
+                "username": graph_in.username,
+            }
+            if graph_in.password and graph_in.password != "******":
+                update_data["encrypted_password"] = enc_pwd
+            if graph_in.options_json is not None:
+                update_data["options_json"] = graph_in.options_json
+            return self.graph_repo.update(cfg, update_data)
+        else:
+            cfg = GraphConfig(
+                project_id=project_id,
+                name=graph_in.name,
+                target_type=graph_in.target_type,
+                host=graph_in.host,
+                port=graph_in.port,
+                database_name=graph_in.database_name,
+                username=graph_in.username,
+                encrypted_password=enc_pwd,
+                options_json=graph_in.options_json
+            )
+            return self.graph_repo.create(cfg)
+
 
     def get_graph_configs(self, project_id: str) -> List[GraphConfig]:
         return self.graph_repo.get_by_project(project_id)

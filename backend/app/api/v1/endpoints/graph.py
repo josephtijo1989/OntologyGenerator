@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 from app.configuration.database import get_db
-from app.schemas.graph import EnterpriseGraphModel, GraphExportRequest
+from app.schemas.graph import EnterpriseGraphModel, GraphExportRequest, GraphTestConnectionRequest
 from app.services.graph_service import GraphService
 
 router = APIRouter(prefix="/projects/{project_id}/graph", tags=["Enterprise Knowledge Graph"])
@@ -83,3 +83,21 @@ def sync_to_target_graph(project_id: str, db: Session = Depends(get_db)):
         return svc.sync_to_target_graph(project_id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/test-connection")
+def test_graph_connection_endpoint(project_id: str, req: GraphTestConnectionRequest, db: Session = Depends(get_db)):
+    svc = GraphService(db)
+    try:
+        return svc.test_graph_connection(
+            project_id=project_id,
+            host=req.host,
+            port=req.port,
+            target_type=req.target_type,
+            database_name=req.database_name,
+            username=req.username,
+            password=req.password
+        )
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
