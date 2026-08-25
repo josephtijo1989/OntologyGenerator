@@ -26,6 +26,13 @@ rdflib>=7.0.0
 networkx>=3.0.0
 pandas>=2.0.0
 numpy>=1.24.0
+neo4j>=5.0.0
+
+# AI & LLM Integration
+google-generativeai>=0.8.0
+
+# Documentation & Report Generation
+python-docx>=1.0.0
 
 # Background Tasks & Message Broker
 celery>=5.3.0
