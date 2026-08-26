@@ -32,3 +32,36 @@ def test_llm_insights_generation():
     # Clean up project
     del_res = client.delete(f"/api/v1/projects/{project_id}")
     assert del_res.status_code in [200, 204]
+
+
+def test_llm_insights_comparison_where_conditions():
+    test_code = f"LLM_CMP_{uuid.uuid4().hex[:8]}"
+    proj_resp = client.post("/api/v1/projects", json={
+        "name": "LLM Comparison Test Project",
+        "code": test_code,
+        "description": "Testing WHERE clause comparison generation"
+    })
+    assert proj_resp.status_code == 201
+    project_id = proj_resp.json()["id"]
+
+    prompt = (
+        "Find all such invoices where,\n"
+        "Invoice Discount Offer > 0\n"
+        "AND Payment Date > Discount Deadline Date\n"
+        "AND Available Capital > Discounted Amount"
+    )
+
+    res = client.post(f"/api/v1/projects/{project_id}/llm/insights", json={
+        "user_prompt": prompt,
+        "model_name": "gemini-1.5-pro"
+    })
+    assert res.status_code == 200
+    data = res.json()
+    cypher = data["generated_cypher_query"]
+    assert "WHERE" in cypher.upper()
+    assert "discountOffer > 0" in cypher or "invoiceDiscountOffer > 0" in cypher
+    assert "paymentDate >" in cypher
+    assert "availableCapital >" in cypher
+
+    client.delete(f"/api/v1/projects/{project_id}")
+

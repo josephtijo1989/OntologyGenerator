@@ -347,9 +347,12 @@ class LLMInsightService:
                 if response and response.text:
                     text = response.text.strip()
                     match = re.search(r'```(?:cypher)?\s*(.*?)\s*```', text, re.DOTALL)
-                    if match:
-                        return match.group(1).strip()
-                    return text
+                    cypher = match.group(1).strip() if match else text
+                    has_comparison = any(op in user_prompt for op in [">", "<", "=", ">=", "<="]) or "where" in user_prompt.lower()
+                    if has_comparison and "WHERE" not in cypher.upper():
+                        logger.warning("Live Gemini LLM missed WHERE clause for comparison query. Falling back to schema synthesizer.")
+                        return self._generate_ontology_referencing_cypher(user_prompt, class_names, dt_props, relationships)
+                    return cypher
             except Exception as e:
                 logger.warning(f"Live Gemini LLM API call failed: {e}. Falling back to ontology schema generator.")
 
@@ -381,21 +384,40 @@ class LLMInsightService:
 
         sorted_matched = sorted(class_scores.keys(), key=lambda k: class_scores[k], reverse=True)
 
+        if not sorted_matched:
+            # Fallback: Extract target concept class directly from prompt
+            c_match = re.search(r'\b(?:find|show|get|list|select|display)\s+(?:all\s+)?(?:such\s+)?([a-zA-Z0-9_]+)', prompt_lower)
+            if not c_match:
+                c_match = re.search(r'\b([a-zA-Z0-9_]+)\s+where\b', prompt_lower)
+            
+            if c_match:
+                raw_word = c_match.group(1).strip()
+                if raw_word.lower() not in ['where', 'and', 'or', 'all', 'such', 'the', 'a', 'an']:
+                    if raw_word.lower().endswith("ies"):
+                        sing = raw_word[:-3] + "y"
+                    elif raw_word.lower().endswith("s") and not raw_word.lower().endswith("ss"):
+                        sing = raw_word[:-1]
+                    else:
+                        sing = raw_word
+                    
+                    extracted_class = sing.capitalize()
+                    sorted_matched = [extracted_class]
+
         def get_props_return_str(cls_name: str, var_alias: str) -> str:
             props = dt_props.get(cls_name, [])
             selected = []
             for p in props:
                 p_lower = p.lower()
-                if any(k in p_lower for k in ["name", "title", "code", "type", "status", "amount", "number", "id", "date"]):
+                if any(k in p_lower for k in ["name", "title", "code", "type", "status", "amount", "number", "id", "date", "offer", "capital"]):
                     selected.append(f"coalesce({var_alias}.{p}, {var_alias}.{p_lower}, {var_alias}.id) AS {cls_name}_{p}")
-                if len(selected) >= 4:
+                if len(selected) >= 6:
                     break
             if not selected:
                 selected = [f"{var_alias}.id AS {cls_name}_Id"]
             return ", ".join(selected)
 
-        # Check if Count Query
-        is_count_query = any(ck in prompt_lower for ck in count_keywords)
+        # Check if Count Query (Word boundary search to prevent matching 'count' inside 'discount')
+        is_count_query = any(re.search(r'\b' + re.escape(ck) + r'\b', prompt_lower) for ck in count_keywords)
 
         if is_count_query and sorted_matched:
             top_c = sorted_matched[0]
@@ -417,7 +439,7 @@ class LLMInsightService:
 
             def clean_property_name(phrase: str) -> str:
                 clean_p = phrase.strip()
-                words = [w for w in re.findall(r'[a-zA-Z0-9]+', clean_p) if w.lower() not in ['where', 'and', 'or', 'find', 'all', 'such', 'invoices', 'invoice', 'show', 'list', 'the', 'a', 'an']]
+                words = [w for w in re.findall(r'[a-zA-Z0-9]+', clean_p) if w.lower() not in ['where', 'and', 'or', 'find', 'all', 'such', 'invoices', 'invoice', 'show', 'list', 'the', 'a', 'an', 'is', 'are', 'with', 'having']]
                 if not words:
                     words = re.findall(r'[a-zA-Z0-9]+', clean_p)
                 if not words:
@@ -440,9 +462,10 @@ class LLMInsightService:
                 prop = clean_property_name(op_str)
                 return f"{c_alias}.{prop}"
 
-            raw_lines = re.split(r'\n|\bAND\b|\band\b|;', prompt)
-            for line in raw_lines:
-                match = re.search(r'([a-zA-Z0-9_\s]+)\s*(>=|<=|>|<|=)\s*([a-zA-Z0-9_\s"\']+)', line)
+            raw_chunks = re.split(r'\n|\bAND\b|\band\b|;', prompt)
+            for chunk in raw_chunks:
+                clean_chunk = re.sub(r'[,;]+', ' ', chunk)
+                match = re.search(r'(.+?)\s*(>=|<=|>|<|=)\s*(.+)', clean_chunk)
                 if match:
                     left_raw, op, right_raw = match.group(1), match.group(2), match.group(3)
                     left_code = parse_operand(left_raw)
