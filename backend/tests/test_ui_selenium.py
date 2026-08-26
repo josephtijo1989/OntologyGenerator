@@ -257,7 +257,7 @@ class TestFullApplicationUI:
         wait_for_toast(driver, timeout=5)
 
         # 7. Configure Target Graph Database
-        config_target_btn = driver.find_element(By.XPATH, "//button[contains(., 'Configure Target Graph DB')]")
+        config_target_btn = driver.find_element(By.ID, "btn-edit-target-db-header")
         config_target_btn.click()
 
         graph_modal = WebDriverWait(driver, 5).until(
