@@ -1005,4 +1005,16 @@ body {
   font-weight: 700;
 }
 
+/* Explicit Light Theme Code Blocks & Cypher Displays */
+.data-table code,
+.cypher-code-block,
+#edit-saved-cypher-code,
+#llm-cypher-code-block {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 8px !important;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+}
+
 

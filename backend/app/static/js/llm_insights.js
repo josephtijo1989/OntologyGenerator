@@ -278,7 +278,7 @@ function renderSavedCypherTable(items) {
     html += `
       <tr>
         <td style="font-weight: 600; color: var(--text-primary); vertical-align: top;">${escapeHtml(item.question_prompt)}</td>
-        <td style="vertical-align: top;"><code style="background: #f8fafc; color: #0284c7; border: 1px solid var(--border-color); padding: 6px 10px; border-radius: 6px; font-family: var(--font-mono); font-size: 11px; display: block; white-space: pre-wrap; word-break: break-all; font-weight: 600;">${escapeHtml(cypherShort)}</code></td>
+        <td style="vertical-align: top;"><code class="cypher-code-block" style="background: #ffffff !important; color: #0f172a !important; border: 1px solid var(--border-color) !important; padding: 10px 12px; border-radius: 8px; font-family: var(--font-mono); font-size: 12px; display: block; white-space: pre-wrap; word-break: break-all; font-weight: 500; line-height: 1.5;">${escapeHtml(cypherShort)}</code></td>
         <td style="vertical-align: top;"><span class="badge" style="background: rgba(168, 85, 247, 0.12); color: var(--accent-violet); font-size: 11px;">${escapeHtml(item.model_name || 'gemini-1.5-pro')}</span></td>
         <td style="vertical-align: top; font-family: var(--font-mono); font-weight: 700; color: var(--accent-emerald); text-align: center;">${item.usage_count}</td>
         <td style="vertical-align: top; text-align: right;">
