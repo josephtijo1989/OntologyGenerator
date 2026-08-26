@@ -35,6 +35,7 @@ class LLMInsightService:
         lines.append("2. Never leave variables out of a WITH clause if you are going to RETURN them.")
         lines.append("3. To count relationships or nodes, you MUST use the COUNT clause, never the size() function.")
         lines.append("4. Limit the query to maximum 15 results using LIMIT 15;")
+        lines.append("5. Carefully parse all comparison filter conditions (such as '>', '<', '=', 'AND', 'OR', 'after', 'greater than', 'where') in the user prompt and construct explicit WHERE clause statements matching the datatype properties of the nodes.")
 
         if business_rules:
             lines.append("\nDomain Governance & Business Rules:")
@@ -404,6 +405,60 @@ class LLMInsightService:
                 f"MATCH ({c_alias}:{top_c})\n"
                 f"RETURN count({c_alias}) AS Total_{top_c}s;"
             )
+
+        # Check if Prompt Contains Where / Comparison Filter Conditions
+        where_conditions = []
+        has_comparison = any(op in prompt for op in [">", "<", "=", ">=", "<="]) or "where" in prompt_lower
+
+        if has_comparison and sorted_matched:
+            top_c = sorted_matched[0]
+            c_alias = top_c[0].lower()
+            available_props = dt_props.get(top_c, [])
+
+            def clean_property_name(phrase: str) -> str:
+                clean_p = phrase.strip()
+                words = [w for w in re.findall(r'[a-zA-Z0-9]+', clean_p) if w.lower() not in ['where', 'and', 'or', 'find', 'all', 'such', 'invoices', 'invoice', 'show', 'list', 'the', 'a', 'an']]
+                if not words:
+                    words = re.findall(r'[a-zA-Z0-9]+', clean_p)
+                if not words:
+                    return "id"
+                
+                candidate_lower = "".join(w.lower() for w in words)
+                for p in available_props:
+                    p_clean = "".join(re.findall(r'[a-zA-Z0-9]+', p.lower()))
+                    if candidate_lower == p_clean or candidate_lower in p_clean or p_clean in candidate_lower:
+                        return p
+                
+                return words[0].lower() + "".join(w.capitalize() for w in words[1:])
+
+            def parse_operand(op_str: str) -> str:
+                op_str = op_str.strip()
+                if re.match(r'^-?\d+(\.\d+)?$', op_str):
+                    return op_str
+                if (op_str.startswith("'") and op_str.endswith("'")) or (op_str.startswith('"') and op_str.endswith('"')):
+                    return op_str
+                prop = clean_property_name(op_str)
+                return f"{c_alias}.{prop}"
+
+            raw_lines = re.split(r'\n|\bAND\b|\band\b|;', prompt)
+            for line in raw_lines:
+                match = re.search(r'([a-zA-Z0-9_\s]+)\s*(>=|<=|>|<|=)\s*([a-zA-Z0-9_\s"\']+)', line)
+                if match:
+                    left_raw, op, right_raw = match.group(1), match.group(2), match.group(3)
+                    left_code = parse_operand(left_raw)
+                    right_code = parse_operand(right_raw)
+                    where_conditions.append(f"{left_code} {op} {right_code}")
+
+            if where_conditions:
+                where_clause = "WHERE " + "\n  AND ".join(where_conditions)
+                c_props = get_props_return_str(top_c, c_alias)
+                return (
+                    f"// Cypher query synthesized from W3C OWL Ontology Class ({top_c})\n"
+                    f"MATCH ({c_alias}:{top_c})\n"
+                    f"{where_clause}\n"
+                    f"RETURN {c_props}\n"
+                    f"LIMIT 15;"
+                )
 
         # Check single concept query
         if len(sorted_matched) >= 1:
