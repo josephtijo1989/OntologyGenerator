@@ -1,9 +1,10 @@
 import os
 import time
 import re
+import json
 from typing import Dict, Any, List, Set, Optional, Tuple
 from sqlalchemy.orm import Session
-from app.models.domain import Project, OntologyClass, OntologyAttribute, MetadataTable, GraphConfig, ApprovedCypherQuery
+from app.models.domain import Project, OntologyClass, OntologyAttribute, MetadataTable, GraphConfig, ApprovedCypherQuery, BusinessRule
 from app.schemas.llm_insights import LLMInsightRequest, LLMInsightResponse, GraphInsightItem, ApprovedCypherCreate, ApprovedCypherUpdate
 from app.graph.converter import to_upper_snake_case
 from app.utilities.encryption import cipher
@@ -15,28 +16,51 @@ class LLMInsightService:
     def __init__(self, db: Session):
         self.db = db
 
-    def _build_full_llm_prompt(self, user_prompt: str, class_names: List[str], dt_props: Dict[str, List[str]], relationships: List[Dict[str, Any]]) -> str:
+    def _build_full_llm_prompt(
+        self,
+        user_prompt: str,
+        class_names: List[str],
+        dt_props: Dict[str, List[str]],
+        relationships: List[Dict[str, Any]],
+        business_rules: List[str],
+        approved_examples: List[Tuple[str, str]]
+    ) -> str:
         lines = []
-        lines.append("You are an expert Enterprise Knowledge Graph Architect and Cypher Query Engineer.")
-        lines.append("Below is the complete project W3C OWL 2.0 Enterprise Ontology Schema:\n")
+        lines.append("Task: Generate Cypher statement to query a graph database.")
+        lines.append("\nInstructions:")
+        lines.append("Use only the provided relationship types and properties in the schema.")
+        lines.append("Do not use any other relationship types or properties that are not provided.")
+        lines.append("\nCRITICAL CYPHER RULES:")
+        lines.append("1. If you use a WITH clause, you MUST include EVERY variable that you intend to use later.")
+        lines.append("2. Never leave variables out of a WITH clause if you are going to RETURN them.")
+        lines.append("3. To count relationships or nodes, you MUST use the COUNT clause, never the size() function.")
+        lines.append("4. Limit the query to maximum 15 results using LIMIT 15;")
 
-        lines.append("=== 1. W3C OWL ONTOLOGY CLASSES & DATATYPE PROPERTIES ===")
+        if business_rules:
+            lines.append("\nDomain Governance & Business Rules:")
+            for br in business_rules[:10]:
+                lines.append(f"- {br}")
+
+        lines.append("\nW3C OWL Schema & Graph Topology:")
         for c in class_names:
             props = dt_props.get(c, [])
-            props_str = ", ".join(props[:8]) if props else "id"
-            lines.append(f"- Class :{c} (DatatypeProperties: {props_str})")
+            props_str = ", ".join(props[:10]) if props else "id"
+            lines.append(f"Node Label :{c} (DatatypeProperties: {props_str})")
 
-        lines.append("\n=== 2. W3C OWL OBJECT PROPERTY RELATIONSHIPS (GRAPH EDGES) ===")
-        for rel in relationships:
-            lines.append(f"- (:{rel['source']}) -[:{rel['relationship']}]-> (:{rel['target']})")
+        if relationships:
+            lines.append("\nRelationship Edges:")
+            for rel in relationships:
+                lines.append(f"- (:{rel['source']}) -[:{rel['relationship']}]-> (:{rel['target']})")
 
-        lines.append(f"\n=== 3. USER QUESTION / QUERY INTENT ===")
-        lines.append(f"\"{user_prompt}\"")
+        if approved_examples:
+            lines.append("\nExamples of Correct Cypher Queries for similar questions:")
+            for q_prompt, c_code in approved_examples[:5]:
+                lines.append(f"Question: {q_prompt}")
+                lines.append(f"Cypher: {c_code.strip()}\n")
 
-        lines.append("\n=== 4. INSTRUCTIONS ===")
-        lines.append("1. Synthesize a valid Neo4j Cypher query referencing ONLY the exact node labels and relationship types listed in the ontology schema above.")
-        lines.append("2. Return ONLY the Cypher code starting with comment // Cypher query synthesized from W3C OWL Ontology.")
-        lines.append("3. Limit the result set to 15 records using LIMIT 15;")
+        lines.append(f"\nThe user question is:\n\"{user_prompt}\"")
+        lines.append("\nNote: Do not include any explanations or apologies in your responses.")
+        lines.append("Do not include any text except the generated Cypher statement starting with comment // Cypher query synthesized from W3C OWL Ontology.")
 
         return "\n".join(lines)
 
@@ -89,6 +113,7 @@ class LLMInsightService:
         project = self.db.query(Project).filter(Project.id == project_id).first()
         classes = self.db.query(OntologyClass).filter(OntologyClass.project_id == project_id).all()
         g_config = self.db.query(GraphConfig).filter(GraphConfig.project_id == project_id).first()
+        b_rules = self.db.query(BusinessRule).filter(BusinessRule.project_id == project_id, BusinessRule.is_active == True).all()
 
         c_ids = [c.id for c in classes]
         c_map = {c.id: c.class_name for c in classes}
@@ -115,6 +140,13 @@ class LLMInsightService:
         class_names = [c.class_name for c in classes]
         prompt = req.user_prompt.strip()
 
+        # Load Business Governance Rules strings
+        rule_strings = [f"{r.name}: {r.rule_definition or ''}" for r in b_rules]
+
+        # Load Approved Cypher examples for few-shot learning
+        approved_all = self.get_approved_cyphers(project_id)
+        approved_examples = [(a.question_prompt, a.approved_cypher) for a in approved_all]
+
         # Check Few-Shot Approved Knowledge Repository first
         similar_match = self._find_similar_approved_cypher(project_id, prompt)
         if similar_match:
@@ -128,7 +160,7 @@ class LLMInsightService:
             full_llm_prompt = f"Approved Few-Shot Match ({pct_score}% match against: '{approved_item.question_prompt}')"
             logger.info(f"Retrieved approved Cypher query for '{prompt}' with match score {pct_score}%")
         else:
-            full_llm_prompt = self._build_full_llm_prompt(prompt, class_names, dt_props, relationships)
+            full_llm_prompt = self._build_full_llm_prompt(prompt, class_names, dt_props, relationships, rule_strings, approved_examples)
             cypher_query = self._call_llm_or_synthesizer(full_llm_prompt, prompt, class_names, dt_props, relationships)
 
         real_data_records = []
@@ -158,8 +190,11 @@ class LLMInsightService:
             except Exception as e:
                 logger.warning(f"Error querying target graph DB for insights: {e}")
 
+        # Natural Language Answer Generation (Stage 2 QA Synthesis)
+        helpful_answer = self._generate_natural_language_answer(prompt, cypher_query, real_data_records, is_target_online)
+
         exec_summary = self._build_executive_summary(
-            req.user_prompt, target_type, target_db_name, is_target_online,
+            req.user_prompt, helpful_answer, target_type, target_db_name, is_target_online,
             len(classes), len(relationships), real_data_records, node_counts, rel_counts
         )
         
@@ -188,6 +223,58 @@ class LLMInsightService:
             cypher_data_records=real_data_records,
             execution_time_ms=elapsed_ms
         )
+
+    def _generate_natural_language_answer(
+        self,
+        user_prompt: str,
+        cypher_query: str,
+        records: List[Dict[str, Any]],
+        is_target_online: bool
+    ) -> str:
+        api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        if api_key and records:
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel("gemini-1.5-pro")
+
+                records_clean = json.dumps(records[:10], indent=2, default=str)
+                qa_prompt = (
+                    "You are a helpful assistant interacting with an enterprise graph database.\n"
+                    "Use the following information retrieved from the database to answer the user's question directly, clearly, and concisely.\n\n"
+                    "If the database results are empty or insufficient, clearly say you couldn't find the answer.\n\n"
+                    f"Database Results:\n{records_clean}\n\n"
+                    f"User Request:\n{user_prompt}\n\n"
+                    "Helpful Answer:"
+                )
+                response = model.generate_content(qa_prompt)
+                if response and response.text:
+                    return response.text.strip()
+            except Exception as e:
+                logger.warning(f"Live Gemini QA Answer Generation failed: {e}")
+
+        if not records:
+            if is_target_online:
+                return f"No matching records found in the database for question: \"{user_prompt}\"."
+            else:
+                return f"Target graph database is offline. Generated Cypher query prepared for question: \"{user_prompt}\"."
+
+        num_recs = len(records)
+        sample_keys = [k for k in records[0].keys() if k.lower() not in ['id', 'uuid', 'type']]
+        if not sample_keys:
+            sample_keys = list(records[0].keys())
+
+        summary_values = []
+        for r in records[:6]:
+            val_strs = [str(r[k]) for k in sample_keys if r.get(k) is not None and str(r[k]).strip()]
+            if val_strs:
+                summary_values.append(", ".join(val_strs[:2]))
+
+        if summary_values:
+            val_summary = "; ".join(summary_values)
+            return f"Found **{num_recs} result(s)** in the graph database. Key data items: **{val_summary}**."
+        else:
+            return f"Found **{num_recs} record(s)** matching your query in the graph database."
 
     def save_approved_cypher(self, project_id: str, req: ApprovedCypherCreate) -> ApprovedCypherQuery:
         existing = self.db.query(ApprovedCypherQuery).filter(
@@ -271,6 +358,7 @@ class LLMInsightService:
         prompt_lower = prompt.lower()
         prompt_tokens = set(re.findall(r'\w+', prompt_lower))
         action_keywords = {"list", "show", "get", "find", "all", "select", "display"}
+        count_keywords = {"count", "how many", "number of", "total"}
 
         class_scores = {}
         for c_name in class_names:
@@ -297,7 +385,7 @@ class LLMInsightService:
             selected = []
             for p in props:
                 p_lower = p.lower()
-                if any(k in p_lower for k in ["name", "code", "type", "status", "amount", "number", "id", "date"]):
+                if any(k in p_lower for k in ["name", "title", "code", "type", "status", "amount", "number", "id", "date"]):
                     selected.append(f"coalesce({var_alias}.{p}, {var_alias}.{p_lower}, {var_alias}.id) AS {cls_name}_{p}")
                 if len(selected) >= 4:
                     break
@@ -305,7 +393,19 @@ class LLMInsightService:
                 selected = [f"{var_alias}.id AS {cls_name}_Id"]
             return ", ".join(selected)
 
-        # Check if single concept / class requested (e.g. "list all vendor name", "show vendors")
+        # Check if Count Query
+        is_count_query = any(ck in prompt_lower for ck in count_keywords)
+
+        if is_count_query and sorted_matched:
+            top_c = sorted_matched[0]
+            c_alias = top_c[0].lower()
+            return (
+                f"// Cypher query synthesized from W3C OWL Ontology Class ({top_c})\n"
+                f"MATCH ({c_alias}:{top_c})\n"
+                f"RETURN count({c_alias}) AS Total_{top_c}s;"
+            )
+
+        # Check single concept query
         if len(sorted_matched) >= 1:
             top_c = sorted_matched[0]
             top_score = class_scores[top_c]
@@ -373,7 +473,19 @@ class LLMInsightService:
             "LIMIT 15;"
         )
 
-    def _build_executive_summary(self, user_prompt: str, target_type: str, db_name: str, is_online: bool, class_count: int, rel_count: int, records: List[Dict[str, Any]], node_counts: List[Dict[str, Any]], rel_counts: List[Dict[str, Any]]) -> str:
+    def _build_executive_summary(
+        self,
+        user_prompt: str,
+        helpful_answer: str,
+        target_type: str,
+        db_name: str,
+        is_online: bool,
+        class_count: int,
+        rel_count: int,
+        records: List[Dict[str, Any]],
+        node_counts: List[Dict[str, Any]],
+        rel_counts: List[Dict[str, Any]]
+    ) -> str:
         total_nodes = sum(r.get("Count", 0) for r in node_counts) if node_counts else class_count
         total_edges = sum(r.get("Count", 0) for r in rel_counts) if rel_counts else rel_count
         
@@ -403,24 +515,31 @@ class LLMInsightService:
         rels_list = [f"`:{r}`" for r in record_rels if r] if record_rels else ["None (Single Concept Query)"]
         attrs_list = [f"`{a}`" for a in record_attributes if a] if record_attributes else ["`id`", "`name`"]
 
-        header = f"Analyzed {status_str} for prompt: **\"{user_prompt}\"**.\n\n"
+        # 1. Primary Direct Answer Section
+        answer_section = (
+            f"### 💬 Direct Answer\n"
+            f"{helpful_answer}\n\n"
+        )
         
+        # 2. Ontology & Schema Concepts Used
         concepts_section = (
-            f"### W3C OWL Ontology Concepts & Attributes Used\n"
+            f"### 🧠 W3C OWL Ontology Concepts & Attributes Used\n"
             f"- **Ontology Concepts (Classes)**: {', '.join(labels_list)}\n"
             f"- **Ontology Datatype Attributes**: {', '.join(attrs_list)}\n"
             f"- **Object Property Edges**: {', '.join(rels_list)}\n\n"
         )
 
+        # 3. Query Execution & Target DB Data Analytics
         body_analytics = (
-            f"### Query Execution & Target DB Data Analysis\n"
-            f"- **Target DB Topology**: Evaluated **{total_nodes} materialized nodes** and **{total_edges} active relationship edges**.\n"
+            f"### 📊 Query Execution & Target DB Data Analysis\n"
+            f"- **Target DB Topology**: Evaluated **{total_nodes} materialized nodes** and **{total_edges} active relationship edges** across {status_str}.\n"
             f"- **Query Execution Results**: Executed Cypher query returned **{len(records)} analytical data records**.\n\n"
         )
 
+        # 4. Executed Cypher Real Data Records Table
         data_table_section = ""
         if records:
-            data_table_section += f"### Executed Cypher Real Data Records ({len(records)} records returned)\n"
+            data_table_section += f"### 📋 Executed Cypher Real Data Records ({len(records)} records returned)\n"
             headers = list(records[0].keys())
             header_line = "| " + " | ".join(headers) + " |"
             sep_line = "| " + " | ".join([":---"] * len(headers)) + " |"
@@ -432,6 +551,7 @@ class LLMInsightService:
 
             data_table_section += header_line + "\n" + sep_line + "\n" + "\n".join(row_lines) + "\n\n"
 
+        # 5. Domain Governance & Reasoning Findings
         findings = []
         if rel_counts:
             top_r = rel_counts[0]
@@ -444,9 +564,9 @@ class LLMInsightService:
 
         findings.append(f"3. **Data Quality & Integrity Assertion**: Zero orphaned node labels detected across target graph schema. 100% property schema consistency verified.")
 
-        findings_text = "### Domain Governance & Reasoning Findings\n" + "\n".join(findings)
+        findings_text = "### 🛡️ Domain Governance & Reasoning Findings\n" + "\n".join(findings)
 
-        return header + concepts_section + body_analytics + data_table_section + findings_text
+        return answer_section + concepts_section + body_analytics + data_table_section + findings_text
 
     def _build_real_data_insights(self, prompt: str, is_online: bool, records: List[Dict[str, Any]], node_counts: List[Dict[str, Any]], rel_counts: List[Dict[str, Any]], class_names: List[str], relationships: List[Dict[str, Any]]) -> List[GraphInsightItem]:
         items = []
