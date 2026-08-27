@@ -79,8 +79,16 @@ class LLMInsightService:
         best_item = None
         best_score = 0.0
 
+        prompt_has_where = any(op in prompt for op in [">", "<", "=", ">=", "<="]) or "where" in prompt_clean
+
         for item in approved_items:
             saved_clean = item.question_prompt.strip().lower()
+            item_has_where = "WHERE" in item.approved_cypher.upper()
+
+            # If user prompt requests filter conditions but saved query lacks WHERE clause, skip
+            if prompt_has_where and not item_has_where:
+                continue
+
             if prompt_clean == saved_clean:
                 score = 1.0
             else:
@@ -91,14 +99,13 @@ class LLMInsightService:
                 intersection = len(t1 & t2)
                 union = len(t1 | t2)
                 jaccard = intersection / union if union > 0 else 0.0
-                match_ratio = intersection / min(len(t1), len(t2)) if min(len(t1), len(t2)) > 0 else 0.0
-                score = 0.5 * jaccard + 0.5 * match_ratio
+                score = jaccard
 
             if score > best_score:
                 best_score = score
                 best_item = item
 
-        if best_item and best_score >= 0.55:
+        if best_item and best_score >= 0.70:
             try:
                 best_item.usage_count += 1
                 self.db.commit()
@@ -148,21 +155,27 @@ class LLMInsightService:
         approved_all = self.get_approved_cyphers(project_id)
         approved_examples = [(a.question_prompt, a.approved_cypher) for a in approved_all]
 
-        # Check Few-Shot Approved Knowledge Repository first
-        similar_match = self._find_similar_approved_cypher(project_id, prompt)
-        if similar_match:
-            approved_item, match_score = similar_match
-            pct_score = round(match_score * 100, 1)
-            cypher_query = (
-                f"// Cypher query retrieved from Approved Few-Shot Knowledge Repository (Match score: {pct_score}%)\n"
-                f"// Approved Question: \"{approved_item.question_prompt}\"\n"
-                f"{approved_item.approved_cypher.strip()}"
-            )
-            full_llm_prompt = f"Approved Few-Shot Match ({pct_score}% match against: '{approved_item.question_prompt}')"
-            logger.info(f"Retrieved approved Cypher query for '{prompt}' with match score {pct_score}%")
+        # Check if user typed a raw Cypher query directly in the prompt text input
+        if re.match(r'^(?:CYPHER\s+)?(?:MATCH|OPTIONAL\s+MATCH|WITH)\b', prompt, re.IGNORECASE):
+            cypher_query = prompt
+            full_llm_prompt = "Direct Raw Cypher Statement Pass-Through"
+            logger.info("User prompt recognized as direct raw Cypher statement execution.")
         else:
-            full_llm_prompt = self._build_full_llm_prompt(prompt, class_names, dt_props, relationships, rule_strings, approved_examples)
-            cypher_query = self._call_llm_or_synthesizer(full_llm_prompt, prompt, class_names, dt_props, relationships)
+            # Check Few-Shot Approved Knowledge Repository first
+            similar_match = self._find_similar_approved_cypher(project_id, prompt)
+            if similar_match:
+                approved_item, match_score = similar_match
+                pct_score = round(match_score * 100, 1)
+                cypher_query = (
+                    f"// Cypher query retrieved from Approved Few-Shot Knowledge Repository (Match score: {pct_score}%)\n"
+                    f"// Approved Question: \"{approved_item.question_prompt}\"\n"
+                    f"{approved_item.approved_cypher.strip()}"
+                )
+                full_llm_prompt = f"Approved Few-Shot Match ({pct_score}% match against: '{approved_item.question_prompt}')"
+                logger.info(f"Retrieved approved Cypher query for '{prompt}' with match score {pct_score}%")
+            else:
+                full_llm_prompt = self._build_full_llm_prompt(prompt, class_names, dt_props, relationships, rule_strings, approved_examples)
+                cypher_query = self._call_llm_or_synthesizer(full_llm_prompt, prompt, class_names, dt_props, relationships)
 
         real_data_records = []
         node_counts = []

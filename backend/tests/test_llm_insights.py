@@ -65,3 +65,26 @@ def test_llm_insights_comparison_where_conditions():
 
     client.delete(f"/api/v1/projects/{project_id}")
 
+
+def test_llm_insights_raw_cypher_passthrough():
+    test_code = f"LLM_RAW_{uuid.uuid4().hex[:8]}"
+    proj_resp = client.post("/api/v1/projects", json={
+        "name": "LLM Raw Cypher Test Project",
+        "code": test_code,
+        "description": "Testing raw Cypher pass-through"
+    })
+    assert proj_resp.status_code == 201
+    project_id = proj_resp.json()["id"]
+
+    raw_cypher = "MATCH (i:Invoice) WHERE i.discountOffer > 0 RETURN i LIMIT 5;"
+
+    res = client.post(f"/api/v1/projects/{project_id}/llm/insights", json={
+        "user_prompt": raw_cypher,
+        "model_name": "gemini-1.5-pro"
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert data["generated_cypher_query"].strip() == raw_cypher.strip()
+
+    client.delete(f"/api/v1/projects/{project_id}")
+
