@@ -1,0 +1,58 @@
+import sys
+import os
+from Common.graph_bot_engine import run_chatbot
+import configparser
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(current_dir, '..'))
+config = configparser.ConfigParser()
+
+# --- THE FIX ---
+# Build the absolute path to config.ini using current_dir
+config_path = os.path.join(current_dir, 'config.ini')
+
+# Optional but highly recommended: Catch the error early if the file isn't there
+if not os.path.exists(config_path):
+    raise FileNotFoundError(f"Missing config file at: {config_path}")
+
+# Pass the absolute path variable, NOT the hardcoded string
+config.read(config_path)
+# ---------------
+
+# Neo4j Config
+neo4j_uri = config['neo4j']['uri']
+neo4j_user = config['neo4j']['user']
+neo4j_password = config['neo4j']['password']
+neo4j_database = config['neo4j']['database']
+
+# Ontology Config
+ontology_file = config['ontology']['filepath']
+feedback_file = config['ontology']['feedbackfile']
+
+api_key = config['llmAPI']['apikey']
+
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+pharma_config = {
+    # UI Customization
+    "page_title": "Pharma DB Chatbot",
+    "page_icon": "💊",
+    "bot_name": "💊 PharmaBot",
+    "bot_short_name": "PharmaBot",
+    "bot_description": "Ask questions about drug interactions, inventory, and supply chain.",
+    "welcome_message": "Hello! Ask me to check stock for a specific SKU or trace a drug batch.",
+
+    # Credentials (Always keep your API keys safe!)
+    "groq_api_key": api_key,
+    "neo4j_uri": neo4j_uri,
+    "neo4j_username": neo4j_user,
+    "neo4j_password": neo4j_password,
+    "neo4j_database": neo4j_database,
+
+    # Domain-Specific Files
+    "ontology_file": ontology_file,
+    "feedback_file": feedback_file
+}
+if __name__ == "__main__":
+    run_chatbot(pharma_config)
