@@ -1,0 +1,233 @@
+import os
+import json
+import streamlit as st
+from langchain_neo4j import Neo4jGraph, GraphCypherQAChain
+from langchain_groq import ChatGroq
+from langchain_core.prompts.prompt import PromptTemplate
+
+
+# --- 1. Helper Functions ---
+def load_examples(feedback_file):
+    """Safely loads feedback JSON, handling empty files or decode errors."""
+    if feedback_file and os.path.exists(feedback_file):
+        if os.path.getsize(feedback_file) == 0:
+            return []
+        try:
+            with open(feedback_file, "r") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            return []
+    return []
+
+
+def save_example(question, cypher, feedback_file):
+    examples = load_examples(feedback_file)
+    if not any(ex["question"] == question for ex in examples):
+        examples.append({"question": question, "cypher": cypher})
+        with open(feedback_file, "w") as f:
+            json.dump(examples, f, indent=4)
+
+
+def build_custom_prompt(ontology_file, feedback_file):
+    examples = load_examples(feedback_file)
+    example_text = ""
+    if examples:
+        example_text = "\nHere are some examples of correct Cypher queries for specific questions:\n"
+        for ex in examples:
+            example_text += f"Question: {ex['question']}\nCypher: {ex['cypher']}\n\n"
+
+    ontology_text = ""
+    if ontology_file and os.path.exists(ontology_file):
+        with open(ontology_file, "r") as f:
+            ontology_text = f.read()
+    else:
+        ontology_text = "No additional ontology provided."
+
+    # Base raw template with standard str.format placeholders
+    raw_template = """Task: Generate Cypher statement to query a graph database.
+Instructions:
+Use only the provided relationship types and properties in the schema.
+Do not use any other relationship types or properties that are not provided.
+
+CRITICAL CYPHER RULES:
+1. If you use a WITH clause, you MUST include EVERY variable that you intend to use later in the query or in the RETURN statement. 
+2. Never leave variables out of a WITH clause if you are going to RETURN them.
+3. To count relationships, you MUST use the COUNT clause, never the size() function.
+
+Domain Ontology & Rules:
+{ontology}
+
+Schema:
+{schema}
+
+{examples}
+
+Note: Do not include any explanations or apologies in your responses.
+Do not include any text except the generated Cypher statement.
+
+The question is:
+{question}"""
+
+    # 1. Escape literal braces in static text so LangChain treats them as literals
+    ontology_safe = ontology_text.replace('{', '{{').replace('}', '}}')
+    examples_safe = example_text.replace('{', '{{').replace('}', '}}')
+
+    # 2. Inject content into template without Python f-string double-evaluation
+    final_template = raw_template.format(
+        ontology=ontology_safe,
+        examples=examples_safe,
+        schema="{schema}",      # Retain for LangChain input variables
+        question="{question}"   # Retain for LangChain input variables
+    )
+
+    return PromptTemplate(input_variables=["schema", "question"], template=final_template)
+
+
+def build_qa_prompt():
+    template = """You are a helpful assistant interacting with a graph database.
+    Use the following information retrieved from the database to answer the user's request.
+
+    If the user asked to create, book, or update something, and the information contains an ID or details, you must confirm that the action was successful and summarize the details in a friendly way.
+    If the information is empty, say you couldn't find the answer.
+
+    Database Results:
+    {context}
+
+    User Request:
+    {question}
+
+    Helpful Answer:"""
+
+    return PromptTemplate(input_variables=["context", "question"], template=template)
+
+
+# --- 2. Setup Graph & LLM (Cached based on credentials) ---
+@st.cache_resource
+def setup_chain(api_key, uri, username, password, database, ontology_file, feedback_file):
+    os.environ["GROQ_API_KEY"] = api_key
+
+    graph = Neo4jGraph(
+        url=uri,
+        username=username,
+        password=password,
+        database=database
+    )
+    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+
+    custom_cypher_prompt = build_custom_prompt(ontology_file, feedback_file)
+    custom_qa_prompt = build_qa_prompt()
+
+    chain = GraphCypherQAChain.from_llm(
+        llm=llm,
+        graph=graph,
+        verbose=True,
+        allow_dangerous_requests=True,
+        return_intermediate_steps=True,
+        cypher_prompt=custom_cypher_prompt,
+        qa_prompt=custom_qa_prompt
+    )
+    return chain
+
+
+# --- 3. The Main App Runner ---
+def run_chatbot(config: dict):
+    """
+    Call this function from your specific domain files to launch the bot.
+    """
+    st.set_page_config(
+        page_title=config.get("page_title", "Graph DB Bot"),
+        page_icon=config.get("page_icon", "🕸️"),
+        layout="wide"
+    )
+    st.title(config.get("bot_name", "🕸️ Billy"))
+    st.markdown(config.get("bot_description", "Ask natural language questions to query your Neo4j Graph Database."))
+
+    try:
+        chain = setup_chain(
+            api_key=config["groq_api_key"],
+            uri=config["neo4j_uri"],
+            username=config["neo4j_username"],
+            password=config["neo4j_password"],
+            database=config.get("neo4j_database", "neo4j"),
+            ontology_file=config.get("ontology_file"),
+            feedback_file=config.get("feedback_file", "default_queries.json")
+        )
+    except Exception as e:
+        st.error(f"Failed to connect to the database or LLM: {e}")
+        st.stop()
+
+    if "messages" not in st.session_state:
+        st.session_state.messages = [
+            {
+                "role": "assistant",
+                "content": config.get("welcome_message", "Hello! How can I help you today?"),
+                "cypher": None,
+                "question": None
+            }
+        ]
+
+    header_col1, header_col2 = st.columns(2)
+    with header_col1:
+        st.subheader("💬 Chat")
+    with header_col2:
+        st.subheader("🔍 Cypher Queries")
+    st.divider()
+
+    for idx, message in enumerate(st.session_state.messages):
+        row_col1, row_col2 = st.columns(2)
+
+        with row_col1:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+                if message["role"] == "assistant" and message.get("cypher"):
+                    feedback = st.feedback("thumbs", key=f"fb_{idx}")
+                    if feedback == 1:
+                        save_example(
+                            message["question"],
+                            message["cypher"],
+                            config.get("feedback_file", "default_queries.json")
+                        )
+                        setup_chain.clear()
+                        st.toast("Saved to training examples! 🚀")
+
+        with row_col2:
+            if message["role"] == "assistant" and message.get("cypher"):
+                st.info("Query generated for this response:")
+                st.code(message["cypher"], language="cypher")
+
+    if prompt := st.chat_input("Ask a question about your data..."):
+        st.session_state.messages.append({"role": "user", "content": prompt, "cypher": None, "question": None})
+        st.rerun()
+
+    if st.session_state.messages[-1]["role"] == "user":
+        resp_col1, resp_col2 = st.columns(2)
+
+        with resp_col1:
+            with st.chat_message("assistant"):
+                spinner_text = f"{config.get('bot_short_name', 'Bot')} is translating to Cypher and searching your graph..."
+                with st.spinner(spinner_text):
+                    try:
+                        user_prompt = st.session_state.messages[-1]["content"]
+                        response = chain.invoke({"query": user_prompt})
+
+                        result = response['result']
+                        cypher_query = ""
+                        if "intermediate_steps" in response and len(response["intermediate_steps"]) > 0:
+                            cypher_query = response["intermediate_steps"][0].get("query", "")
+
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "content": result,
+                            "cypher": cypher_query,
+                            "question": user_prompt
+                        })
+                        st.rerun()
+
+                    except Exception as e:
+                        error_msg = f"Oops, something went wrong. Error: `{e}`"
+                        st.error(error_msg)
+                        st.session_state.messages.append(
+                            {"role": "assistant", "content": error_msg, "cypher": None, "question": None}
+                        )
+                        st.rerun()
