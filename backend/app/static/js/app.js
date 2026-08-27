@@ -48,6 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (viewId === 'saved-cyphers') {
         if (typeof loadSavedCypherQueries === 'function') loadSavedCypherQueries();
       }
+      if (viewId === 'streamlit-bot') {
+        if (typeof initStreamlitBotView === 'function') initStreamlitBotView();
+      }
     });
   });
 

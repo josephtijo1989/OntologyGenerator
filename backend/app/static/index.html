@@ -50,6 +50,7 @@
       <button class="nav-btn" data-view="graph" onclick="switchToTab('graph')">🕸️ Knowledge Graph</button>
       <button class="nav-btn" data-view="data-movement" onclick="switchToTab('data-movement')">🚀 Data Movement Engine</button>
       <button class="nav-btn" data-view="llm-insights" onclick="switchToTab('llm-insights')">🤖 AI Graph Insights</button>
+      <button class="nav-btn" data-view="streamlit-bot" onclick="switchToTab('streamlit-bot')">💬 Streamlit Cypher Bot</button>
       <button class="nav-btn" data-view="saved-cyphers" onclick="switchToTab('saved-cyphers')">⭐ Saved Cypher Queries</button>
     </aside>
 
@@ -1039,6 +1040,57 @@
         </div>
       </section>
 
+      <!-- Streamlit Cypher Chatbot Panel -->
+      <section id="panel-streamlit-bot" class="view-panel">
+        <div class="flex-between" style="align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+              <h2 style="margin: 0;">🤖 Billy - Streamlit Graph DB Assistant</h2>
+              <span class="badge" style="background: rgba(236, 72, 153, 0.15); color: #ec4899; font-weight: 700; font-size: 11px;">LANGCHAIN ST-BOT REPLICA</span>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 14px; margin: 0;">2-Column Split Chat & Cypher View | LangChain GraphCypherQAChain Replica with Live Thumbs-Up Training Feedback</p>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <span id="st-fewshot-badge" class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); font-size: 12px; padding: 6px 12px; font-weight: 700;">
+              🚀 0 Training Examples Loaded
+            </span>
+            <button class="btn-secondary" onclick="initStreamlitBotView()">🔄 Reset Chat Session</button>
+          </div>
+        </div>
+
+        <!-- Preset Prompt Chips Bar -->
+        <div class="glass-card" style="margin-top: 14px; padding: 10px 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span style="font-size: 12px; font-weight: 700; color: var(--accent-cyan);">⚡ Sample Prompts:</span>
+          <div id="st-sample-pills" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
+        </div>
+
+        <!-- Clean Full-Width Workspace -->
+        <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 14px; height: 620px;">
+          
+          <!-- Full-Width Chat Stream & Inline Output Container -->
+          <div class="glass-card" style="display: flex; flex-direction: column; padding: 18px; border-top: 4px solid var(--accent-blue); flex: 1; overflow: hidden;">
+            <div class="flex-between" style="border-bottom: 1px dashed var(--border-color); padding-bottom: 10px; margin-bottom: 12px;">
+              <h3 style="margin: 0; font-size: 15px; color: var(--accent-blue); display: flex; align-items: center; gap: 8px;">
+                <span>💬 Natural Language Cypher Assistant Chat Stream</span>
+              </h3>
+              <span style="font-size: 11px; color: var(--text-secondary); font-weight: 600;">Model: llama-3.3-70b / gemini-1.5-pro</span>
+            </div>
+
+            <!-- Messages Stream Area -->
+            <div id="st-chat-messages" style="flex: 1; overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 12px;">
+              <!-- Dynamically Populated Inline Chat Messages -->
+            </div>
+
+            <!-- Chat Input Box -->
+            <div style="display: flex; gap: 10px; margin-top: 12px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+              <input type="text" id="st-chat-input" placeholder="Ask a natural language question about your graph data..." style="flex: 1; padding: 12px 16px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface); color: var(--text-primary);" onkeydown="if(event.key==='Enter') sendStBotQuery()">
+              <button type="button" class="btn-primary" style="padding: 0 24px; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;" onclick="sendStBotQuery()">⚡ Send Query</button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       <!-- 4. Business Rules Engine Panel (Before Ontology Creation) -->
       <section id="panel-rules" class="view-panel">
         <div class="flex-between">
@@ -1701,6 +1753,7 @@
   <script src="/static/js/graph.js?v=14.0"></script>
   <script src="/static/js/data_movement.js?v=14.0"></script>
   <script src="/static/js/llm_insights.js?v=14.0"></script>
+  <script src="/static/js/streamlit_bot.js?v=14.0"></script>
   <script src="/static/js/projects.js?v=14.0"></script>
 </body>
 </html>
