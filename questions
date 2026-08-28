@@ -1,0 +1,27 @@
+Which approval hierarchies contain steps where the required approval limit exceeds the maximum approval amount of the assigned approval process?
+
+MATCH (h:ApprovalHierarrchy)-[:HAS_APPROVAL_ROLE]->(r:ApprovalRole),
+      (h)-[:HAS_APPROVAL_PROCESS]->(p:ApprovalProcess)
+WHERE r.approvallimit > p.maximumapprovalamount
+RETURN DISTINCT h.approvalhierarchyid AS hierarchyId,
+                h.approvallevel AS hierarchyLevel,
+                r.role AS roleName,
+                r.approvallimit AS requiredApprovalLimit,
+                p.approvalprocessid AS processId,
+                p.maximumapprovalamount AS maxApprovalAmount;
+
+
+
+For projects past their planned end date, what is the variance between the budgeted amount and the total invoice product amount billed?
+
+MATCH (p:Project)
+WHERE date(p.plannedenddate) < date()
+OPTIONAL MATCH (i:Invoice)-[:HAS_PROJECT]->(p)
+WITH p, coalesce(sum(i.totalinvoiceproductamount), 0) AS billedAmount
+RETURN p.projectid AS projectId,
+       p.budgetedamount AS budgetedAmount,
+       billedAmount,
+       p.budgetedamount - billedAmount AS variance
+ORDER BY variance DESC
+
+
