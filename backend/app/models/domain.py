@@ -118,6 +118,8 @@ class Project(Base):
     workflows = relationship('Workflow', back_populates='project', cascade='all, delete-orphan')
     data_movement_jobs = relationship('DataMovementJob', back_populates='project', cascade='all, delete-orphan')
     approved_cypher_queries = relationship('ApprovedCypherQuery', back_populates='project', cascade='all, delete-orphan')
+    target_graph_nodes = relationship('TargetGraphNode', back_populates='project', cascade='all, delete-orphan')
+    target_graph_relationships = relationship('TargetGraphRelationship', back_populates='project', cascade='all, delete-orphan')
 
 
 class SourceConnection(Base):
@@ -366,4 +368,62 @@ class ApprovedCypherQuery(Base):
     updated_at = Column(DateTime, default=current_utc_time, onupdate=current_utc_time, nullable=False)
 
     project = relationship('Project', back_populates='approved_cypher_queries')
+
+
+# --- TARGET GRAPH DB SCHEMA LAYER ---
+
+class TargetGraphNode(Base):
+    __tablename__ = 'target_graph_nodes'
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    project_id = Column(String(36), ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    graph_config_id = Column(String(36), ForeignKey('graph_configs.id', ondelete='SET NULL'), nullable=True)
+    node_label = Column(String(100), nullable=False)
+    node_count = Column(Integer, default=0, nullable=False)
+    ontology_class_id = Column(String(36), ForeignKey('ontology_classes.id', ondelete='SET NULL'), nullable=True)
+    created_at = Column(DateTime, default=current_utc_time, nullable=False)
+    updated_at = Column(DateTime, default=current_utc_time, onupdate=current_utc_time, nullable=False)
+
+    project = relationship('Project', back_populates='target_graph_nodes')
+    graph_config = relationship('GraphConfig')
+    ontology_class = relationship('OntologyClass')
+    attributes = relationship('TargetGraphAttribute', back_populates='node', cascade='all, delete-orphan')
+
+
+class TargetGraphAttribute(Base):
+    __tablename__ = 'target_graph_attributes'
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    node_id = Column(String(36), ForeignKey('target_graph_nodes.id', ondelete='CASCADE'), nullable=False)
+    attribute_name = Column(String(100), nullable=False)
+    data_type = Column(String(100), default="xsd:string", nullable=False)
+    is_primary_key = Column(Boolean, default=False, nullable=False)
+    ontology_attribute_id = Column(String(36), ForeignKey('ontology_attributes.id', ondelete='SET NULL'), nullable=True)
+    created_at = Column(DateTime, default=current_utc_time, nullable=False)
+
+    node = relationship('TargetGraphNode', back_populates='attributes')
+    ontology_attribute = relationship('OntologyAttribute')
+
+
+class TargetGraphRelationship(Base):
+    __tablename__ = 'target_graph_relationships'
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    project_id = Column(String(36), ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    graph_config_id = Column(String(36), ForeignKey('graph_configs.id', ondelete='SET NULL'), nullable=True)
+    source_node_id = Column(String(36), ForeignKey('target_graph_nodes.id', ondelete='SET NULL'), nullable=True)
+    source_label = Column(String(100), nullable=False)
+    relationship_type = Column(String(100), nullable=False)
+    target_node_id = Column(String(36), ForeignKey('target_graph_nodes.id', ondelete='SET NULL'), nullable=True)
+    target_label = Column(String(100), nullable=False)
+    edge_count = Column(Integer, default=0, nullable=False)
+    ontology_attribute_id = Column(String(36), ForeignKey('ontology_attributes.id', ondelete='SET NULL'), nullable=True)
+    created_at = Column(DateTime, default=current_utc_time, nullable=False)
+
+    project = relationship('Project', back_populates='target_graph_relationships')
+    graph_config = relationship('GraphConfig')
+    source_node = relationship('TargetGraphNode', foreign_keys=[source_node_id])
+    target_node = relationship('TargetGraphNode', foreign_keys=[target_node_id])
+    ontology_attribute = relationship('OntologyAttribute')
+
 

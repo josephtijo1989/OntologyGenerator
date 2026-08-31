@@ -35,6 +35,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (viewId === 'ontology-graph') initOntologyGraph();
       if (viewId === 'ontology-viewer') initOntologyViewer();
       if (viewId === 'data-movement') initDataMovementView();
+      if (viewId === 'schema-matrix') {
+        if (typeof loadSchemaMappingMatrix === 'function') loadSchemaMappingMatrix();
+      }
+      if (viewId === 'graph-profiler') {
+        if (typeof loadGraphSchemaProfile === 'function') loadGraphSchemaProfile();
+      }
       if (viewId === 'metadata') loadMetadata();
       if (viewId === 'profiling') loadProfiling();
       if (viewId === 'ontology') loadOntology();
@@ -47,9 +53,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (viewId === 'saved-cyphers') {
         if (typeof loadSavedCypherQueries === 'function') loadSavedCypherQueries();
-      }
-      if (viewId === 'streamlit-bot') {
-        if (typeof initStreamlitBotView === 'function') initStreamlitBotView();
       }
     });
   });

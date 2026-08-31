@@ -64,47 +64,81 @@ async function loadPresetQueryPills() {
 }
 
 async function renderDefaultPresetPills(container) {
-  if (!container || !currentProjectId) return;
+  if (!container) return;
 
-  try {
-    const res = await fetch(`${API_BASE}/projects/${currentProjectId}/ontology/generate`);
-    if (res.ok) {
-      const onto = await res.json();
-      const classes = onto.classes || [];
-      if (classes.length > 0) {
-        const topClasses = classes.slice(0, 4);
-        let html = '';
-        const styles = [
-          { bg: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-indigo)', border: 'rgba(99, 102, 241, 0.3)', icon: '📊' },
-          { bg: 'rgba(16, 185, 129, 0.1)', color: 'var(--accent-emerald)', border: 'rgba(16, 185, 129, 0.3)', icon: '🔍' },
-          { bg: 'rgba(6, 182, 212, 0.1)', color: 'var(--accent-cyan)', border: 'rgba(6, 182, 212, 0.3)', icon: '🕸️' },
-          { bg: 'rgba(244, 63, 94, 0.1)', color: 'var(--accent-rose)', border: 'rgba(244, 63, 94, 0.3)', icon: '⚡' }
-        ];
-
-        topClasses.forEach((cls, idx) => {
-          const st = styles[idx % styles.length];
-          const cName = cls.class_name;
-          const prompt = `Show concept details, attributes, and relationships for :${cName}`;
-          html += `
-            <button class="btn-sm" style="background: ${st.bg}; color: ${st.color}; border: 1px solid ${st.border}; font-weight: 600;" onclick="selectLLMPrompt('${escapeHtml(prompt)}')">
-              ${st.icon} List ${escapeHtml(cName)} Concepts
-            </button>
-          `;
-        });
-
-        container.innerHTML = html;
-        return;
-      }
+  const defaultPills = [
+    {
+      title: '📊 Vendor Contract Risks',
+      prompt: 'Which vendors currently hold active contracts with multiple jurisdiction indicators, and do they have any outstanding invoices past their due date?',
+      style: { bg: 'rgba(99, 102, 241, 0.12)', color: 'var(--accent-indigo)', border: 'rgba(99, 102, 241, 0.3)' }
+    },
+    {
+      title: '🔍 Overdue Invoices (>60 Days)',
+      prompt: 'Which invoices are tied to aging report data with over 60 days past due specifically because of an applied hold reason?',
+      style: { bg: 'rgba(16, 185, 129, 0.12)', color: 'var(--accent-emerald)', border: 'rgba(16, 185, 129, 0.3)' }
+    },
+    {
+      title: '🕸️ Product Reorder & PO Audit',
+      prompt: 'Are there products falling below their reorder level that are not currently linked to a purchase order via the item ID?',
+      style: { bg: 'rgba(6, 182, 212, 0.12)', color: 'var(--accent-cyan)', border: 'rgba(6, 182, 212, 0.3)' }
+    },
+    {
+      title: '⚡ Project Budget Variance',
+      prompt: 'For projects past their planned end date, what is the variance between the budgeted amount and the total invoice product amount billed?',
+      style: { bg: 'rgba(245, 158, 11, 0.12)', color: 'var(--accent-amber)', border: 'rgba(245, 158, 11, 0.3)' }
     }
-  } catch (e) {
-    console.warn('Could not load dynamic ontology pills:', e);
+  ];
+
+  if (currentProjectId) {
+    try {
+      const res = await fetch(`${API_BASE}/projects/${currentProjectId}/ontology/generate`);
+      if (res.ok) {
+        const onto = await res.json();
+        const classes = onto.classes || [];
+        if (classes.length > 0) {
+          const names = classes
+            .map(c => typeof c === 'string' ? c : (c.class_name || c.name || c.node_label || ''))
+            .filter(n => Boolean(n) && n.toLowerCase() !== 'concepts');
+          
+          if (names.length >= 2) {
+            let html = '';
+            const styles = [
+              { bg: 'rgba(99, 102, 241, 0.12)', color: 'var(--accent-indigo)', border: 'rgba(99, 102, 241, 0.3)', icon: '📊' },
+              { bg: 'rgba(16, 185, 129, 0.12)', color: 'var(--accent-emerald)', border: 'rgba(16, 185, 129, 0.3)', icon: '🔍' },
+              { bg: 'rgba(6, 182, 212, 0.12)', color: 'var(--accent-cyan)', border: 'rgba(6, 182, 212, 0.3)', icon: '🕸️' },
+              { bg: 'rgba(245, 158, 11, 0.12)', color: 'var(--accent-amber)', border: 'rgba(245, 158, 11, 0.3)', icon: '⚡' }
+            ];
+
+            const topNames = [...new Set(names)].slice(0, 4);
+            topNames.forEach((cName, idx) => {
+              const st = styles[idx % styles.length];
+              const prompt = `Show concept details, attributes, and relationships for :${cName}`;
+              html += `
+                <button class="btn-sm" style="background: ${st.bg}; color: ${st.color}; border: 1px solid ${st.border}; font-weight: 600;" onclick="selectLLMPrompt('${escapeHtml(prompt)}')">
+                  ${st.icon} Analyze :${escapeHtml(cName)}
+                </button>
+              `;
+            });
+
+            container.innerHTML = html;
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load dynamic ontology pills:', e);
+    }
   }
 
-  container.innerHTML = `
-    <span style="color: var(--text-secondary); font-size: 12px; font-style: italic;">
-      No approved Cypher queries saved for this project yet. Ask a question below or click 👍 on an answer to save it as a template!
-    </span>
-  `;
+  let html = '';
+  defaultPills.forEach(p => {
+    html += `
+      <button class="btn-sm" style="background: ${p.style.bg}; color: ${p.style.color}; border: 1px solid ${p.style.border}; font-weight: 600;" onclick="selectLLMPrompt('${escapeHtml(p.prompt)}')">
+        ${escapeHtml(p.title)}
+      </button>
+    `;
+  });
+  container.innerHTML = html;
 }
 
 async function runLLMInsight() {
@@ -186,6 +220,41 @@ function renderLLMInsights(data) {
   const summaryText = document.getElementById('llm-exec-summary-text');
   if (summaryText) {
     summaryText.innerHTML = formatLLMMarkdown(data.executive_summary || '');
+  }
+
+  // 3. Target Graph Database Records Table
+  const recordsCard = document.getElementById('llm-records-card');
+  const recordsTableContainer = document.getElementById('llm-records-table-container');
+  const recordCountBadge = document.getElementById('llm-record-count-badge');
+
+  if (recordsCard && recordsTableContainer) {
+    if (data.records && data.records.length > 0) {
+      recordsCard.style.display = 'block';
+      if (recordCountBadge) recordCountBadge.innerText = `${data.records.length} Record${data.records.length > 1 ? 's' : ''}`;
+      
+      const headers = Object.keys(data.records[0]);
+      let tblHtml = '<table class="data-table" style="width: 100%; border-collapse: collapse; font-size: 12px;">';
+      tblHtml += '<thead><tr style="background: rgba(16, 185, 129, 0.15); border-bottom: 2px solid var(--accent-emerald);">';
+      headers.forEach(h => {
+        tblHtml += `<th style="padding: 8px 12px; text-align: left; color: var(--accent-emerald); font-family: var(--font-mono); font-weight: 700;">${escapeHtml(h)}</th>`;
+      });
+      tblHtml += '</tr></thead><tbody>';
+
+      data.records.forEach((row, idx) => {
+        const bg = idx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.02)';
+        tblHtml += `<tr style="background: ${bg}; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">`;
+        headers.forEach(h => {
+          const val = row[h] !== null && row[h] !== undefined ? String(row[h]) : 'N/A';
+          tblHtml += `<td style="padding: 8px 12px; color: var(--text-primary);">${escapeHtml(val)}</td>`;
+        });
+        tblHtml += '</tr>';
+      });
+
+      tblHtml += '</tbody></table>';
+      recordsTableContainer.innerHTML = tblHtml;
+    } else {
+      recordsCard.style.display = 'none';
+    }
   }
 
   container.scrollIntoView({ behavior: 'smooth', block: 'start' });

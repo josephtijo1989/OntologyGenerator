@@ -4,7 +4,8 @@ from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 from app.models.domain import (
     Project, MetadataTable, OntologyClass, OntologyAttribute, BusinessRule,
-    GraphConfig, SourceConnection, DataMovementJob
+    GraphConfig, SourceConnection, DataMovementJob,
+    TargetGraphNode, TargetGraphAttribute, TargetGraphRelationship
 )
 from app.schemas.data_movement import (
     DataMovementMappingResponse, DataMovementExecutionRequest, DataMovementJobResponse
@@ -113,6 +114,154 @@ class DataMovementService:
             pipeline_stages=pipeline_stages,
             mappings=mappings
         )
+
+    def get_semantic_lineage_matrix(self, project_id: str) -> Dict[str, Any]:
+        tables = self.db.query(MetadataTable).filter(MetadataTable.project_id == project_id).all()
+        classes = self.db.query(OntologyClass).filter(OntologyClass.project_id == project_id).all()
+        g_config = self.db.query(GraphConfig).filter(GraphConfig.project_id == project_id).first()
+
+        tg_nodes = self.db.query(TargetGraphNode).filter(TargetGraphNode.project_id == project_id).all()
+        node_ids = [n.id for n in tg_nodes]
+        tg_attrs = self.db.query(TargetGraphAttribute).filter(TargetGraphAttribute.node_id.in_(node_ids)).all() if node_ids else []
+        tg_rels = self.db.query(TargetGraphRelationship).filter(TargetGraphRelationship.project_id == project_id).all()
+
+        tg_node_map = {n.node_label.lower(): n for n in tg_nodes}
+        tg_attr_map = {(a.node_id, a.attribute_name.lower()): a for a in tg_attrs}
+
+        c_ids = [c.id for c in classes]
+        all_attrs = self.db.query(OntologyAttribute).filter(OntologyAttribute.class_id.in_(c_ids)).all() if c_ids else []
+
+        c_by_name = {c.class_name.lower(): c for c in classes}
+        c_by_tbl_id = {c.mapped_table_id: c for c in classes if c.mapped_table_id}
+
+        table_mappings = []
+        column_mappings = []
+        seen_tables = set()
+
+        for tbl in tables:
+            seen_tables.add(tbl.id)
+            onto_cls = c_by_tbl_id.get(tbl.id) or c_by_name.get(tbl.table_name.lower())
+            cls_name = onto_cls.class_name if onto_cls else "".join([part.capitalize() for part in tbl.table_name.split("_")])
+            cls_domain = onto_cls.domain_type if onto_cls else "Transactional"
+
+            tg_node = tg_node_map.get(cls_name.lower())
+            target_node_label = f"(:{tg_node.node_label})" if tg_node else f"(:{cls_name})"
+
+            cls_attrs = [a for a in all_attrs if onto_cls and a.class_id == onto_cls.id]
+            dt_count = len([a for a in cls_attrs if (a.property_type or "").lower() == "datatypeproperty"])
+            obj_count = len([a for a in cls_attrs if (a.property_type or "").lower() == "objectproperty"])
+
+            pk_cols = [c.column_name for c in tbl.columns if c.is_primary_key]
+            pk_str = ", ".join(pk_cols) if pk_cols else "id"
+
+            table_mappings.append({
+                "source_table_id": tbl.id,
+                "source_schema": tbl.schema_name or "public",
+                "source_table_name": tbl.table_name,
+                "full_source_table": f"{tbl.schema_name or 'public'}.{tbl.table_name}",
+                "row_count": tbl.row_count or 0,
+                "ontology_concept": cls_name,
+                "ontology_iri": onto_cls.class_iri if (onto_cls and onto_cls.class_iri) else f"http://enterprise.org/ontology#{cls_name}",
+                "domain_type": cls_domain,
+                "target_graph_node": target_node_label,
+                "primary_key": pk_str,
+                "attributes_count": dt_count or len(tbl.columns),
+                "relationships_count": obj_count,
+                "status": "MAPPED"
+            })
+
+            for col in tbl.columns:
+                mapped_attr = next((a for a in cls_attrs if (a.mapped_column_id == col.id or a.attribute_name.lower() == col.column_name.lower())), None)
+                attr_name = mapped_attr.attribute_name if mapped_attr else col.column_name
+                prop_type = mapped_attr.property_type if mapped_attr else ("ObjectProperty" if col.is_foreign_key else "DatatypeProperty")
+                range_type = mapped_attr.range_datatype if mapped_attr else ("xsd:string" if "char" in col.data_type.lower() or "text" in col.data_type.lower() else "xsd:integer" if "int" in col.data_type.lower() else "xsd:decimal" if "num" in col.data_type.lower() or "float" in col.data_type.lower() or "decimal" in col.data_type.lower() else "xsd:dateTime" if "date" in col.data_type.lower() or "time" in col.data_type.lower() else "xsd:string")
+
+                # Target Graph property linkage
+                if tg_node:
+                    tg_attr = tg_attr_map.get((tg_node.id, attr_name.lower())) or tg_attr_map.get((tg_node.id, col.column_name.lower()))
+                    if tg_attr:
+                        target_prop = f"n.{tg_attr.attribute_name}"
+                    else:
+                        target_prop = f"n.{to_camel_case(mapped_attr.relationship_name or attr_name)}" if prop_type == "DatatypeProperty" else f"-[:{to_upper_snake_case(mapped_attr.relationship_name or attr_name)}]-> (:{mapped_attr.target_class_name or 'Entity'})" if mapped_attr else f"-[:HAS_{col.foreign_table_name.upper() if col.foreign_table_name else 'REL'}]->"
+                else:
+                    target_prop = f"n.{to_camel_case(mapped_attr.relationship_name or attr_name)}" if prop_type == "DatatypeProperty" else f"-[:{to_upper_snake_case(mapped_attr.relationship_name or attr_name)}]-> (:{mapped_attr.target_class_name or 'Entity'})" if mapped_attr else f"-[:HAS_{col.foreign_table_name.upper() if col.foreign_table_name else 'REL'}]->"
+
+                column_mappings.append({
+                    "source_table": f"{tbl.schema_name or 'public'}.{tbl.table_name}",
+                    "source_column": col.column_name,
+                    "source_data_type": col.data_type,
+                    "is_primary_key": col.is_primary_key,
+                    "is_foreign_key": col.is_foreign_key,
+                    "is_nullable": col.is_nullable,
+                    "ontology_concept": cls_name,
+                    "ontology_attribute": attr_name,
+                    "property_type": prop_type,
+                    "range_datatype": range_type,
+                    "target_graph_node": target_node_label,
+                    "target_graph_property": target_prop,
+                    "status": "MAPPED"
+                })
+
+        for cls in classes:
+            if cls.mapped_table_id not in seen_tables and cls.class_name.lower() not in {tm["source_table_name"].lower() for tm in table_mappings}:
+                cls_attrs = [a for a in all_attrs if a.class_id == cls.id]
+                dt_count = len([a for a in cls_attrs if (a.property_type or "").lower() == "datatypeproperty"])
+                obj_count = len([a for a in cls_attrs if (a.property_type or "").lower() == "objectproperty"])
+
+                tg_node = tg_node_map.get(cls.class_name.lower())
+                target_node_label = f"(:{tg_node.node_label})" if tg_node else f"(:{cls.class_name})"
+
+                table_mappings.append({
+                    "source_table_id": None,
+                    "source_schema": "ontology",
+                    "source_table_name": cls.class_name.lower(),
+                    "full_source_table": f"ontology.{cls.class_name.lower()}",
+                    "row_count": 0,
+                    "ontology_concept": cls.class_name,
+                    "ontology_iri": cls.class_iri or f"http://enterprise.org/ontology#{cls.class_name}",
+                    "domain_type": cls.domain_type or "Transactional",
+                    "target_graph_node": target_node_label,
+                    "primary_key": "id",
+                    "attributes_count": dt_count,
+                    "relationships_count": obj_count,
+                    "status": "CONCEPT_ONLY"
+                })
+
+                for a in cls_attrs:
+                    column_mappings.append({
+                        "source_table": f"ontology.{cls.class_name.lower()}",
+                        "source_column": a.attribute_name.lower(),
+                        "source_data_type": "VARCHAR(255)",
+                        "is_primary_key": a.is_primary_key,
+                        "is_foreign_key": (a.property_type == "ObjectProperty"),
+                        "is_nullable": True,
+                        "ontology_concept": cls.class_name,
+                        "ontology_attribute": a.attribute_name,
+                        "property_type": a.property_type or "DatatypeProperty",
+                        "range_datatype": a.range_datatype or "xsd:string",
+                        "target_graph_node": target_node_label,
+                        "target_graph_property": f"n.{to_camel_case(a.relationship_name or a.attribute_name)}" if a.property_type == "DatatypeProperty" else f"-[:{to_upper_snake_case(a.relationship_name or a.attribute_name)}]-> (:{a.target_class_name or 'Entity'})",
+                        "status": "MAPPED"
+                    })
+
+        target_type = g_config.target_type.value if (g_config and hasattr(g_config.target_type, 'value')) else str(g_config.target_type if g_config else "NEO4J")
+
+        return {
+            "project_id": project_id,
+            "target_graph_type": target_type,
+            "target_graph_name": g_config.name if g_config else "Enterprise Target Graph",
+            "summary": {
+                "total_tables_mapped": len(table_mappings),
+                "total_columns_mapped": len(column_mappings),
+                "total_ontology_classes": len(classes),
+                "total_ontology_attributes": len(all_attrs),
+                "total_target_nodes": len(tg_nodes),
+                "total_target_attributes": len(tg_attrs),
+                "total_target_relationships": len(tg_rels)
+            },
+            "table_mappings": table_mappings,
+            "column_mappings": column_mappings
+        }
 
     def extract_nodes_and_relationships(self, project_id: str, source_connection_id: Optional[str] = None):
         """

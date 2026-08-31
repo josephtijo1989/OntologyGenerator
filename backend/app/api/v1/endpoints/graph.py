@@ -101,3 +101,23 @@ def test_graph_connection_endpoint(project_id: str, req: GraphTestConnectionRequ
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+
+@router.post("/profile-target-schema")
+def profile_target_schema(project_id: str, db: Session = Depends(get_db)):
+    svc = GraphService(db)
+    try:
+        return svc.profile_and_persist_target_graph_schema(project_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get("/profile-target-schema")
+def get_persisted_profile_schema(project_id: str, db: Session = Depends(get_db)):
+    svc = GraphService(db)
+    try:
+        return svc.get_persisted_target_graph_schema(project_id)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+

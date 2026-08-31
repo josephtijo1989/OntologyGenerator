@@ -129,12 +129,17 @@ body {
    ========================================================================== */
 .app-body {
   display: flex;
+  flex-direction: row;
   flex: 1;
   height: calc(100vh - 64px);
+  width: 100%;
+  overflow: hidden;
 }
 
 .sidebar {
   width: 260px;
+  min-width: 260px;
+  flex-shrink: 0;
   background: #ffffff;
   border-right: 1px solid var(--border-color);
   padding: 18px 12px;
@@ -184,6 +189,7 @@ body {
 
 .main-content {
   flex: 1;
+  min-width: 0;
   padding: 24px;
   overflow-y: auto;
   display: flex;

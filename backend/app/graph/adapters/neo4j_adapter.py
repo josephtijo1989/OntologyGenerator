@@ -24,17 +24,21 @@ class Neo4jAdapter(BaseGraphAdapter):
         self.database = self.params.get('database_name') or 'neo4j'
         self.username = self.params.get('username') or 'neo4j'
         self.password = self.params.get('password') or ''
+        self.last_error = None
 
-    def _get_driver(self, uri_override: str = None):
+    def _get_driver(self, uri_override: str = None, auth_override = None):
         import neo4j
         u = uri_override or self.uri
-        if self.username and self.password:
+        if auth_override is not None:
+            auth = auth_override
+        elif self.username and self.password:
             auth = neo4j.basic_auth(self.username, self.password)
         else:
             auth = None
         return neo4j.GraphDatabase.driver(u, auth=auth)
 
     def test_connection(self) -> bool:
+        self.last_error = None
         # Step 1: Check raw TCP socket connectivity
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -42,48 +46,57 @@ class Neo4jAdapter(BaseGraphAdapter):
             result = sock.connect_ex((self.clean_host, self.port))
             sock.close()
             if result != 0:
-                logger.info(f"Target Graph port {self.clean_host}:{self.port} is closed/unreachable.")
+                self.last_error = f"Target Graph DB port {self.clean_host}:{self.port} is closed or unreachable. Ensure Neo4j/Memgraph server is running."
+                logger.info(self.last_error)
                 return False
         except Exception as se:
-            logger.info(f"Socket test exception for {self.clean_host}:{self.port}: {se}")
+            self.last_error = f"Socket connection failed for {self.clean_host}:{self.port}: {se}"
+            logger.info(self.last_error)
             return False
 
-        # Step 2: Test driver sessions (Try bolt:// first for standalone local instances)
-        uris = [
-            f"bolt://{self.clean_host}:{self.port}",
-            f"neo4j://{self.clean_host}:{self.port}",
-            self.uri
-        ]
+        # Step 2: Single driver session test (Avoid rate limit spam)
+        uris_to_try = [self.uri, f"bolt://{self.clean_host}:{self.port}"]
         seen_uris = set()
-        for u in uris:
+        
+        for u in uris_to_try:
             if u in seen_uris:
                 continue
             seen_uris.add(u)
-            try:
-                with self._get_driver(u) as driver:
-                    with driver.session(database=self.database) as session:
-                        res = session.run("RETURN 1 AS num")
-                        record = res.single()
-                        if record is not None and record["num"] == 1:
-                            self.uri = u
-                            logger.info(f"Successfully connected to Neo4j database '{self.database}' at {u}")
-                            return True
-            except Exception as e:
-                logger.warning(f"Neo4j driver attempt failed for {u} (database: {self.database}): {e}")
 
-        # Step 3: Fallback session test without specifying database_name
-        for u in seen_uris:
             try:
                 with self._get_driver(u) as driver:
-                    with driver.session() as session:
+                    sess_kwargs = {"database": self.database} if self.database and self.database.lower() != "neo4j" else {}
+                    with driver.session(**sess_kwargs) as session:
                         res = session.run("RETURN 1 AS num")
                         record = res.single()
                         if record is not None and record["num"] == 1:
                             self.uri = u
-                            logger.info(f"Successfully connected to Neo4j (default session) at {u}")
+                            logger.info(f"Successfully connected to Neo4j at {u}")
                             return True
             except Exception as e:
-                pass
+                err_str = str(e)
+                if "Unauthorized" in err_str or "AuthenticationRateLimit" in err_str or "42NFF" in err_str:
+                    self.last_error = f"Authentication Failed: Invalid username ('{self.username}') or password for target Neo4j database at {self.clean_host}:{self.port}. Please update credentials in Database Connectors."
+                    logger.warning(self.last_error)
+                    return False
+                else:
+                    self.last_error = f"Neo4j connection error for {u}: {err_str}"
+                    logger.warning(self.last_error)
+
+        # Step 3: Try unauthenticated driver session if auth was not set
+        if not self.password:
+            for u in seen_uris:
+                try:
+                    with self._get_driver(u, auth_override=None) as driver:
+                        with driver.session() as session:
+                            res = session.run("RETURN 1 AS num")
+                            record = res.single()
+                            if record is not None and record["num"] == 1:
+                                self.uri = u
+                                logger.info(f"Successfully connected to Neo4j unauthenticated at {u}")
+                                return True
+                except Exception:
+                    pass
 
         return False
 
@@ -129,9 +142,18 @@ class Neo4jAdapter(BaseGraphAdapter):
     def execute_cypher(self, query: str, parameters: Dict[str, Any] = None) -> List[Dict[str, Any]]:
         try:
             with self._get_driver() as driver:
-                with driver.session(database=self.database) as session:
-                    res = session.run(query, parameters or {})
-                    return [record.data() for record in res]
+                try:
+                    with driver.session(database=self.database) as session:
+                        res = session.run(query, parameters or {})
+                        return [record.data() for record in res]
+                except Exception as db_err:
+                    logger.info(f"Target DB database '{self.database}' query session failed, falling back to default session: {db_err}")
+                    with driver.session() as session:
+                        res = session.run(query, parameters or {})
+                        return [record.data() for record in res]
         except Exception as e:
             logger.error(f"Failed to execute Cypher query: {e}")
             raise e
+
+    def execute_query(self, query: str, parameters: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+        return self.execute_cypher(query, parameters)

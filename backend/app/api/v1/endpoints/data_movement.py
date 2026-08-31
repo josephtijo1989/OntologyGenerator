@@ -20,6 +20,15 @@ def get_pipeline_mapping(project_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+@router.get("/lineage-matrix")
+def get_semantic_lineage_matrix(project_id: str, db: Session = Depends(get_db)):
+    svc = DataMovementService(db)
+    try:
+        return svc.get_semantic_lineage_matrix(project_id)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
 @router.post("/execute", response_model=DataMovementJobResponse)
 def execute_data_movement(project_id: str, req: DataMovementExecutionRequest, db: Session = Depends(get_db)):
     svc = DataMovementService(db)

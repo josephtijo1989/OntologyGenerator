@@ -49,8 +49,9 @@
       <button class="nav-btn" data-view="ontology-viewer" onclick="switchToTab('ontology-viewer')">📤 Upload & View Ontology</button>
       <button class="nav-btn" data-view="graph" onclick="switchToTab('graph')">🕸️ Knowledge Graph</button>
       <button class="nav-btn" data-view="data-movement" onclick="switchToTab('data-movement')">🚀 Data Movement Engine</button>
+      <button class="nav-btn" data-view="graph-profiler" onclick="switchToTab('graph-profiler')">🕸️ Graph Topology Profiler</button>
+      <button class="nav-btn" data-view="schema-matrix" onclick="switchToTab('schema-matrix')">🗺️ Schema Lineage Matrix</button>
       <button class="nav-btn" data-view="llm-insights" onclick="switchToTab('llm-insights')">🤖 AI Graph Insights</button>
-      <button class="nav-btn" data-view="streamlit-bot" onclick="switchToTab('streamlit-bot')">💬 Streamlit Cypher Bot</button>
       <button class="nav-btn" data-view="saved-cyphers" onclick="switchToTab('saved-cyphers')">⭐ Saved Cypher Queries</button>
     </aside>
 
@@ -905,6 +906,170 @@
         </div>
       </section>
 
+      <!-- 3.4. Target Graph Schema Profiler & Topology Repository Panel -->
+      <section id="panel-graph-profiler" class="view-panel">
+        <div class="flex-between" style="align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <h2>🕸️ Target Graph Schema Profiler & Topology Repository</h2>
+            <p style="color: var(--text-secondary); font-size: 14px;">Profile live connected graph database topologies (Neo4j / Memgraph) and automatically persist node labels, datatype attributes, and object relationships to the project database to power accurate AI Cypher synthesis.</p>
+          </div>
+          <div class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); font-size: 12px; padding: 6px 12px; font-weight: 700;">
+            🔍 GRAPH SCHEMA INTROSPECTOR ACTIVE
+          </div>
+        </div>
+
+        <!-- Connection Health & Profiler Control Card -->
+        <div class="glass-card" style="margin-top: 14px; padding: 20px; border-top: 4px solid var(--accent-cyan);">
+          <div class="flex-between" style="align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <div style="font-size: 32px;">🕸️</div>
+              <div>
+                <h3 style="margin: 0; font-size: 16px; color: var(--text-primary);" id="profiler-target-db-title">Connected Target Graph Database</h3>
+                <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-secondary);" id="profiler-target-db-info">Inspect live database node labels, properties, and relationships</p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <button class="btn-secondary" onclick="loadGraphSchemaProfile()">🔄 Refresh View</button>
+              <button class="btn-primary" id="btn-run-graph-profiler" style="padding: 10px 22px; font-size: 13px; font-weight: 700; background: linear-gradient(135deg, #0284c7, #8b5cf6);" onclick="runTargetGraphProfiler()">
+                🔍 Profile Live Target Graph & Save to App DB
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Loader -->
+        <div id="profiler-loading-spinner" style="display: none; margin-top: 20px; text-align: center; padding: 40px; background: var(--bg-surface); border-radius: 12px; border: 1px dashed var(--accent-cyan);">
+          <div style="font-size: 32px; animation: spin 1.2s infinite linear; display: inline-block;">🕸️</div>
+          <h3 style="margin: 12px 0 4px 0; color: var(--accent-cyan);">Profiling Live Target Graph Topology & Persisting Schema...</h3>
+          <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">Executing Cypher schema introspection queries, mapping datatype properties, and saving to SQLite application DB</p>
+        </div>
+
+        <!-- Profiler Output Area -->
+        <div id="profiler-results-container" style="display: none; margin-top: 18px; flex-direction: column; gap: 18px;">
+          <!-- App DB Sync Summary Banner -->
+          <div id="profiler-sync-banner" class="glass-card" style="padding: 16px 20px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-left: 4px solid var(--accent-emerald);"></div>
+
+          <!-- Node Labels & Datatype Attributes Grid -->
+          <div class="glass-card" style="padding: 20px;">
+            <div class="flex-between" style="margin-bottom: 14px;">
+              <h3 style="margin: 0; font-size: 15px; color: var(--accent-cyan); display: flex; align-items: center; gap: 8px;">
+                <span>📦 Profiled Node Labels & Datatype Attributes</span>
+              </h3>
+              <span id="profiler-node-count-badge" class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan);">0 Labels</span>
+            </div>
+            <div id="profiler-nodes-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px;"></div>
+          </div>
+
+          <!-- Relationship Edges List -->
+          <div class="glass-card" style="padding: 20px;">
+            <div class="flex-between" style="margin-bottom: 14px;">
+              <h3 style="margin: 0; font-size: 15px; color: var(--accent-violet); display: flex; align-items: center; gap: 8px;">
+                <span>🔗 Profiled Relationship Types & Topology Edges</span>
+              </h3>
+              <span id="profiler-rel-count-badge" class="badge" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-violet);">0 Relationships</span>
+            </div>
+            <div id="profiler-rels-container" style="display: flex; flex-direction: column; gap: 10px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3.3. Semantic Lineage & Schema Mapping Matrix Panel -->
+      <section id="panel-schema-matrix" class="view-panel">
+        <div class="flex-between" style="align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <h2>🗺️ Source Table ➔ Ontology Concept ➔ Target Graph Node Lineage Matrix</h2>
+            <p style="color: var(--text-secondary); font-size: 14px;">Complete 3-tier semantic mapping tracking physical database tables and columns, W3C OWL 2.0 DL ontology concepts and attributes, and live target graph database nodes and properties.</p>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn-secondary" onclick="loadSchemaMappingMatrix()">🔄 Refresh Matrix</button>
+            <button class="btn-primary" style="background: linear-gradient(135deg, #10b981, #0284c7);" onclick="exportLineageMatrixJSON()">
+              📥 Export Matrix (JSON)
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI Summary Cards Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 16px;">
+          <div class="glass-card" style="padding: 16px; border-left: 4px solid var(--accent-cyan);">
+            <div style="font-size: 12px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Source Physical Tables</div>
+            <div style="font-size: 24px; font-weight: 800; color: var(--accent-cyan); margin-top: 4px;" id="kpi-matrix-tables">0 Tables</div>
+          </div>
+          <div class="glass-card" style="padding: 16px; border-left: 4px solid var(--accent-violet);">
+            <div style="font-size: 12px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Ontology Concepts</div>
+            <div style="font-size: 24px; font-weight: 800; color: var(--accent-violet); margin-top: 4px;" id="kpi-matrix-classes">0 Concepts</div>
+          </div>
+          <div class="glass-card" style="padding: 16px; border-left: 4px solid var(--accent-amber);">
+            <div style="font-size: 12px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Column-to-Attribute Mappings</div>
+            <div style="font-size: 24px; font-weight: 800; color: var(--accent-amber); margin-top: 4px;" id="kpi-matrix-cols">0 Mappings</div>
+          </div>
+          <div class="glass-card" style="padding: 16px; border-left: 4px solid var(--accent-emerald);">
+            <div style="font-size: 12px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Object Property Edges</div>
+            <div style="font-size: 24px; font-weight: 800; color: var(--accent-emerald); margin-top: 4px;" id="kpi-matrix-rels">0 Edges</div>
+          </div>
+        </div>
+
+        <!-- Filter & Level Toggle Controls -->
+        <div class="glass-card" style="margin-top: 16px; padding: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+          <div style="display: flex; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 8px; gap: 4px;">
+            <button id="btn-matrix-level1" style="padding: 8px 16px; border: none; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, #0284c7, #8b5cf6); color: #fff;" onclick="switchLineageLevel(1)">
+              📦 Level 1: Table ➔ Concept ➔ Target Node
+            </button>
+            <button id="btn-matrix-level2" style="padding: 8px 16px; border: none; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; background: transparent; color: var(--text-secondary);" onclick="switchLineageLevel(2)">
+              🏷️ Level 2: Column ➔ Attribute ➔ Target Property
+            </button>
+          </div>
+
+          <div style="flex: 1; max-width: 380px;">
+            <input type="text" id="matrix-search-input" class="input-field" placeholder="🔍 Search tables, columns, ontology concepts, graph properties..." onkeyup="filterLineageMatrixTable()" style="width: 100%; margin: 0;">
+          </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="matrix-loading-spinner" style="display: none; margin-top: 20px; text-align: center; padding: 40px; background: var(--bg-surface); border-radius: 12px; border: 1px dashed var(--accent-violet);">
+          <div style="font-size: 32px; animation: spin 1.2s infinite linear; display: inline-block;">🗺️</div>
+          <h3 style="margin: 12px 0 4px 0; color: var(--accent-violet);">Constructing 3-Tier Semantic Lineage Matrix...</h3>
+          <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">Mapping relational database schemas against W3C OWL ontology definitions & target graph node properties</p>
+        </div>
+
+        <!-- Content Container -->
+        <div id="matrix-content-container" class="glass-card" style="margin-top: 16px; padding: 0; overflow-x: auto;">
+          <!-- Level 1 Table -->
+          <table id="matrix-table-level1" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+              <tr style="background: rgba(255,255,255,0.03); border-bottom: 2px solid rgba(255,255,255,0.08); text-align: left;">
+                <th style="padding: 14px;">Source Physical Table</th>
+                <th style="padding: 14px;">Schema</th>
+                <th style="padding: 14px;">Ontology Concept (Class)</th>
+                <th style="padding: 14px;">Domain Type</th>
+                <th style="padding: 14px;">Target Graph Node Label</th>
+                <th style="padding: 14px; text-align: center;">Attributes</th>
+                <th style="padding: 14px; text-align: center;">Relationships</th>
+                <th style="padding: 14px; text-align: right;">Mapping Status</th>
+              </tr>
+            </thead>
+            <tbody id="matrix-level1-tbody"></tbody>
+          </table>
+
+          <!-- Level 2 Table -->
+          <table id="matrix-table-level2" style="width: 100%; border-collapse: collapse; font-size: 13px; display: none;">
+            <thead>
+              <tr style="background: rgba(255,255,255,0.03); border-bottom: 2px solid rgba(255,255,255,0.08); text-align: left;">
+                <th style="padding: 14px;">Source Table</th>
+                <th style="padding: 14px;">Source Column</th>
+                <th style="padding: 14px;">Data Type</th>
+                <th style="padding: 14px;">Ontology Concept</th>
+                <th style="padding: 14px;">Ontology Attribute</th>
+                <th style="padding: 14px;">Property Type</th>
+                <th style="padding: 14px;">Range Datatype</th>
+                <th style="padding: 14px;">Target Graph Property / Edge</th>
+                <th style="padding: 14px; text-align: right;">Status</th>
+              </tr>
+            </thead>
+            <tbody id="matrix-level2-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
       <!-- 3.5. AI Knowledge Graph Insights & LLM Analytics Panel -->
       <section id="panel-llm-insights" class="view-panel">
         <div class="flex-between" style="align-items: flex-start; flex-wrap: wrap; gap: 16px;">
@@ -984,6 +1149,17 @@
             </div>
             <div id="llm-exec-summary-text" style="font-size: 13px; color: var(--text-primary); line-height: 1.6;"></div>
           </div>
+
+          <!-- 3. Target Graph DB Live Data Extracts Table -->
+          <div id="llm-records-card" class="glass-card" style="display: none; padding: 18px; border-left: 4px solid var(--accent-emerald);">
+            <div class="flex-between" style="margin-bottom: 10px;">
+              <h3 style="margin: 0; font-size: 15px; color: var(--accent-emerald); display: flex; align-items: center; gap: 8px;">
+                <span>📊 Live Target Graph Database Data Extracts</span>
+              </h3>
+              <span id="llm-record-count-badge" class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); font-size: 11px;">0 Records</span>
+            </div>
+            <div id="llm-records-table-container" style="overflow-x: auto;"></div>
+          </div>
         </div>
       </section>
 
@@ -1040,56 +1216,7 @@
         </div>
       </section>
 
-      <!-- Streamlit Cypher Chatbot Panel -->
-      <section id="panel-streamlit-bot" class="view-panel">
-        <div class="flex-between" style="align-items: flex-start; flex-wrap: wrap; gap: 16px;">
-          <div>
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
-              <h2 style="margin: 0;">🤖 Billy - Streamlit Graph DB Assistant</h2>
-              <span class="badge" style="background: rgba(236, 72, 153, 0.15); color: #ec4899; font-weight: 700; font-size: 11px;">LANGCHAIN ST-BOT REPLICA</span>
-            </div>
-            <p style="color: var(--text-secondary); font-size: 14px; margin: 0;">2-Column Split Chat & Cypher View | LangChain GraphCypherQAChain Replica with Live Thumbs-Up Training Feedback</p>
-          </div>
-          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            <span id="st-fewshot-badge" class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); font-size: 12px; padding: 6px 12px; font-weight: 700;">
-              🚀 0 Training Examples Loaded
-            </span>
-            <button class="btn-secondary" onclick="initStreamlitBotView()">🔄 Reset Chat Session</button>
-          </div>
-        </div>
 
-        <!-- Preset Prompt Chips Bar -->
-        <div class="glass-card" style="margin-top: 14px; padding: 10px 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <span style="font-size: 12px; font-weight: 700; color: var(--accent-cyan);">⚡ Sample Prompts:</span>
-          <div id="st-sample-pills" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
-        </div>
-
-        <!-- Clean Full-Width Workspace -->
-        <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 14px; height: 620px;">
-          
-          <!-- Full-Width Chat Stream & Inline Output Container -->
-          <div class="glass-card" style="display: flex; flex-direction: column; padding: 18px; border-top: 4px solid var(--accent-blue); flex: 1; overflow: hidden;">
-            <div class="flex-between" style="border-bottom: 1px dashed var(--border-color); padding-bottom: 10px; margin-bottom: 12px;">
-              <h3 style="margin: 0; font-size: 15px; color: var(--accent-blue); display: flex; align-items: center; gap: 8px;">
-                <span>💬 Natural Language Cypher Assistant Chat Stream</span>
-              </h3>
-              <span style="font-size: 11px; color: var(--text-secondary); font-weight: 600;">Model: llama-3.3-70b / gemini-1.5-pro</span>
-            </div>
-
-            <!-- Messages Stream Area -->
-            <div id="st-chat-messages" style="flex: 1; overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 12px;">
-              <!-- Dynamically Populated Inline Chat Messages -->
-            </div>
-
-            <!-- Chat Input Box -->
-            <div style="display: flex; gap: 10px; margin-top: 12px; border-top: 1px solid var(--border-color); padding-top: 12px;">
-              <input type="text" id="st-chat-input" placeholder="Ask a natural language question about your graph data..." style="flex: 1; padding: 12px 16px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface); color: var(--text-primary);" onkeydown="if(event.key==='Enter') sendStBotQuery()">
-              <button type="button" class="btn-primary" style="padding: 0 24px; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;" onclick="sendStBotQuery()">⚡ Send Query</button>
-            </div>
-          </div>
-
-        </div>
-      </section>
 
       <!-- 4. Business Rules Engine Panel (Before Ontology Creation) -->
       <section id="panel-rules" class="view-panel">
@@ -1752,8 +1879,9 @@
   <script src="/static/js/ontology_viewer.js?v=14.0"></script>
   <script src="/static/js/graph.js?v=14.0"></script>
   <script src="/static/js/data_movement.js?v=14.0"></script>
+  <script src="/static/js/schema_matrix.js?v=1.0"></script>
+  <script src="/static/js/graph_profiler.js?v=16.0"></script>
   <script src="/static/js/llm_insights.js?v=14.0"></script>
-  <script src="/static/js/streamlit_bot.js?v=14.0"></script>
   <script src="/static/js/projects.js?v=14.0"></script>
 </body>
 </html>
