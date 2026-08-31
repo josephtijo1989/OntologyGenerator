@@ -1765,3 +1765,126 @@ async function submitCreateClassFromGraph() {
   }
 }
 
+// ==========================================================================
+// EXCEL MODEL IMPORT FROM GRAPHICAL ONTOLOGY
+// ==========================================================================
+let selectedExcelFile = null;
+
+function openExcelUploadModalFromGraph() {
+  if (!currentProjectId) {
+    const select = document.getElementById('projectSelect');
+    if (select && select.value && select.value !== 'CREATE_NEW') {
+      currentProjectId = select.value;
+    } else if (typeof projectsList !== 'undefined' && projectsList.length > 0) {
+      currentProjectId = projectsList[0].id;
+    }
+  }
+
+  if (!currentProjectId) {
+    if (typeof showToast === 'function') showToast('Please select an active project first.', 'error');
+    return;
+  }
+
+  selectedExcelFile = null;
+  const fileInput = document.getElementById('excel-file-input');
+  if (fileInput) fileInput.value = '';
+  
+  const nameDisplay = document.getElementById('excel-file-name-display');
+  if (nameDisplay) {
+    nameDisplay.style.display = 'none';
+    nameDisplay.innerText = '';
+  }
+
+  const btnSubmit = document.getElementById('btn-submit-excel-import');
+  if (btnSubmit) {
+    btnSubmit.disabled = false;
+    btnSubmit.innerHTML = '⚡ Upload & Import Model';
+  }
+
+  openModal('uploadExcelOntologyModal');
+}
+
+function triggerExcelFilePicker(e) {
+  if (e) e.stopPropagation();
+  const fileInput = document.getElementById('excel-file-input');
+  if (fileInput) fileInput.click();
+}
+
+function onExcelFileSelected(input) {
+  if (input.files && input.files.length > 0) {
+    selectedExcelFile = input.files[0];
+    const nameDisplay = document.getElementById('excel-file-name-display');
+    if (nameDisplay) {
+      nameDisplay.style.display = 'inline-block';
+      nameDisplay.innerText = `📄 Selected File: ${selectedExcelFile.name} (${(selectedExcelFile.size / 1024).toFixed(1)} KB)`;
+    }
+  }
+}
+
+function downloadExcelOntologyTemplate() {
+  window.location.href = `${API_BASE}/excel/template`;
+}
+
+async function submitExcelUploadFromGraph() {
+  if (!currentProjectId) {
+    const select = document.getElementById('projectSelect');
+    if (select && select.value && select.value !== 'CREATE_NEW') {
+      currentProjectId = select.value;
+    } else if (typeof projectsList !== 'undefined' && projectsList.length > 0) {
+      currentProjectId = projectsList[0].id;
+    }
+  }
+
+  if (!currentProjectId) {
+    if (typeof showToast === 'function') showToast('Please select an active project first.', 'error');
+    return;
+  }
+
+  if (!selectedExcelFile) {
+    if (typeof showToast === 'function') showToast('Please select an Excel file (.xlsx, .xls) to upload.', 'warning');
+    return;
+  }
+
+  const mode = document.getElementById('excel-import-mode')?.value || 'merge';
+  const btnSubmit = document.getElementById('btn-submit-excel-import');
+
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '⏳ Importing Excel Model...';
+  }
+
+  const formData = new FormData();
+  formData.append('file', selectedExcelFile);
+
+  try {
+    const res = await fetch(`${API_BASE}/projects/${currentProjectId}/excel/import?mode=${encodeURIComponent(mode)}`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      closeModal('uploadExcelOntologyModal');
+
+      const msg = data.summary_message || `Imported ${data.classes_created || 0} classes, ${data.attributes_created || 0} attributes, and ${data.relationships_created || 0} relationships.`;
+      if (typeof showToast === 'function') showToast(`✨ ${msg}`, 'success');
+
+      // Refresh Graphical Ontology & other views
+      await initOntologyGraph();
+      if (typeof loadOntology === 'function') loadOntology();
+      if (typeof loadDashboard === 'function') loadDashboard();
+    } else {
+      const err = await res.json();
+      if (typeof showToast === 'function') showToast(`Failed to import Excel model: ${err.detail || 'Error'}`, 'error');
+    }
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('Network error while uploading Excel model.', 'error');
+  } finally {
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.innerHTML = '⚡ Upload & Import Model';
+    }
+  }
+}
+
+

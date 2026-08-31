@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from app.api.v1.endpoints import (
-    auth, projects, connectors, metadata, profiling, graph, ontology, rules, workflows, dashboard, audit, data_movement, llm_insights
+    auth, projects, connectors, metadata, profiling, graph, ontology, rules, workflows, dashboard, audit, data_movement, llm_insights, excel_import
 )
 
 api_router = APIRouter()
@@ -17,3 +17,5 @@ api_router.include_router(dashboard.router)
 api_router.include_router(audit.router)
 api_router.include_router(data_movement.router)
 api_router.include_router(llm_insights.router)
+api_router.include_router(excel_import.router)
+
