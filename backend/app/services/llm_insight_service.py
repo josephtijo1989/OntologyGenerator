@@ -34,8 +34,8 @@ class LLMInsightService:
         lines.append("Use only the provided relationship types and properties in the schema.")
         lines.append("Do not use any other relationship types or properties that are not provided.")
         lines.append("\nCRITICAL CYPHER RULES & CONCEPT MAPPING GUIDELINES:")
-        lines.append("1. Map natural language terms to exact Node Labels (e.g. 'invoices' -> :Invoice, 'vendors' -> :Vendor, 'user' / 'approver' / 'responsible' -> :User, 'contracts' -> :Contract, 'purchase orders' -> :PurchaseOrder, 'products' -> :Product, 'customers' -> :Customer).")
-        lines.append("2. For questions asking 'who is responsible' or 'stuck in approval process', traverse (:Invoice)-[:APPROVED_BY|ASSIGNED_TO]->(:User) and return u.userName / u.name as Responsible_User.")
+        lines.append("1. Map natural language terms to exact Node Labels present in the W3C OWL Schema.")
+        lines.append("2. For questions asking about responsible entities or status, traverse relevant relationship edges between node labels and return entity attributes.")
         lines.append("3. ALWAYS construct explicit WHERE clause filter conditions whenever the user prompt specifies filtering criteria, status constraints, numeric thresholds, date ranges, property keywords, or descriptive conditions. Extract filtering values dynamically from the user prompt and map them to exact datatype properties in the schema. Do not omit WHERE clauses when filtering is requested, and do not hardcode arbitrary filter values.")
         lines.append("4. For ranking or highest value queries, use sum(coalesce(...)) with ORDER BY DESC LIMIT 15;")
         lines.append("5. To count relationships or nodes, use count(n), never size().")
@@ -639,11 +639,25 @@ class LLMInsightService:
             'did', 'doing', 'was', 'were', 'for', 'by', 'at', 'on', 'if', 'then', 'else', 'when', 'who', 'whom'
         }
 
-        # Include standard enterprise domain classes if class_names is limited
+        # Available classes are project ontology classes, or dynamically extracted from user prompt
+        attr_suffix_words = {
+            'date', 'time', 'amount', 'offer', 'deadline', 'capital', 'count', 'number', 'code',
+            'status', 'id', 'name', 'rate', 'price', 'cost', 'total', 'val', 'value', 'flag',
+            'indicator', 'type', 'period', 'days', 'jurisdiction', 'description', 'discount', 'discounted',
+            'payment', 'available', 'due', 'approaching', 'active', 'overdue', 'multiple'
+        }
         available_classes = list(class_names) if class_names else []
-        for std_c in ["Vendor", "Contract", "Invoice", "User", "PurchaseOrder", "Product", "Customer"]:
-            if std_c not in available_classes:
-                available_classes.append(std_c)
+        if not available_classes:
+            prompt_words = re.findall(r'\b[a-zA-Z]{3,}\b', prompt)
+            for w in prompt_words:
+                w_low = w.lower().rstrip('s')
+                if w.lower() not in stop_nouns and w_low not in attr_suffix_words:
+                    c_title = w_low.capitalize()
+                    if c_title not in available_classes:
+                        available_classes.append(c_title)
+
+            if not available_classes:
+                available_classes = ["Entity"]
 
         # Dynamically extract potential attribute names from user prompt if dt_props for a concept class is empty
         prompt_prop_matches = re.findall(r'\b[a-zA-Z]{3,}\b', prompt)
@@ -694,7 +708,7 @@ class LLMInsightService:
         sorted_matched = sorted(class_scores.keys(), key=lambda k: class_scores[k], reverse=True)
 
         if not sorted_matched:
-            sorted_matched = ["Invoice"]
+            sorted_matched = available_classes[:1] if available_classes else ["Entity"]
 
         primary_class = sorted_matched[0]
 
@@ -794,7 +808,10 @@ class LLMInsightService:
                     if prop_words:
                         left_words = prop_words
 
-                    prop_name = left_words[-1] if left_words else "id"
+                    if left_words:
+                        prop_name = left_words[0].lower() + "".join(w.capitalize() for w in left_words[1:]) if len(left_words) > 1 else left_words[0]
+                    else:
+                        prop_name = "id"
 
                     # Match exact property name against dt_props case-insensitively if available
                     matched_prop = False
