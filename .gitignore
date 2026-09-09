@@ -88,7 +88,15 @@ logs
 # Editor and OS files
 .DS_Store
 Thumbs.db
+desktop.ini
 .idea/
 .vscode/
 *.swp
 *.swo
+
+# Office temporary lock files
+~$*
+~$*.docx
+~$*.pptx
+~$*.xlsx
+
