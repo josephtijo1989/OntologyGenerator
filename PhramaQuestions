@@ -1,0 +1,101 @@
+Question 1: What are all the parent disease categories that Gaucher Disease belongs to, ordered from closest to broadest?
+MATCH (d:ref_disease {disease_name: 'Gaucher Disease'})-[:IS_A*1..10]->(ancestor:ref_disease)
+RETURN 
+  ancestor.disease_name,
+  ancestor.description,
+  length(shortestPath((d)-[:IS_A*]-(ancestor))) AS distance
+ORDER BY distance
+
+Question 2: Which existing FDA-approved drugs can be repurposed to target Gaucher Disease?
+MATCH (d:ref_disease {disease_name: 'Gaucher Disease'})<-[:mapDisease]-(tdm:target_disease_map)-[:mapTarget]->(bt:biologicaltarget)
+WITH d, bt
+MATCH (bt)<-[:mapInteractionTarget]-(sti:substancetargetinteraction)-[:mapInteractionSubstance]->(s:substance)
+WHERE s.approval_status = 'FDA Approved' 
+  AND NOT EXISTS {
+    MATCH (s)<-[:mapInteractionSubstance]-(sim:substance_indication_map)-[:mapDisease]->(dd:ref_disease)
+    WHERE dd.disease_name = 'Gaucher Disease'
+  }
+RETURN DISTINCT 
+  s.substancename AS RepurposedCandidate, 
+  bt.targetname AS BiologicalTarget, 
+  sti.isprimarymechanism AS IsPrimaryMechanism
+
+Question 3: Find me any approved drugs that could treat diseases related to lysosomal storage issues.
+MATCH (d:ref_disease)-[:IS_A*1..10]->(parent:ref_disease)
+WHERE parent.disease_name = 'Lysosomal Storage Disease'
+   OR parent.description = 'Lysosomal Storage Diseases'
+MATCH (d)<-[:mapDisease]-(tdm:target_disease_map)-[:mapTarget]->(bt:biologicaltarget)
+MATCH (bt)<-[:mapInteractionTarget]-(sti:substancetargetinteraction)-[:mapInteractionSubstance]->(s:substance)
+WHERE s.approval_status = 'FDA Approved'
+RETURN DISTINCT 
+  d.disease_name AS SpecificDisease, 
+  bt.targetname AS BiologicalTarget, 
+  s.substancename AS PotentialTreatment, 
+  sti.isprimarymechanism AS IsPrimaryMechanism
+
+Question 4: Which vendors currently hold active contracts with multiple jurisdiction indicators, and do they have any outstanding invoices past their due date?
+MATCH (po:PurchaseOrder)-[:HAS_CONTRACT]->(c:Contract), 
+      (po)-[:HAS_VENDOR]->(v:Vendor)
+WHERE c.multiplejurisdictionindicator IS NOT NULL 
+  AND c.multiplejurisdictionindicator <> ''
+WITH v, collect(DISTINCT c.contractid) AS contractIds
+MATCH (v)<-[:HAS_VENDOR]-(inv:Invoice)
+WHERE date(inv.duedate) < date() 
+  AND (inv.status IS NULL OR inv.status <> 'Paid')
+WITH v, 
+     contractIds, 
+     collect(DISTINCT inv.invoiceid) AS overdueInvoiceIds, 
+     COUNT(inv) AS overdueCount
+WHERE overdueCount > 0
+RETURN 
+  v.vendorid AS vendorId, 
+  v.vendorname AS vendorName, 
+  contractIds, 
+  overdueInvoiceIds, 
+  overdueCount
+
+Question 5: Which invoices are tied to aging report data with over 60 days past due specifically because of an applied hold reason?
+MATCH (a:AgingReportData)-[:HAS_INVOICE]->(i:Invoice)<-[:HAS_INVOICE]-(h:HoldReason)
+WHERE a.dayspastdue > 60
+RETURN 
+  i.invoiceid AS invoiceId, 
+  i.invoicenumber AS invoiceNumber, 
+  a.dayspastdue AS daysPastDue, 
+  h.reason AS holdReason, 
+  h.holddate AS holdDate
+
+Question 6: For projects past their planned end date, what is the variance between the budgeted amount and the total invoice product amount billed?
+MATCH (p:Project)
+WHERE date(p.plannedenddate) < date()
+OPTIONAL MATCH (i:Invoice)-[:HAS_PROJECT]->(p)
+WITH p, coalesce(sum(i.totalinvoiceproductamount), 0) AS billedAmount
+RETURN 
+  p.projectid AS projectId, 
+  p.budgetedamount AS budgetedAmount, 
+  billedAmount, 
+  p.budgetedamount - billedAmount AS variance
+ORDER BY variance DESC
+
+Question 7: Which approval hierarchies contain steps where the required approval limit exceeds the maximum approval amount of the assigned approval process?
+MATCH (h:ApprovalHierarrchy)-[:HAS_APPROVAL_ROLE]->(r:ApprovalRole), 
+      (h)-[:HAS_APPROVAL_PROCESS]->(p:ApprovalProcess)
+WHERE r.approvallimit > p.maximumapprovalamount
+RETURN DISTINCT 
+  h.approvalhierarchyid AS hierarchyId, 
+  h.approvallevel AS hierarchyLevel, 
+  r.role AS roleName, 
+  r.approvallimit AS requiredApprovalLimit, 
+  p.approvalprocessid AS processId, 
+  p.maximumapprovalamount AS maxApprovalAmount
+
+Question 8: Show me contracts with an automatic renewal indicator where the vendor has a negative compliance status, and list the associated penalty amounts.
+MATCH (c:Contract)-[:HAS_CONTRACT_TERM]->(ct:ContractTerm), 
+      (c)-[:IS_CONTRACT_OF]->(po:PurchaseOrder)-[:HAS_VENDOR]->(v:Vendor)
+WHERE c.automaticrenewalindicator IS NOT NULL 
+  AND c.automaticrenewalindicator <> '' 
+  AND v.compliancestatus = 'Negative'
+RETURN 
+  c.contractid AS contractId, 
+  c.automaticrenewalindicator AS autoRenewalIndicator, 
+  v.vendorid AS vendorId, 
+  collect(ct.penaltyamount) AS penaltyAmounts
