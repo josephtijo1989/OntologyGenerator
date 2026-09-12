@@ -1,0 +1,229 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rad: <http://example.org/rad/ontology#> .
+
+rad:PharmaOntology a owl:Ontology ;
+    rdfs:label "RAD Pharma and Sales R&D Ontology" ;
+    rdfs:comment "Complete semantic mapping of the RAD database schema, including all attributes, relationships, and constraints." .
+
+# ==============================================================================
+# 1. CLASSES (Tables & Entities)
+# ==============================================================================
+
+# --- Reference Entities ---
+rad:RefAssayType a owl:Class ; rdfs:label "Ref Assay Type" .
+rad:RefChemicalProperty a owl:Class ; rdfs:label "Ref Chemical Property" .
+rad:RefDisease a owl:Class ; rdfs:label "Ref Disease" .
+rad:RefExperimentalModel a owl:Class ; rdfs:label "Ref Experimental Model" .
+rad:RefInteractionType a owl:Class ; rdfs:label "Ref Interaction Type" .
+rad:RefMilestonePhase a owl:Class ; rdfs:label "Ref Milestone Phase" .
+rad:RefNcbiTaxonomy a owl:Class ; rdfs:label "Ref NCBI Taxonomy" .
+rad:RefNucleicAcidType a owl:Class ; rdfs:label "Ref Nucleic Acid Type" .
+rad:RefPhysicalState a owl:Class ; rdfs:label "Ref Physical State" .
+rad:RefSequenceFormat a owl:Class ; rdfs:label "Ref Sequence Format" .
+rad:RefStudyType a owl:Class ; rdfs:label "Ref Study Type" .
+rad:RefSubstanceType a owl:Class ; rdfs:label "Ref Substance Type" .
+
+# --- Core Biological/Chemical Entities ---
+rad:Species a owl:Class ; rdfs:label "Species" .
+rad:SubjectGenome a owl:Class ; rdfs:label "Subject Genome" .
+rad:ChromosomeDnaSequence a owl:Class ; rdfs:label "Chromosome DNA Sequence" .
+rad:DnaMarker a owl:Class ; rdfs:label "DNA Marker" .
+rad:BiologicalTarget a owl:Class ; rdfs:label "Biological Target" .
+rad:Substance a owl:Class ; rdfs:label "Substance" .
+
+# Inheritance classes (Subtypes based on UNIQUE constraint on substanceid)
+rad:Chemical a owl:Class ; rdfs:subClassOf rad:Substance ; rdfs:label "Chemical" .
+rad:Protein a owl:Class ; rdfs:subClassOf rad:Substance ; rdfs:label "Protein" .
+rad:NucleicAcid a owl:Class ; rdfs:subClassOf rad:Substance ; rdfs:label "Nucleic Acid" .
+rad:Polymer a owl:Class ; rdfs:subClassOf rad:Substance ; rdfs:label "Polymer" .
+rad:Mixture a owl:Class ; rdfs:subClassOf rad:Substance ; rdfs:label "Mixture" .
+
+rad:ChemicalSubstance a owl:Class ; rdfs:label "Chemical Substance (Physical Batch)" .
+rad:ChemicalTarget a owl:Class ; rdfs:label "Chemical Target (Formulation Limit)" .
+rad:Biosequence a owl:Class ; rdfs:label "Biosequence" .
+
+# --- Transactional / Lab Entities ---
+rad:Assay a owl:Class ; rdfs:label "Assay" .
+rad:ScreeningResult a owl:Class ; rdfs:label "Screening Result" .
+rad:InVivoStudy a owl:Class ; rdfs:label "In Vivo Study" .
+rad:LabNotebook a owl:Class ; rdfs:label "Lab Notebook" .
+
+# --- Reified Relationship Classes (Mapping tables with extra attributes) ---
+rad:AssayChemicalMap a owl:Class ; rdfs:label "Assay Chemical Map" .
+rad:TargetDiseaseMap a owl:Class ; rdfs:label "Target Disease Map" .
+rad:SubstanceIndicationMap a owl:Class ; rdfs:label "Substance Indication Map" .
+rad:SubstanceTargetInteraction a owl:Class ; rdfs:label "Substance Target Interaction" .
+
+# --- Commercial Entities ---
+rad:Customer a owl:Class ; rdfs:label "Customer" .
+rad:Product a owl:Class ; rdfs:label "Product" .
+rad:Store a owl:Class ; rdfs:label "Store" .
+rad:SalesTransaction a owl:Class ; rdfs:label "Sales Transaction" .
+rad:Return a owl:Class ; rdfs:label "Return" .
+
+# ==============================================================================
+# 2. OBJECT PROPERTIES (Foreign Keys & Relationships)
+# ==============================================================================
+
+# Relationships from Species & Genetics
+rad:hasTaxonomy a owl:ObjectProperty ; rdfs:domain rad:Species ; rdfs:range rad:RefNcbiTaxonomy .
+rad:hasSpecies a owl:ObjectProperty ; 
+    rdfs:domain [ owl:unionOf (rad:SubjectGenome rad:BiologicalTarget rad:InVivoStudy) ] ; 
+    rdfs:range rad:Species .
+rad:hasGenome a owl:ObjectProperty ; rdfs:domain rad:ChromosomeDnaSequence ; rdfs:range rad:SubjectGenome .
+rad:hasChromosome a owl:ObjectProperty ; rdfs:domain rad:DnaMarker ; rdfs:range rad:ChromosomeDnaSequence .
+
+# Relationships from Substance
+rad:hasSubstanceType a owl:ObjectProperty ; rdfs:domain rad:Substance ; rdfs:range rad:RefSubstanceType .
+rad:hasPhysicalState a owl:ObjectProperty ; rdfs:domain rad:ChemicalSubstance ; rdfs:range rad:RefPhysicalState .
+rad:hasChemical a owl:ObjectProperty ; 
+    rdfs:domain [ owl:unionOf (rad:ChemicalSubstance rad:AssayChemicalMap) ] ; 
+    rdfs:range rad:Chemical .
+rad:hasNucleicAcidType a owl:ObjectProperty ; rdfs:domain rad:NucleicAcid ; rdfs:range rad:RefNucleicAcidType .
+rad:hasSequenceFormat a owl:ObjectProperty ; rdfs:domain rad:Biosequence ; rdfs:range rad:RefSequenceFormat .
+rad:hasChemicalProperty a owl:ObjectProperty ; rdfs:domain rad:ChemicalTarget ; rdfs:range rad:RefChemicalProperty .
+
+# Pure Junction Tables translated directly to many-to-many Object Properties
+rad:assayProfilesTarget a owl:ObjectProperty ;
+    rdfs:domain rad:Assay ; rdfs:range rad:BiologicalTarget ;
+    rdfs:comment "Replaces assay_biotarget_map table" .
+rad:assayProfilesChemicalTarget a owl:ObjectProperty ;
+    rdfs:domain rad:Assay ; rdfs:range rad:ChemicalTarget ;
+    rdfs:comment "Replaces assay_chemtarget_map table" .
+
+# Relationships for Lab/Assay workflows
+rad:hasAssayType a owl:ObjectProperty ; rdfs:domain rad:Assay ; rdfs:range rad:RefAssayType .
+rad:hasExperimentalModel a owl:ObjectProperty ; rdfs:domain rad:Assay ; rdfs:range rad:RefExperimentalModel .
+rad:hasStudyType a owl:ObjectProperty ; rdfs:domain rad:InVivoStudy ; rdfs:range rad:RefStudyType .
+rad:screeningResultForAssay a owl:ObjectProperty ; rdfs:domain rad:ScreeningResult ; rdfs:range rad:Assay .
+rad:screeningResultForSubstance a owl:ObjectProperty ; rdfs:domain rad:ScreeningResult ; rdfs:range rad:Substance .
+
+# Reified relationship linkages (Foreign keys on mapping classes)
+rad:mapAssay a owl:ObjectProperty ; rdfs:domain rad:AssayChemicalMap ; rdfs:range rad:Assay .
+rad:mapInteractionSubstance a owl:ObjectProperty ; rdfs:domain rad:SubstanceTargetInteraction ; rdfs:range rad:Substance .
+rad:mapInteractionTarget a owl:ObjectProperty ; rdfs:domain rad:SubstanceTargetInteraction ; rdfs:range rad:BiologicalTarget .
+rad:mapInteractionType a owl:ObjectProperty ; rdfs:domain rad:SubstanceTargetInteraction ; rdfs:range rad:RefInteractionType .
+rad:mapTarget a owl:ObjectProperty ; rdfs:domain rad:TargetDiseaseMap ; rdfs:range rad:BiologicalTarget .
+rad:mapDisease a owl:ObjectProperty ; rdfs:domain [ owl:unionOf (rad:TargetDiseaseMap rad:SubstanceIndicationMap) ] ; rdfs:range rad:RefDisease .
+
+# Commercial Relationships
+rad:transactionCustomer a owl:ObjectProperty ; rdfs:domain rad:SalesTransaction ; rdfs:range rad:Customer .
+rad:transactionProduct a owl:ObjectProperty ; rdfs:domain rad:SalesTransaction ; rdfs:range rad:Product .
+rad:transactionStore a owl:ObjectProperty ; rdfs:domain rad:SalesTransaction ; rdfs:range rad:Store .
+rad:returnOrder a owl:ObjectProperty ; rdfs:domain rad:Return ; rdfs:range rad:SalesTransaction .
+
+# ==============================================================================
+# 3. DATATYPE PROPERTIES (Attributes / Columns)
+# ==============================================================================
+
+# Rule: Functional properties indicate attributes that can only have one value (like a specific column row)
+rad:id a owl:DatatypeProperty, owl:FunctionalProperty ; rdfs:range xsd:string ; rdfs:comment "Generic ID property for all entities" .
+rad:name a owl:DatatypeProperty, owl:FunctionalProperty ; rdfs:range xsd:string .
+rad:description a owl:DatatypeProperty, owl:FunctionalProperty ; rdfs:range xsd:string .
+
+# --- Ref Taxonomy ---
+rad:taxonomicClass a owl:DatatypeProperty ; rdfs:domain rad:RefNcbiTaxonomy ; rdfs:range xsd:string .
+
+# --- Ref Chemical Property ---
+rad:standardUnit a owl:DatatypeProperty ; rdfs:domain rad:RefChemicalProperty ; rdfs:range xsd:string .
+
+# --- Ref Disease ---
+rad:meshId a owl:DatatypeProperty ; rdfs:domain rad:RefDisease ; rdfs:range xsd:string .
+rad:icd10Code a owl:DatatypeProperty ; rdfs:domain rad:RefDisease ; rdfs:range xsd:string .
+rad:isRareDisease a owl:DatatypeProperty ; rdfs:domain rad:RefDisease ; rdfs:range xsd:boolean .
+
+# --- Substance / Chemical Attributes ---
+rad:approvalStatus a owl:DatatypeProperty ; rdfs:domain rad:Substance ; rdfs:range xsd:string .
+rad:maxClinicalPhase a owl:DatatypeProperty ; rdfs:domain rad:Substance ; rdfs:range xsd:integer .
+rad:molecularWeight a owl:DatatypeProperty ; rdfs:domain rad:Chemical ; rdfs:range xsd:decimal .
+rad:smilesString a owl:DatatypeProperty ; rdfs:domain rad:Chemical ; rdfs:range xsd:string .
+rad:chemblCompoundId a owl:DatatypeProperty ; rdfs:domain rad:Chemical ; rdfs:range xsd:string .
+rad:purityPercentage a owl:DatatypeProperty ; rdfs:domain rad:ChemicalSubstance ; rdfs:range xsd:decimal .
+
+# --- Biological Entities ---
+rad:targetValue a owl:DatatypeProperty ; rdfs:domain rad:ChemicalTarget ; rdfs:range xsd:decimal .
+rad:chromosomeNumber a owl:DatatypeProperty ; rdfs:domain rad:ChromosomeDnaSequence ; rdfs:range xsd:string .
+rad:sequenceString a owl:DatatypeProperty ; rdfs:domain rad:Biosequence ; rdfs:range xsd:string .
+rad:nucleicLength a owl:DatatypeProperty ; rdfs:domain rad:NucleicAcid ; rdfs:range xsd:integer .
+rad:avgMolecularWeight a owl:DatatypeProperty ; rdfs:domain rad:Polymer ; rdfs:range xsd:decimal .
+rad:isoelectricPoint a owl:DatatypeProperty ; rdfs:domain rad:Protein ; rdfs:range xsd:decimal .
+rad:chemblTargetId a owl:DatatypeProperty ; rdfs:domain rad:BiologicalTarget ; rdfs:range xsd:string .
+rad:buildVersion a owl:DatatypeProperty ; rdfs:domain rad:SubjectGenome ; rdfs:range xsd:string .
+
+# --- Laboratory & Testing Attributes ---
+rad:resultValue a owl:DatatypeProperty ; rdfs:domain rad:ScreeningResult ; rdfs:range xsd:decimal .
+rad:passFailFlag a owl:DatatypeProperty ; rdfs:domain rad:ScreeningResult ; rdfs:range xsd:boolean .
+rad:rawDataFilePath a owl:DatatypeProperty ; rdfs:domain rad:ScreeningResult ; rdfs:range xsd:string .
+rad:endDate a owl:DatatypeProperty ; rdfs:domain rad:InVivoStudy ; rdfs:range xsd:date .
+rad:preparationDate a owl:DatatypeProperty ; rdfs:domain rad:Mixture ; rdfs:range xsd:date .
+rad:creationDate a owl:DatatypeProperty ; rdfs:domain rad:LabNotebook ; rdfs:range xsd:date .
+rad:digitalSignature a owl:DatatypeProperty ; rdfs:domain rad:LabNotebook ; rdfs:range xsd:string .
+rad:scientistId a owl:DatatypeProperty ; rdfs:domain rad:LabNotebook ; rdfs:range xsd:integer .
+rad:isPrimaryMechanism a owl:DatatypeProperty ; rdfs:domain rad:SubstanceTargetInteraction ; rdfs:range xsd:boolean .
+rad:testPurpose a owl:DatatypeProperty ; rdfs:domain rad:AssayChemicalMap ; rdfs:range xsd:string .
+rad:associationType a owl:DatatypeProperty ; rdfs:domain rad:TargetDiseaseMap ; rdfs:range xsd:string .
+rad:approvalYear a owl:DatatypeProperty ; rdfs:domain rad:SubstanceIndicationMap ; rdfs:range xsd:integer .
+
+# --- Commercial / Sales Attributes ---
+rad:customerSegment a owl:DatatypeProperty ; rdfs:domain rad:Customer ; rdfs:range xsd:string .
+rad:signupDate a owl:DatatypeProperty ; rdfs:domain rad:Customer ; rdfs:range xsd:date .
+rad:preferredChannel a owl:DatatypeProperty ; rdfs:domain rad:Customer ; rdfs:range xsd:string .
+rad:city a owl:DatatypeProperty ; rdfs:domain [ owl:unionOf (rad:Customer rad:Store) ] ; rdfs:range xsd:string .
+
+rad:category a owl:DatatypeProperty ; rdfs:domain rad:Product ; rdfs:range xsd:string .
+rad:subCategory a owl:DatatypeProperty ; rdfs:domain rad:Product ; rdfs:range xsd:string .
+rad:basePrice a owl:DatatypeProperty ; rdfs:domain rad:Product ; rdfs:range xsd:decimal .
+
+rad:region a owl:DatatypeProperty ; rdfs:domain rad:Store ; rdfs:range xsd:string .
+rad:storeType a owl:DatatypeProperty ; rdfs:domain rad:Store ; rdfs:range xsd:string .
+
+rad:orderDate a owl:DatatypeProperty ; rdfs:domain rad:SalesTransaction ; rdfs:range xsd:date .
+rad:salesChannel a owl:DatatypeProperty ; rdfs:domain rad:SalesTransaction ; rdfs:range xsd:string .
+rad:unitsSold a owl:DatatypeProperty ; rdfs:domain rad:SalesTransaction ; rdfs:range xsd:integer .
+rad:unitPrice a owl:DatatypeProperty ; rdfs:domain rad:SalesTransaction ; rdfs:range xsd:decimal .
+rad:discountPct a owl:DatatypeProperty ; rdfs:domain rad:SalesTransaction ; rdfs:range xsd:integer .
+rad:paymentStatus a owl:DatatypeProperty ; rdfs:domain rad:SalesTransaction ; rdfs:range xsd:string .
+rad:deliveryStatus a owl:DatatypeProperty ; rdfs:domain rad:SalesTransaction ; rdfs:range xsd:string .
+
+rad:returnDate a owl:DatatypeProperty ; rdfs:domain rad:Return ; rdfs:range xsd:date .
+rad:returnReason a owl:DatatypeProperty ; rdfs:domain rad:Return ; rdfs:range xsd:string .
+
+# ==============================================================================
+# 4. RULES & CONSTRAINTS (Primary Keys and Uniqueness)
+# ==============================================================================
+
+# Applying Primary Key semantics using owl:hasKey 
+rad:Assay owl:hasKey (rad:id) .
+rad:BiologicalTarget owl:hasKey (rad:id) .
+rad:Biosequence owl:hasKey (rad:id) .
+rad:ChemicalSubstance owl:hasKey (rad:id) .
+rad:ChemicalTarget owl:hasKey (rad:id) .
+rad:ChromosomeDnaSequence owl:hasKey (rad:id) .
+rad:Customer owl:hasKey (rad:id) .
+rad:DnaMarker owl:hasKey (rad:id) .
+rad:InVivoStudy owl:hasKey (rad:id) .
+rad:LabNotebook owl:hasKey (rad:id) .
+rad:Product owl:hasKey (rad:id) .
+rad:RefAssayType owl:hasKey (rad:id) .
+rad:RefChemicalProperty owl:hasKey (rad:id) .
+rad:RefDisease owl:hasKey (rad:id) .
+rad:RefExperimentalModel owl:hasKey (rad:id) .
+rad:RefInteractionType owl:hasKey (rad:id) .
+rad:RefMilestonePhase owl:hasKey (rad:id) .
+rad:RefNcbiTaxonomy owl:hasKey (rad:id) .
+rad:RefNucleicAcidType owl:hasKey (rad:id) .
+rad:RefPhysicalState owl:hasKey (rad:id) .
+rad:RefSequenceFormat owl:hasKey (rad:id) .
+rad:RefStudyType owl:hasKey (rad:id) .
+rad:RefSubstanceType owl:hasKey (rad:id) .
+rad:Return owl:hasKey (rad:id) .
+rad:SalesTransaction owl:hasKey (rad:id) .
+rad:ScreeningResult owl:hasKey (rad:id) .
+rad:Species owl:hasKey (rad:id) .
+rad:Store owl:hasKey (rad:id) .
+rad:SubjectGenome owl:hasKey (rad:id) .
+rad:Substance owl:hasKey (rad:id) .
+rad:SubstanceTargetInteraction owl:hasKey (rad:id) .
