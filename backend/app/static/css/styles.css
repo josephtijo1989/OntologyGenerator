@@ -137,123 +137,53 @@ body {
 }
 
 .sidebar {
-  width: 250px;
-  min-width: 250px;
+  width: 260px;
+  min-width: 260px;
   flex-shrink: 0;
-  background: #07152B;          /* Dark Navy Blue matching Image */
-  color: #FFFFFF;
-  padding: 16px 12px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.12);
-}
-
-.sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 4px 8px 14px 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.sidebar-logo-img {
-  height: 36px;
-  width: auto;
-  object-fit: contain;
-}
-
-.sidebar-nav-list {
+  background: #ffffff;
+  border-right: 1px solid var(--border-color);
+  padding: 18px 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  overflow-y: auto;
+}
+
+.nav-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+  padding: 4px 12px 8px;
+  text-transform: uppercase;
 }
 
 .nav-btn {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 11px 16px;
+  gap: 12px;
+  padding: 10px 14px;
   background: transparent;
-  border: none;
-  border-radius: 10px;
-  color: #94A3B8;               /* Slate-400 muted menu text */
-  font-size: 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   text-align: left;
   width: 100%;
-  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.15s ease;
 }
 
 .nav-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #FFFFFF;
+  background: #f1f5f9;
+  color: var(--text-primary);
 }
 
 .nav-btn.active {
-  background: #0066FF;          /* Bright Royal Blue Active Pill */
-  color: #FFFFFF;
-  font-weight: 700;
-  box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
-}
-
-.nav-btn .nav-icon {
-  font-size: 16px;
-  width: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: inherit;
-}
-
-.nav-btn .nav-label {
-  font-size: 14px;
-  color: inherit;
-}
-
-.sidebar-user-footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 14px;
-  margin-top: 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-left: 6px;
-  padding-right: 6px;
-  cursor: pointer;
-}
-
-.user-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #0066FF;
-  color: #FFFFFF;
-  font-weight: 800;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 102, 255, 0.4);
-}
-
-.user-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.user-name {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: #FFFFFF;
-}
-
-.user-chevron {
-  font-size: 12px;
-  color: #94A3B8;
+  background: #eff6ff;          /* Soft Sky Blue */
+  color: #0284c7;
+  border-left: 3px solid #0284c7;
   font-weight: 700;
 }
 
