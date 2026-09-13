@@ -150,19 +150,7 @@ body {
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.12);
 }
 
-.sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 4px 8px 12px 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
 
-.sidebar-logo-img {
-  height: 36px;
-  width: auto;
-  object-fit: contain;
-}
 
 .nav-title {
   font-size: 10px;
