@@ -37,22 +37,54 @@
 
   <!-- Main Body -->
   <div class="app-body">
-    <!-- Sidebar -->
+    <!-- Sidebar (Executive Dark Navy Navigator matching Image Specification) -->
     <aside class="sidebar">
-      <div class="nav-title">PLATFORM NAVIGATOR</div>
-      <button class="nav-btn active" data-view="connectors" onclick="switchToTab('connectors')">🔌 Database Connectors</button>
-      <button class="nav-btn" data-view="metadata" onclick="switchToTab('metadata')">🔍 Metadata Discovery</button>
-      <button class="nav-btn" data-view="profiling" onclick="switchToTab('profiling')">📈 Data Profiling & Quality</button>
-      <button class="nav-btn" data-view="rules" onclick="switchToTab('rules')">⚙️ Business Rules Engine</button>
-      <button class="nav-btn" data-view="ontology" onclick="switchToTab('ontology')">🧠 OWL Ontology Editor</button>
-      <button class="nav-btn" data-view="ontology-graph" onclick="switchToTab('ontology-graph')">🌐 Graphical Ontology</button>
-      <button class="nav-btn" data-view="ontology-viewer" onclick="switchToTab('ontology-viewer')">📤 Upload & View Ontology</button>
-      <button class="nav-btn" data-view="graph" onclick="switchToTab('graph')">🕸️ Knowledge Graph</button>
-      <button class="nav-btn" data-view="data-movement" onclick="switchToTab('data-movement')">🚀 Data Movement Engine</button>
-      <button class="nav-btn" data-view="graph-profiler" onclick="switchToTab('graph-profiler')">🕸️ Graph Topology Profiler</button>
-      <button class="nav-btn" data-view="schema-matrix" onclick="switchToTab('schema-matrix')">🗺️ Schema Lineage Matrix</button>
-      <button class="nav-btn" data-view="llm-insights" onclick="switchToTab('llm-insights')">🤖 AI Graph Insights</button>
-      <button class="nav-btn" data-view="saved-cyphers" onclick="switchToTab('saved-cyphers')">⭐ Saved Cypher Queries</button>
+      <div style="display: flex; flex-direction: column; gap: 14px; flex: 1;">
+        <!-- Top Brand Logo inside Sidebar -->
+        <div class="sidebar-brand">
+          <img src="/static/img/ontoforge_logo.png" alt="OntoForge" class="sidebar-logo-img">
+        </div>
+
+        <!-- Navigation Menu Items -->
+        <div class="sidebar-nav-list">
+          <button class="nav-btn active" data-view="connectors" onclick="switchToTab('connectors')">
+            <span class="nav-icon">🏠</span> <span class="nav-label">Home</span>
+          </button>
+          <button class="nav-btn" data-view="metadata" onclick="switchToTab('metadata')">
+            <span class="nav-icon">🗄️</span> <span class="nav-label">Data Sources</span>
+          </button>
+          <button class="nav-btn" data-view="ontology" onclick="switchToTab('ontology')">
+            <span class="nav-icon">🕸️</span> <span class="nav-label">Ontology</span>
+          </button>
+          <button class="nav-btn" data-view="llm-insights" onclick="switchToTab('llm-insights')">
+            <span class="nav-icon">🔍</span> <span class="nav-label">Exploration</span>
+          </button>
+          <button class="nav-btn" data-view="schema-matrix" onclick="switchToTab('schema-matrix')">
+            <span class="nav-icon">📄</span> <span class="nav-label">Classes</span>
+          </button>
+          <button class="nav-btn" data-view="ontology-viewer" onclick="switchToTab('ontology-viewer')">
+            <span class="nav-icon">✏️</span> <span class="nav-label">RDF Sandbox</span>
+          </button>
+          <button class="nav-btn" data-view="graph" onclick="switchToTab('graph')">
+            <span class="nav-icon">🔗</span> <span class="nav-label">Knowledge Graph</span>
+          </button>
+          <button class="nav-btn" data-view="data-movement" onclick="switchToTab('data-movement')">
+            <span class="nav-icon">📋</span> <span class="nav-label">Jobs</span>
+          </button>
+          <button class="nav-btn" data-view="saved-cyphers" onclick="switchToTab('saved-cyphers')">
+            <span class="nav-icon">⚙️</span> <span class="nav-label">Settings</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- User Profile Badge Footer -->
+      <div class="sidebar-user-footer">
+        <div class="user-avatar">TJ</div>
+        <div class="user-info">
+          <span class="user-name">Tijo Joseph</span>
+        </div>
+        <span class="user-chevron">⌄</span>
+      </div>
     </aside>
 
     <!-- Main Content Area -->
