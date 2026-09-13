@@ -140,22 +140,20 @@ body {
   width: 270px;
   min-width: 270px;
   flex-shrink: 0;
-  background: #07152B;          /* Executive Dark Navy Blue */
-  color: #FFFFFF;
+  background: #F8FAFC;          /* Clean Light Slate Background */
+  color: #1E293B;
   padding: 16px 12px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.12);
+  border-right: 1px solid #E2E8F0;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.03);
 }
-
-
 
 .nav-title {
   font-size: 10px;
   font-weight: 700;
-  color: #94A3B8;               /* Muted slate title text */
+  color: #64748B;               /* Muted title text */
   letter-spacing: 1px;
   padding: 6px 12px 4px;
   text-transform: uppercase;
@@ -169,7 +167,7 @@ body {
   background: transparent;
   border: none;
   border-radius: 10px;
-  color: #94A3B8;               /* Slate-400 muted menu text */
+  color: #475569;               /* Slate-600 menu text */
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -179,19 +177,19 @@ body {
 }
 
 .nav-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #FFFFFF;
+  background: #E2E8F0;
+  color: #0F172A;
 }
 
 .nav-btn.active {
   background: #0066FF;          /* Bright Royal Blue Active Pill */
   color: #FFFFFF;
   font-weight: 700;
-  box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
+  box-shadow: 0 4px 14px rgba(0, 102, 255, 0.25);
 }
 
 .sidebar-user-footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid #E2E8F0;
   padding-top: 14px;
   margin-top: 12px;
   display: flex;
@@ -213,7 +211,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 102, 255, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 102, 255, 0.3);
 }
 
 .user-info {
@@ -225,12 +223,12 @@ body {
 .user-name {
   font-size: 13.5px;
   font-weight: 600;
-  color: #FFFFFF;
+  color: #1E293B;
 }
 
 .user-chevron {
   font-size: 12px;
-  color: #94A3B8;
+  color: #64748B;
   font-weight: 700;
 }
 
