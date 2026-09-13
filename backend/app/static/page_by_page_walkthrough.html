@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OntoForge - Full 13-Step Interactive Application Walkthrough</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #F8FAFC;
+            --bg-card: #FFFFFF;
+            --border-light: #E2E8F0;
+            --border-indigo: #C7D2FE;
+            --accent-indigo: #4F46E5;
+            --accent-cyan: #0284C7;
+            --accent-violet: #7C3AED;
+            --accent-emerald: #059669;
+            --accent-rose: #DC2626;
+            --text-heading: #0F172A;
+            --text-body: #334155;
+            --text-muted: #64748B;
+            --shadow-card: 0 20px 40px -15px rgba(15, 23, 42, 0.08);
+            --shadow-window: 0 25px 50px -12px rgba(15, 23, 42, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-heading);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .main-container {
+            width: 95%;
+            max-width: 1360px;
+            margin: 16px auto;
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: 20px;
+            box-shadow: var(--shadow-window);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Header */
+        .walkthrough-header {
+            padding: 16px 32px;
+            background: #FFFFFF;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .tour-badge {
+            background: #EEF2FF;
+            border: 1px solid var(--border-indigo);
+            color: var(--accent-indigo);
+            font-size: 0.75rem;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        /* 13 Pages Step Navigation Bar */
+        .pages-step-bar {
+            padding: 12px 24px;
+            background: #F8FAFC;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+        }
+
+        .step-tab {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            color: var(--text-muted);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .step-tab:hover {
+            border-color: var(--accent-indigo);
+            color: var(--accent-indigo);
+        }
+
+        .step-tab.active {
+            background: var(--accent-indigo);
+            color: white;
+            border-color: var(--accent-indigo);
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.25);
+        }
+
+        .step-num {
+            background: rgba(255, 255, 255, 0.25);
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Stage Layout */
+        .walkthrough-stage {
+            display: grid;
+            grid-template-columns: 7fr 5fr;
+            gap: 20px;
+            padding: 24px;
+            background: #F8FAFC;
+            min-height: 560px;
+        }
+
+        /* App Screen Window Frame */
+        .screen-frame {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-card);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .browser-bar {
+            background: #E2E8F0;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .window-controls { display: flex; gap: 8px; }
+        .win-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .dot-close { background: #EF4444; }
+        .dot-min { background: #F59E0B; }
+        .dot-max { background: #10B981; }
+
+        .address-bar {
+            background: #FFFFFF;
+            padding: 4px 14px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-body);
+            width: 60%;
+            text-align: center;
+            border: 1px solid #CBD5E1;
+        }
+
+        .screen-content-view {
+            padding: 24px;
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .page-view {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .page-view.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Sidebar Info Panel */
+        .info-panel {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow-card);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .page-title {
+            font-size: 1.45rem;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin-bottom: 4px;
+        }
+
+        .page-subtitle {
+            font-size: 0.9rem;
+            color: var(--accent-indigo);
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
+
+        .section-box {
+            background: #F8FAFC;
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+        }
+
+        .section-title {
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .section-desc {
+            font-size: 0.85rem;
+            color: var(--text-body);
+            line-height: 1.45;
+        }
+
+        /* UI Mockup Helpers */
+        .mock-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .mock-card {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .btn-action {
+            background: var(--accent-indigo);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-delete-mock {
+            background: #FEF2F2;
+            border: 1px solid #FCA5A5;
+            color: var(--accent-rose);
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        /* Footer Controls */
+        .walkthrough-footer {
+            padding: 14px 32px;
+            background: #FFFFFF;
+            border-top: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-tour {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            color: var(--text-heading);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-tour.active {
+            background: var(--accent-indigo);
+            color: white;
+            border-color: var(--accent-indigo);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <!-- Header -->
+        <header class="walkthrough-header">
+            <div class="brand-group">
+                <img src="/static/img/ontoforge_logo.png" alt="OntoForge" style="height: 38px; width: auto;">
+            </div>
+            <div class="tour-badge">Full 13-Step Enterprise Platform Walkthrough</div>
+        </header>
+
+        <!-- 13 Step Navigation Bar -->
+        <nav class="pages-step-bar">
+            <button class="step-tab active" onclick="goToPage(0)"><span class="step-num">1</span> Connectors</button>
+            <button class="step-tab" onclick="goToPage(1)"><span class="step-num">2</span> Metadata</button>
+            <button class="step-tab" onclick="goToPage(2)"><span class="step-num">3</span> Profiling</button>
+            <button class="step-tab" onclick="goToPage(3)"><span class="step-num">4</span> Rules Engine</button>
+            <button class="step-tab" onclick="goToPage(4)"><span class="step-num">5</span> OWL Editor</button>
+            <button class="step-tab" onclick="goToPage(5)"><span class="step-num">6</span> Graphical</button>
+            <button class="step-tab" onclick="goToPage(6)"><span class="step-num">7</span> RDF Exporter</button>
+            <button class="step-tab" onclick="goToPage(7)"><span class="step-num">8</span> Knowledge Graph</button>
+            <button class="step-tab" onclick="goToPage(8)"><span class="step-num">9</span> Data Movement</button>
+            <button class="step-tab" onclick="goToPage(9)"><span class="step-num">10</span> Graph Profiler</button>
+            <button class="step-tab" onclick="goToPage(10)"><span class="step-num">11</span> Lineage Matrix</button>
+            <button class="step-tab" onclick="goToPage(11)"><span class="step-num">12</span> AI GraphRAG</button>
+            <button class="step-tab" onclick="goToPage(12)"><span class="step-num">13</span> Saved Cyphers</button>
+        </nav>
+
+        <!-- Walkthrough Stage -->
+        <main class="walkthrough-stage">
+
+            <!-- Left Screen Frame -->
+            <div class="screen-frame">
+                <div class="browser-bar">
+                    <div class="window-controls">
+                        <div class="win-dot dot-close"></div>
+                        <div class="win-dot dot-min"></div>
+                        <div class="win-dot dot-max"></div>
+                    </div>
+                    <div class="address-bar" id="address-url">http://localhost:4200/connectors</div>
+                    <div style="font-size: 0.75rem; color: var(--accent-emerald); font-weight: 700;">● Server Live</div>
+                </div>
+
+                <div class="screen-content-view">
+                    <!-- VIEW 1: Connectors -->
+                    <div class="page-view active" id="view-0">
+                        <h3 style="font-size: 1.1rem;">Multi-Source Data Ingestion & Target Graph Topology</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+                            <div style="background: #F8FAFC; border: 1px solid var(--border-light); padding: 14px; border-radius: 8px;">
+                                <strong style="color: var(--accent-cyan); font-size: 0.85rem;">Source Databases:</strong>
+                                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">PostgreSQL, SQL Server, MySQL, Oracle</p>
+                            </div>
+                            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 14px; border-radius: 8px;">
+                                <strong style="color: var(--accent-emerald); font-size: 0.85rem;">Target Neo4j Graph DB:</strong>
+                                <p style="font-size: 0.75rem; color: #047857; margin-top: 4px;">bolt://localhost:7687 (ONLINE)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VIEW 2: Metadata -->
+                    <div class="page-view" id="view-1">
+                        <h3 style="font-size: 1.1rem;">Relational Database Metadata Catalog</h3>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-top: 10px;">
+                            <tr style="background: #F1F5F9; text-align: left;">
+                                <th style="padding: 6px;">Table</th><th style="padding: 6px;">Columns</th><th style="padding: 6px;">Primary Key</th>
+                            </tr>
+                            <tr><td style="padding: 6px;">devices</td><td style="padding: 6px;">id, serial_no, status</td><td style="padding: 6px;">id</td></tr>
+                            <tr><td style="padding: 6px;">temp_sensors</td><td style="padding: 6px;">id, device_id, temp_val</td><td style="padding: 6px;">id</td></tr>
+                        </table>
+                    </div>
+
+                    <!-- VIEW 3: Profiling -->
+                    <div class="page-view" id="view-2">
+                        <h3 style="font-size: 1.1rem;">Data Profiling & Quality Scores</h3>
+                        <div style="background: #EEF2FF; border: 1px solid var(--border-indigo); padding: 14px; border-radius: 8px; font-size: 0.8rem; color: var(--accent-indigo);">
+                            ✔ Completeness: 99.8% | Unique Constraint Score: 100% | Nullability Check Passed
+                        </div>
+                    </div>
+
+                    <!-- VIEW 4: Rules -->
+                    <div class="page-view" id="view-3">
+                        <h3 style="font-size: 1.1rem;">Business Rules & Constraint Logic Engine</h3>
+                        <div style="background: #F8FAFC; border: 1px solid var(--border-light); padding: 14px; border-radius: 8px; font-size: 0.8rem;">
+                            Rule #1: Map table <code>temp_sensors</code> ➔ Subclass of <code>Device</code><br>
+                            Rule #2: Enforce URI namespace <code>http://onto.org/</code>
+                        </div>
+                    </div>
+
+                    <!-- VIEW 5: OWL Ontology Editor -->
+                    <div class="page-view" id="view-4">
+                        <h3 style="font-size: 1.1rem;">OWL Ontology Editor Workspace</h3>
+                        <div class="mock-grid-3">
+                            <div class="mock-card">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <strong style="color: var(--accent-indigo); font-size: 0.85rem;">Device</strong>
+                                    <button class="btn-delete-mock">🗑️ Delete</button>
+                                </div>
+                                <span style="font-size: 0.7rem; color: var(--text-muted);">URI: http://onto.org/Device</span>
+                            </div>
+                            <div class="mock-card">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <strong style="color: var(--accent-indigo); font-size: 0.85rem;">TemperatureSensor</strong>
+                                    <button class="btn-delete-mock">🗑️ Delete</button>
+                                </div>
+                                <span style="font-size: 0.7rem; color: var(--text-muted);">subClassOf: Device</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VIEW 6: Graphical Ontology -->
+                    <div class="page-view" id="view-5">
+                        <h3 style="font-size: 1.1rem;">Graphical Ontology Hierarchy</h3>
+                        <div style="background: #F8FAFC; border: 1px dashed var(--accent-indigo); border-radius: 8px; height: 180px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--accent-indigo);">
+                            owl:Thing ➔ Device ➔ TemperatureSensor
+                        </div>
+                    </div>
+
+                    <!-- VIEW 7: RDF Exporter -->
+                    <div class="page-view" id="view-6">
+                        <h3 style="font-size: 1.1rem;">W3C RDF/OWL Turtle Exporter</h3>
+                        <div style="background: #0F172A; color: #6EE7B7; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.75rem;">
+                            @prefix onto: &lt;http://onto.org/&gt; .<br>
+                            onto:TemperatureSensor a owl:Class ; rdfs:subClassOf owl:Thing .
+                        </div>
+                    </div>
+
+                    <!-- VIEW 8: Knowledge Graph -->
+                    <div class="page-view" id="view-7">
+                        <h3 style="font-size: 1.1rem;">Interactive Knowledge Graph Visualizer</h3>
+                        <div style="background: #0B0F19; border-radius: 8px; height: 180px; display: flex; align-items: center; justify-content: center; color: var(--accent-cyan); font-weight: 700;">
+                            🕸️ Projected Neo4j Nodes & Relationship Edges
+                        </div>
+                    </div>
+
+                    <!-- VIEW 9: Data Movement -->
+                    <div class="page-view" id="view-8">
+                        <h3 style="font-size: 1.1rem;">Data Movement Engine & Batch Graph ETL</h3>
+                        <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 14px; border-radius: 8px; font-size: 0.8rem; color: #047857;">
+                            ⚡ Batch Status: 10,000 Relational Rows Migrated ➔ 10,000 Graph Nodes Created
+                        </div>
+                    </div>
+
+                    <!-- VIEW 10: Graph Profiler -->
+                    <div class="page-view" id="view-9">
+                        <h3 style="font-size: 1.1rem;">Graph Topology Profiler & Metrics</h3>
+                        <div style="font-size: 0.8rem; color: var(--text-body);">
+                            Node Count: 10,240 | Edge Count: 34,120 | Average Clustering Coefficient: 0.74
+                        </div>
+                    </div>
+
+                    <!-- VIEW 11: Schema Lineage Matrix -->
+                    <div class="page-view" id="view-10">
+                        <h3 style="font-size: 1.1rem;">Schema Lineage Matrix</h3>
+                        <div style="font-size: 0.8rem; color: var(--text-body);">
+                            Source: <code>temp_sensors.temp_val</code> ➔ Target: <code>(TemperatureSensor).temperature</code>
+                        </div>
+                    </div>
+
+                    <!-- VIEW 12: Gemini AI GraphRAG -->
+                    <div class="page-view" id="view-11">
+                        <h3 style="font-size: 1.1rem;">Gemini AI GraphRAG Engine</h3>
+                        <div style="background: #0F172A; color: #6EE7B7; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.75rem;">
+                            MATCH (s:TemperatureSensor)-[:LOCATED_IN]->(l:Location)<br>
+                            WHERE s.temp > 85 RETURN s.id, l.name
+                        </div>
+                    </div>
+
+                    <!-- VIEW 13: Saved Cypher Queries -->
+                    <div class="page-view" id="view-12">
+                        <h3 style="font-size: 1.1rem;">Approved Cypher Query Templates</h3>
+                        <div style="background: #F8FAFC; border: 1px solid var(--border-light); padding: 12px; border-radius: 6px; font-size: 0.8rem; color: var(--accent-violet); font-weight: 700;">
+                            ⭐ Query #1: High-Temperature Sensors Report<br>
+                            ⭐ Query #2: Facility Device Count Summary
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Info Panel -->
+            <div class="info-panel">
+                <div>
+                    <div class="page-title" id="info-title">1. Connectors</div>
+                    <div class="page-subtitle" id="info-sub">Multi-Source Data Ingestion & Target Graph Topology</div>
+
+                    <div class="section-box">
+                        <div class="section-title">📌 Purpose & Objective</div>
+                        <div class="section-desc" id="info-purpose">
+                            Connect multiple relational source databases (PostgreSQL, SQL Server, MySQL) and target Neo4j Knowledge Graph instances.
+                        </div>
+                    </div>
+
+                    <div class="section-box">
+                        <div class="section-title">⚡ How It Works</div>
+                        <div class="section-desc" id="info-how">
+                            Users map source database connection strings and configure Bolt/Cypher connection protocols to the target Neo4j database.
+                        </div>
+                    </div>
+
+                    <div class="section-box">
+                        <div class="section-title">🎯 Output Delivered</div>
+                        <div class="section-desc" id="info-output">
+                            Verified active multi-source database connections and target graph topology status.
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 8px; margin-top: 14px;">
+                    <button class="btn-tour" onclick="prevPage()">‹ Previous</button>
+                    <button class="btn-tour active" style="flex: 1;" onclick="nextPage()">Next Step ›</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer Controls -->
+        <footer class="walkthrough-footer">
+            <div style="font-size: 0.82rem; color: var(--text-muted);" id="voiceover-caption">
+                Step 1 of 13: Database Connectors
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-tour" id="btn-autoplay" onclick="toggleAutoTour()">▶ Auto-Play 13-Step Tour</button>
+                <button class="btn-tour" id="btn-vo" onclick="toggleVoiceover()">🔊 Voiceover: ON</button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const pagesData13 = [
+            {
+                url: "http://localhost:4200/connectors",
+                title: "1. Database Connectors",
+                subtitle: "Multi-Source Data Ingestion & Target Graph Topology Setup",
+                purpose: "Connect multiple relational source databases (PostgreSQL, SQL Server, MySQL, Oracle) into a unified target Knowledge Graph instance.",
+                how: "Users map source database connection strings and configure Bolt/Cypher protocols to the target Neo4j instance.",
+                output: "Verified active multi-source database connections and live target graph status.",
+                voText: "Step 1: Database Connectors. Connect multiple relational source databases and target Neo4j Knowledge Graph instances."
+            },
+            {
+                url: "http://localhost:4200/metadata",
+                title: "2. Metadata Discovery",
+                subtitle: "Relational Database Metadata Catalog & Auto Discovery",
+                purpose: "Inspect primary keys, foreign keys, table definitions, and column data types across all connected databases.",
+                how: "OntoForge automatically scans database catalogs to extract table structures and foreign key relationships.",
+                output: "Discovered relational metadata catalog ready for ontology mapping.",
+                voText: "Step 2: Metadata Discovery. OntoForge automatically scans database catalogs, extracting tables, primary keys, and foreign keys."
+            },
+            {
+                url: "http://localhost:4200/profiling",
+                title: "3. Data Profiling & Quality",
+                subtitle: "Column Profiling, Nullability & Completeness Scores",
+                purpose: "Evaluate source data quality, uniqueness ratios, and nullability distributions before semantic modeling.",
+                how: "OntoForge runs statistical profiling queries against source columns to compute completeness scores.",
+                output: "Data quality scores and column distribution metrics.",
+                voText: "Step 3: Data Profiling. Inspect data quality metrics, nullability ratios, and completeness scores."
+            },
+            {
+                url: "http://localhost:4200/rules",
+                title: "4. Business Rules Engine",
+                subtitle: "Enterprise Constraint Logic & Mapping Policies",
+                purpose: "Apply domain business logic, validation rules, and transformation constraints to ontology generation.",
+                how: "Users configure mapping policies governing how relational tables transform into ontology classes.",
+                output: "Enforceable business rules steering ontology extraction.",
+                voText: "Step 4: Business Rules Engine. Apply domain policies and validation constraints to steer automated ontology generation."
+            },
+            {
+                url: "http://localhost:4200/ontology",
+                title: "5. OWL Ontology Editor",
+                subtitle: "Class Matrix Workspace & Smart Subclass Rebinding to owl:Thing",
+                purpose: "Manage ontology classes as visual cards, edit properties, and safely delete obsolete classes.",
+                how: "Domain experts inspect class URIs and properties. Clicking Delete Class triggers smart governance: child subclasses automatically rebind to owl:Thing with 0% data loss.",
+                output: "Refined enterprise ontology with guaranteed dependency protection.",
+                voText: "Step 5: OWL Ontology Editor. Inspect classes like Device, TemperatureSensor, and Location. Delete obsolete classes safely with automatic subclass rebinding to owl:Thing."
+            },
+            {
+                url: "http://localhost:4200/ontology-graph",
+                title: "6. Graphical Ontology",
+                subtitle: "Visual Class Hierarchy & Inheritance Tree",
+                purpose: "Inspect class inheritance trees, domain-range properties, and ontology relationships visually.",
+                how: "Renders an interactive Cytoscape network view of the ontology class hierarchy.",
+                output: "Interactive visual rendering of class inheritance.",
+                voText: "Step 6: Graphical Ontology. View the visual class hierarchy and property connections rendered in an interactive tree view."
+            },
+            {
+                url: "http://localhost:4200/ontology-viewer",
+                title: "7. RDF/OWL Exporter",
+                subtitle: "W3C-Compliant Turtle Serialization & Export",
+                purpose: "Convert the refined enterprise ontology into standard W3C RDF/OWL syntax.",
+                how: "Serializes ontology classes into Turtle (.ttl), RDF/XML, or N-Triples formats.",
+                output: "W3C-compliant Turtle (.ttl) file download.",
+                voText: "Step 7: W3C RDF and OWL Exporter. OntoForge serializes refined ontology classes into standard W3C Turtle syntax."
+            },
+            {
+                url: "http://localhost:4200/graph",
+                title: "8. Knowledge Graph",
+                subtitle: "Interactive Neo4j Node Explorer & Visualizer",
+                purpose: "Explore live projected graph nodes, relationship edges, and node properties.",
+                how: "Projects RDF triples directly into live Neo4j graph nodes and edges for visual graph exploration.",
+                output: "Real-time visual Knowledge Graph exploration.",
+                voText: "Step 8: Knowledge Graph Visualizer. Project RDF triples directly into live graph nodes and edges."
+            },
+            {
+                url: "http://localhost:4200/data-movement",
+                title: "9. Data Movement Engine",
+                subtitle: "Batch Relational-to-Graph ETL Execution",
+                purpose: "Execute high-throughput data pipelines converting relational row records into graph nodes.",
+                how: "Triggers automated ETL pipelines migrating database records directly into Neo4j graph instances.",
+                output: "Batch ETL execution metrics and target node creation counts.",
+                voText: "Step 9: Data Movement Engine. Trigger automated ETL pipelines migrating relational records into Neo4j graph nodes."
+            },
+            {
+                url: "http://localhost:4200/graph-profiler",
+                title: "10. Graph Profiler",
+                subtitle: "Graph Topology & Density Metrics",
+                purpose: "Measure graph density, node degree distributions, and hub centrality.",
+                how: "Computes topological metrics over the live Neo4j graph dataset.",
+                output: "Graph structural health and density metrics.",
+                voText: "Step 10: Graph Topology Profiler. Measure graph density, node degree distribution, and structural connectivity metrics."
+            },
+            {
+                url: "http://localhost:4200/schema-matrix",
+                title: "11. Schema Lineage Matrix",
+                subtitle: "Source-to-Target Column-to-Graph Lineage Mapping",
+                purpose: "Trace complete end-to-end data lineage from relational columns to graph properties.",
+                how: "Renders a source-to-target mapping matrix linking columns to graph properties.",
+                output: "End-to-end data lineage matrix.",
+                voText: "Step 11: Schema Lineage Matrix. Trace complete data lineage from source relational columns to target graph node properties."
+            },
+            {
+                url: "http://localhost:4200/llm-insights",
+                title: "12. Gemini AI GraphRAG",
+                subtitle: "Natural Language to Cypher Query Engine",
+                purpose: "Query the knowledge graph in natural language with zero AI hallucinations.",
+                how: "Gemini 1.5 Pro converts prompts into Cypher queries, executing against Neo4j to return deterministic answers.",
+                output: "Accurate, hallucination-free graph answers.",
+                voText: "Step 12: Gemini AI GraphRAG Engine. Gemini AI generates Cypher queries against Neo4j, returning accurate, deterministic answers."
+            },
+            {
+                url: "http://localhost:4200/saved-cyphers",
+                title: "13. Saved Cypher Queries",
+                subtitle: "Approved Cypher Query Templates Library",
+                purpose: "Manage a library of audited, pre-approved Cypher queries for recurring reporting.",
+                how: "Stores approved Cypher templates for rapid execution and AI prompt grounding.",
+                output: "Managed library of enterprise Cypher templates.",
+                voText: "Step 13: Saved Cypher Queries Library. Manage a library of pre-approved Cypher queries for enterprise reporting."
+            }
+        ];
+
+        let currentPageIndex = 0;
+        let isAutoTour = false;
+        let isVoiceover = true;
+        let tourTimer = null;
+        let synth = window.speechSynthesis;
+
+        function showPage(index) {
+            pagesData13.forEach((p, idx) => {
+                const tab = document.querySelectorAll('.step-tab')[idx];
+                const view = document.getElementById(`view-${idx}`);
+                if (idx === index) {
+                    tab.classList.add('active');
+                    if (view) view.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                    if (view) view.classList.remove('active');
+                }
+            });
+
+            const data = pagesData13[index];
+            document.getElementById('address-url').innerText = data.url;
+            document.getElementById('info-title').innerText = data.title;
+            document.getElementById('info-sub').innerText = data.subtitle;
+            document.getElementById('info-purpose').innerText = data.purpose;
+            document.getElementById('info-how').innerText = data.how;
+            document.getElementById('info-output').innerText = data.output;
+            document.getElementById('voiceover-caption').innerText = `Step ${index + 1} of 13: ${data.title}`;
+
+            if (isVoiceover && synth) {
+                synth.cancel();
+                const utterance = new SpeechSynthesisUtterance(data.voText);
+                utterance.rate = 1.0;
+                synth.speak(utterance);
+            }
+
+            if (isAutoTour) {
+                resetTourTimer();
+            }
+        }
+
+        function resetTourTimer() {
+            if (tourTimer) clearTimeout(tourTimer);
+            tourTimer = setTimeout(() => { nextPage(); }, 10000);
+        }
+
+        function nextPage() {
+            currentPageIndex = (currentPageIndex + 1) % pagesData13.length;
+            showPage(currentPageIndex);
+        }
+
+        function prevPage() {
+            currentPageIndex = (currentPageIndex - 1 + pagesData13.length) % pagesData13.length;
+            showPage(currentPageIndex);
+        }
+
+        function goToPage(idx) {
+            currentPageIndex = idx;
+            showPage(currentPageIndex);
+        }
+
+        function toggleAutoTour() {
+            isAutoTour = !isAutoTour;
+            const btn = document.getElementById('btn-autoplay');
+            if (isAutoTour) {
+                btn.innerText = "⏸ Pause Tour";
+                btn.classList.add('active');
+                resetTourTimer();
+            } else {
+                btn.innerText = "▶ Auto-Play 13-Step Tour";
+                btn.classList.remove('active');
+                if (tourTimer) clearTimeout(tourTimer);
+            }
+        }
+
+        function toggleVoiceover() {
+            isVoiceover = !isVoiceover;
+            const btn = document.getElementById('btn-vo');
+            if (isVoiceover) {
+                btn.innerText = "🔊 Voiceover: ON";
+                btn.classList.add('active');
+                showPage(currentPageIndex);
+            } else {
+                btn.innerText = "🔇 Voiceover: OFF";
+                btn.classList.remove('active');
+                if (synth) synth.cancel();
+            }
+        }
+
+        window.onload = () => { showPage(0); };
+    </script>
+</body>
+</html>

@@ -336,6 +336,9 @@ interface PresetOption {
                   <button class="btn-secondary" style="width: 100%; font-size: 11px; padding: 6px 10px;" (click)="openCreateClassModal(selectedGraphNode.properties?.subclass_of?.[0] || 'owl:Thing')">
                     ➕ Create Sibling Class
                   </button>
+                  <button class="btn-danger-sm" style="width: 100%; font-size: 11px; padding: 6px 10px;" (click)="deleteClass(selectedGraphNode.label)">
+                    🗑️ Delete Class {{ selectedGraphNode.label }}
+                  </button>
                 </div>
               </div>
             </div>
@@ -365,9 +368,14 @@ interface PresetOption {
                   <span class="domain-badge" [class.lookup]="cls.annotations?.domain_type === 'Lookup'" [class.fact]="cls.annotations?.domain_type === 'Fact'">
                     {{ cls.annotations?.domain_type || 'Dimension' }}
                   </span>
-                  <button class="btn-sm" style="font-size: 10px; padding: 2px 6px;" (click)="openSubclassModal(cls.label)" title="Create Subclass of {{ cls.label }}">
-                    ➕ Subclass
-                  </button>
+                  <div style="display: flex; gap: 4px;">
+                    <button class="btn-sm" style="font-size: 10px; padding: 2px 6px;" (click)="openSubclassModal(cls.label)" title="Create Subclass of {{ cls.label }}">
+                      ➕ Subclass
+                    </button>
+                    <button class="btn-danger-sm" style="font-size: 10px; padding: 2px 6px;" (click)="deleteClass(cls.label)" title="Delete Class {{ cls.label }}">
+                      🗑️ Delete
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -694,6 +702,20 @@ interface PresetOption {
       padding: 4px 10px;
       border-radius: 6px;
       cursor: pointer;
+    }
+    .btn-danger-sm {
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      color: #fda4af;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-danger-sm:hover {
+      background: rgba(244, 63, 94, 0.3);
+      color: #ffe4e6;
     }
     .glow-btn {
       box-shadow: 0 0 16px rgba(6, 182, 212, 0.35);
@@ -2076,5 +2098,33 @@ ecom:referencesProduct a owl:ObjectProperty ;
 
   submitCreateSubclass() {
     this.submitCreateClass();
+  }
+
+  deleteClass(className: string) {
+    if (!className || !this.parsedData) return;
+    if (confirm(`Remove ontology class "${className}" from preview sandbox?`)) {
+      if (this.parsedData.classes) {
+        this.parsedData.classes = this.parsedData.classes.filter((c: any) => c.label !== className);
+      }
+      if (this.parsedData.graph?.nodes) {
+        this.parsedData.graph.nodes = this.parsedData.graph.nodes.filter((n: any) => n.label !== className);
+      }
+      if (this.parsedData.graph?.edges) {
+        this.parsedData.graph.edges = this.parsedData.graph.edges.filter((e: any) => e.source !== className && e.target !== className);
+      }
+      if (this.parsedData.properties) {
+        this.parsedData.properties = this.parsedData.properties.filter((p: any) => p.parent_class !== className && p.target_class !== className);
+      }
+      if (this.parsedData.stats) {
+        this.parsedData.stats.classes_count = this.parsedData.classes ? this.parsedData.classes.length : 0;
+      }
+      if (this.selectedGraphNode && this.selectedGraphNode.label === className) {
+        this.selectedGraphNode = null;
+      }
+      this.showToast(`🗑️ Class "${className}" removed from sandbox.`);
+      if (this.activeViewTab === 'graph') {
+        this.initCytoscape();
+      }
+    }
   }
 }

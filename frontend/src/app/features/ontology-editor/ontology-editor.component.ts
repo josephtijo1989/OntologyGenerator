@@ -242,6 +242,9 @@ import cytoscape, { Core } from 'cytoscape';
                   <button class="btn-secondary" style="width: 100%; font-size: 11px; padding: 6px 10px;" (click)="openCreateClassModal(selectedGraphNode.properties?.subclass_of?.[0] || 'owl:Thing')">
                     ➕ Create Sibling Class
                   </button>
+                  <button class="btn-danger-sm" style="width: 100%; font-size: 11px; padding: 6px 10px;" (click)="deleteClass(selectedGraphNode.label)">
+                    🗑️ Delete Class {{ selectedGraphNode.label }}
+                  </button>
                 </div>
               </div>
             </div>
@@ -271,9 +274,14 @@ import cytoscape, { Core } from 'cytoscape';
                   <span class="domain-badge" [class.lookup]="cls.annotations?.domain_type === 'Lookup'" [class.fact]="cls.annotations?.domain_type === 'Fact'">
                     {{ cls.annotations?.domain_type || 'Dimension' }}
                   </span>
-                  <button class="btn-sm" style="font-size: 10px; padding: 2px 6px;" (click)="openCreateClassModal(cls.label)" title="Create Subclass of {{ cls.label }}">
-                    ➕ Subclass
-                  </button>
+                  <div style="display: flex; gap: 4px;">
+                    <button class="btn-sm" style="font-size: 10px; padding: 2px 6px;" (click)="openCreateClassModal(cls.label)" title="Create Subclass of {{ cls.label }}">
+                      ➕ Subclass
+                    </button>
+                    <button class="btn-danger-sm" style="font-size: 10px; padding: 2px 6px;" (click)="deleteClass(cls.label)" title="Delete Class {{ cls.label }}">
+                      🗑️ Delete
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -575,6 +583,20 @@ import cytoscape, { Core } from 'cytoscape';
       padding: 4px 10px;
       border-radius: 6px;
       cursor: pointer;
+    }
+    .btn-danger-sm {
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      color: #fda4af;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-danger-sm:hover {
+      background: rgba(244, 63, 94, 0.3);
+      color: #ffe4e6;
     }
     .glow-btn {
       box-shadow: 0 0 16px rgba(6, 182, 212, 0.35);
@@ -1340,5 +1362,25 @@ export class OntologyEditorComponent implements OnInit, AfterViewInit, OnDestroy
         alert(err?.error?.detail || err?.message || 'Failed to create ontology class.');
       }
     });
+  }
+
+  deleteClass(className: string) {
+    if (!className) return;
+    if (confirm(`Are you sure you want to delete ontology class "${className}"? This will remove all associated properties and relationships.`)) {
+      this.isLoading = true;
+      this.apiService.deleteOntologyClass(this.projectId, className).subscribe({
+        next: (res) => {
+          this.showToast(`🗑️ Ontology class "${className}" deleted successfully.`);
+          if (this.selectedGraphNode && this.selectedGraphNode.label === className) {
+            this.selectedGraphNode = null;
+          }
+          this.loadOntology();
+        },
+        error: (err) => {
+          this.isLoading = false;
+          this.showToast('Failed to delete ontology class: ' + (err.error?.detail || err.message || 'Server Error'));
+        }
+      });
+    }
   }
 }

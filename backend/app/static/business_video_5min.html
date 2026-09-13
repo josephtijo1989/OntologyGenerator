@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OntoForge - 5 Minute Executive Business Video Showcase</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #0B0F19;
+            --bg-card: rgba(18, 24, 38, 0.85);
+            --border-glow: rgba(99, 102, 241, 0.35);
+            --border-light: rgba(255, 255, 255, 0.08);
+            --accent-indigo: #6366F1;
+            --accent-cyan: #06B6D4;
+            --accent-violet: #8B5CF6;
+            --accent-emerald: #10B981;
+            --accent-rose: #F43F5E;
+            --text-heading: #F8FAFC;
+            --text-body: #94A3B8;
+            --text-muted: #64748B;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-heading);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 45%),
+                radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.12) 0%, transparent 45%);
+        }
+
+        .exec-video-container {
+            width: 94%;
+            max-width: 1280px;
+            margin: 20px auto;
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 20px;
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.8), 0 0 50px rgba(99, 102, 241, 0.15);
+            backdrop-filter: blur(20px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .exec-header {
+            padding: 16px 28px;
+            background: rgba(11, 15, 25, 0.9);
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-cyan));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1rem;
+            color: white;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .logo-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, #FFFFFF, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .pill-5min {
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid var(--accent-indigo);
+            color: #A5B4FC;
+            font-size: 0.75rem;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        /* Stage */
+        .video-stage {
+            position: relative;
+            width: 100%;
+            height: 560px;
+            background: #050811;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .scene {
+            position: absolute;
+            inset: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s ease;
+            transform: scale(0.97);
+        }
+
+        .scene.active {
+            opacity: 1;
+            visibility: visible;
+            transform: scale(1);
+        }
+
+        /* Scene Typography & Layouts */
+        .scene-headline {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #FFFFFF 30%, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .scene-sub {
+            font-size: 1.05rem;
+            color: var(--text-body);
+            text-align: center;
+            max-width: 750px;
+            margin-bottom: 28px;
+        }
+
+        /* Application UI Window Mockup */
+        .app-window {
+            width: 100%;
+            max-width: 900px;
+            background: #0D1322;
+            border: 1px solid var(--border-glow);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+        }
+
+        .app-window-header {
+            background: #161F33;
+            padding: 10px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .dots { display: flex; gap: 8px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .d-red { background: #FF5F56; }
+        .d-yellow { background: #FFBD2E; }
+        .d-green { background: #27C93F; }
+
+        .app-window-body {
+            padding: 24px;
+        }
+
+        /* Grid Mockups */
+        .card-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .class-card {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: 16px;
+            transition: all 0.3s;
+        }
+
+        .class-card:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+        }
+
+        .class-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .btn-del {
+            background: rgba(244, 63, 94, 0.15);
+            border: 1px solid var(--accent-rose);
+            color: #FDA4AF;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .attr-tag {
+            background: rgba(255, 255, 255, 0.06);
+            color: #CBD5E1;
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            display: inline-block;
+            margin-top: 6px;
+            margin-right: 4px;
+        }
+
+        /* Rebinding Diagram */
+        .rebinding-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px dashed var(--accent-violet);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .rebound-pill {
+            background: rgba(99, 102, 241, 0.2);
+            border: 2px solid var(--accent-indigo);
+            padding: 14px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+        }
+
+        /* Cypher Code Box */
+        .cypher-box {
+            background: #040711;
+            border: 1px solid var(--accent-cyan);
+            border-radius: 10px;
+            padding: 20px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Metrics Display */
+        .metrics-4-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .stat-card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--border-light);
+            border-radius: 14px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .stat-num {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--accent-cyan);
+            margin-bottom: 4px;
+        }
+
+        .stat-lbl {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Subtitles Ticker Bar */
+        .subtitles-ticker {
+            padding: 16px 28px;
+            background: rgba(15, 23, 42, 0.95);
+            border-top: 1px solid var(--border-light);
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .sub-tag {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent-indigo);
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .sub-body {
+            font-size: 0.95rem;
+            color: #F1F5F9;
+            line-height: 1.5;
+            font-weight: 500;
+        }
+
+        /* Controls Bar */
+        .controls-footer {
+            padding: 14px 28px;
+            background: rgba(2, 6, 23, 0.95);
+            border-top: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .btn-ctrl {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-light);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+
+        .btn-ctrl:hover {
+            background: var(--accent-indigo);
+        }
+
+        .btn-ctrl.active {
+            background: var(--accent-cyan);
+            color: black;
+            border-color: var(--accent-cyan);
+            font-weight: 700;
+        }
+
+        .timeline-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .timeline-track {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .timeline-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-indigo), var(--accent-cyan));
+            transition: width 0.1s linear;
+        }
+
+        .time-readout {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .scene-navigator {
+            display: flex;
+            gap: 4px;
+        }
+
+        .scene-pill {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-light);
+            color: var(--text-muted);
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .scene-pill.active {
+            background: var(--accent-indigo);
+            color: white;
+            border-color: var(--accent-indigo);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="exec-video-container">
+        <!-- Header -->
+        <header class="exec-header">
+            <div class="logo-box">
+                <div class="logo-icon">OF</div>
+                <div class="logo-title">OntoForge</div>
+            </div>
+            <div class="pill-5min">5-Minute Executive Product Presentation Video</div>
+        </header>
+
+        <!-- Stage -->
+        <main class="video-stage">
+
+            <!-- SCENE 1: Executive Opening -->
+            <div class="scene active" id="sc-1">
+                <h1 class="scene-headline">Unlocking Enterprise Knowledge Graphs</h1>
+                <p class="scene-sub">AI-Powered RDF/OWL Ontology Extraction & Live Neo4j Synchronization</p>
+                <div style="display: flex; gap: 20px; margin-top: 10px;">
+                    <div style="background: rgba(99, 102, 241, 0.15); border: 1px solid var(--accent-indigo); padding: 16px 28px; border-radius: 12px; font-weight: 700; color: #A5B4FC;">
+                        🚀 10x Modeling Speedup
+                    </div>
+                    <div style="background: rgba(6, 182, 212, 0.15); border: 1px solid var(--accent-cyan); padding: 16px 28px; border-radius: 12px; font-weight: 700; color: #6EE7B7;">
+                        🛡️ Zero AI Hallucinations
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 2: The Enterprise Dilemma -->
+            <div class="scene" id="sc-2">
+                <h2 class="scene-headline" style="color: #FCA5A5;">The Enterprise Data Dilemma</h2>
+                <p class="scene-sub">Siloed Data & Manual Ontology Construction Cost Millions</p>
+                <div class="card-grid-3" style="width: 100%; max-width: 850px;">
+                    <div class="class-card" style="border-color: rgba(244, 63, 94, 0.4); text-align: center;">
+                        <h4 style="color: #FDA4AF; margin-bottom: 6px;">80%+ Siloed Data</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">SQL tables & PDFs lacking semantic topology.</p>
+                    </div>
+                    <div class="class-card" style="border-color: rgba(245, 158, 11, 0.4); text-align: center;">
+                        <h4 style="color: #FDE68A; margin-bottom: 6px;">6 Months Manual Labor</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">Expensive domain-expert ontology building.</p>
+                    </div>
+                    <div class="class-card" style="border-color: rgba(239, 68, 68, 0.4); text-align: center;">
+                        <h4 style="color: #FCA5A5; margin-bottom: 6px;">RAG Hallucinations</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">LLMs producing wrong answers without graph context.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 3: Solution Architecture -->
+            <div class="scene" id="sc-3">
+                <h2 class="scene-headline">Automated Solution Architecture</h2>
+                <p class="scene-sub">From Raw Data to Graph Intelligence in 4 Automated Steps</p>
+                <div style="display: flex; gap: 14px; align-items: center; width: 100%; max-width: 850px;">
+                    <div style="flex: 1; background: rgba(30, 41, 59, 0.8); border: 1px solid var(--accent-cyan); padding: 16px; border-radius: 10px; text-align: center;">
+                        <strong style="color: var(--accent-cyan); font-size: 0.9rem;">1. Data Ingestion</strong>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">SQL & Unstructured Text</p>
+                    </div>
+                    <span style="color: var(--accent-cyan);">➔</span>
+                    <div style="flex: 1; background: rgba(30, 41, 59, 0.8); border: 1px solid var(--accent-indigo); padding: 16px; border-radius: 10px; text-align: center;">
+                        <strong style="color: var(--accent-indigo); font-size: 0.9rem;">2. Auto-Extraction</strong>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">OWL/RDF Class Matrix</p>
+                    </div>
+                    <span style="color: var(--accent-cyan);">➔</span>
+                    <div style="flex: 1; background: rgba(30, 41, 59, 0.8); border: 1px solid var(--accent-violet); padding: 16px; border-radius: 10px; text-align: center;">
+                        <strong style="color: var(--accent-violet); font-size: 0.9rem;">3. Refine & Govern</strong>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Subclass Rebinding</p>
+                    </div>
+                    <span style="color: var(--accent-cyan);">➔</span>
+                    <div style="flex: 1; background: rgba(16, 185, 129, 0.15); border: 1px solid var(--accent-emerald); padding: 16px; border-radius: 10px; text-align: center;">
+                        <strong style="color: var(--accent-emerald); font-size: 0.9rem;">4. Neo4j & AI GraphRAG</strong>
+                        <p style="font-size: 0.75rem; color: #A7F3D0; margin-top: 4px;">Cypher & Gemini Insights</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 4: App Screen — Class Matrix -->
+            <div class="scene" id="sc-4">
+                <div class="app-window">
+                    <div class="app-window-header">
+                        <div class="dots"><div class="dot d-red"></div><div class="dot d-yellow"></div><div class="dot d-green"></div></div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono';">OntoForge Workspace - Class Matrix & Attribute Inspector</span>
+                        <span style="font-size: 0.75rem; color: var(--accent-emerald);">● Neo4j Live</span>
+                    </div>
+                    <div class="app-window-body">
+                        <div class="card-grid-3">
+                            <div class="class-card">
+                                <div class="class-header">
+                                    <strong style="color: var(--accent-cyan);">Device</strong>
+                                    <button class="btn-del">🗑️ Delete</button>
+                                </div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted);">URI: http://onto.org/Device</div>
+                                <span class="attr-tag">id: string</span><span class="attr-tag">status: string</span>
+                            </div>
+
+                            <div class="class-card">
+                                <div class="class-header">
+                                    <strong style="color: var(--accent-cyan);">TemperatureSensor</strong>
+                                    <button class="btn-del">🗑️ Delete</button>
+                                </div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted);">subClassOf: Device</div>
+                                <span class="attr-tag">temp: float</span><span class="attr-tag">unit: string</span>
+                            </div>
+
+                            <div class="class-card">
+                                <div class="class-header">
+                                    <strong style="color: var(--accent-cyan);">Location</strong>
+                                    <button class="btn-del">🗑️ Delete</button>
+                                </div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted);">URI: http://onto.org/Location</div>
+                                <span class="attr-tag">facility: string</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 5: App Screen — Smart Rebinding -->
+            <div class="scene" id="sc-5">
+                <div class="app-window">
+                    <div class="app-window-header">
+                        <div class="dots"><div class="dot d-red"></div><div class="dot d-yellow"></div><div class="dot d-green"></div></div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">Cascading Dependency Protection</span>
+                        <span style="font-size: 0.75rem; color: var(--accent-cyan);">Smart Rebinding Active</span>
+                    </div>
+                    <div class="app-window-body">
+                        <div class="rebinding-box">
+                            <div style="text-align: center;">
+                                <div style="font-size: 0.75rem; color: var(--accent-rose); font-weight: 700; margin-bottom: 4px;">DELETED CLASS</div>
+                                <div class="rebound-pill" style="border-color: var(--accent-rose); background: rgba(244,63,94,0.1);">Device</div>
+                            </div>
+                            <span style="color: var(--accent-cyan); font-weight: 700;">➔ Rebind Subclasses ➔</span>
+                            <div style="text-align: center;">
+                                <div style="font-size: 0.75rem; color: var(--accent-emerald); font-weight: 700; margin-bottom: 4px;">NEW PARENT CLASS</div>
+                                <div class="rebound-pill" style="border-color: var(--accent-emerald); background: rgba(16,185,129,0.1);">owl:Thing</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 14px; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 6px; font-size: 0.8rem; color: #CBD5E1;">
+                            ✔ <strong>Subclass Rebound:</strong> <code>TemperatureSensor</code> rebound to <code>owl:Thing</code>. TargetGraphNode foreign keys sanitized with zero data loss.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 6: App Screen — Gemini Cypher Engine -->
+            <div class="scene" id="sc-6">
+                <div class="app-window">
+                    <div class="app-window-header">
+                        <div class="dots"><div class="dot d-red"></div><div class="dot d-yellow"></div><div class="dot d-green"></div></div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">Gemini AI GraphRAG Console</span>
+                        <span style="font-size: 0.75rem; color: var(--accent-violet);">Gemini 1.5 Pro</span>
+                    </div>
+                    <div class="app-window-body">
+                        <div class="cypher-box">
+                            <div style="color: var(--accent-cyan); margin-bottom: 10px; font-size: 0.9rem;">
+                                💬 <strong>User Prompt:</strong> "Find all sensors with temperature above 85 degrees and return their facility location."
+                            </div>
+                            <div style="color: var(--accent-emerald); font-size: 0.8rem; line-height: 1.6;">
+                                // Gemini Auto-Generated Cypher Query<br>
+                                MATCH (s:TemperatureSensor)-[:LOCATED_IN]->(l:Location)<br>
+                                WHERE s.temperature > 85.0<br>
+                                RETURN s.id AS SensorID, s.temperature AS TempValue, l.facilityName AS Facility<br><br>
+                                <span style="color: #6EE7B7;">✔ 4 Graph Nodes Returned from Neo4j (Deterministic Grounding)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 7: Tech Stack -->
+            <div class="scene" id="sc-7">
+                <h2 class="scene-headline">Multi-Database Architecture & Stack</h2>
+                <p class="scene-sub">FastAPI + Angular 19 + Neo4j + SQLite/Postgres Dual Persistence</p>
+                <div style="display: flex; gap: 16px; width: 100%; max-width: 850px; justify-content: center;">
+                    <div style="background: rgba(30, 41, 59, 0.8); border: 1px solid var(--border-light); padding: 20px; border-radius: 12px; text-align: center; flex: 1;">
+                        <h4 style="color: var(--accent-cyan);">FastAPI Backend</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Modular async Python services</p>
+                    </div>
+                    <div style="background: rgba(30, 41, 59, 0.8); border: 1px solid var(--border-light); padding: 20px; border-radius: 12px; text-align: center; flex: 1;">
+                        <h4 style="color: var(--accent-indigo);">Angular 19 UI</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Reactive component state dashboard</p>
+                    </div>
+                    <div style="background: rgba(30, 41, 59, 0.8); border: 1px solid var(--border-light); padding: 20px; border-radius: 12px; text-align: center; flex: 1;">
+                        <h4 style="color: var(--accent-emerald);">Neo4j Graph DB</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Native Cypher graph projections</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 8: ROI & Impact -->
+            <div class="scene" id="sc-8">
+                <h2 class="scene-headline">Measurable Business Impact</h2>
+                <p class="scene-sub">Quantifiable ROI for Enterprise Knowledge Modeling & AI</p>
+                <div class="metrics-4-grid">
+                    <div class="stat-card"><div class="stat-num">10x</div><div class="stat-lbl">Faster Modeling Speed</div></div>
+                    <div class="stat-card"><div class="stat-num">100%</div><div class="stat-lbl">W3C OWL/RDF Compliant</div></div>
+                    <div class="stat-card"><div class="stat-num">0%</div><div class="stat-lbl">Schema Breakage Risk</div></div>
+                    <div class="stat-card"><div class="stat-num">100%</div><div class="stat-lbl">Deterministic GraphRAG</div></div>
+                </div>
+            </div>
+
+            <!-- SCENE 9: Outro & Deployment -->
+            <div class="scene" id="sc-9">
+                <div style="font-size: 3.5rem; font-weight: 800; background: linear-gradient(90deg, #FFFFFF, var(--accent-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 12px;">
+                    OntoForge
+                </div>
+                <p style="font-size: 1.2rem; color: #F1F5F9; margin-bottom: 24px;">Transform Enterprise Data into Actionable Knowledge Graph Intelligence</p>
+                <a href="https://github.com/josephtijo1989/OntologyGenerator" target="_blank" style="text-decoration: none;">
+                    <button class="btn-ctrl active" style="padding: 14px 28px; font-size: 1rem;">
+                        🚀 Launch Today on GitHub / Private Cloud
+                    </button>
+                </a>
+            </div>
+
+        </main>
+
+        <!-- Subtitles Ticker -->
+        <div class="subtitles-ticker">
+            <div class="sub-tag" id="sub-tag-display">SCENE 1: EXECUTIVE OPENING (0:00 - 0:35)</div>
+            <div class="sub-body" id="sub-body-display">
+                Loading presentation script...
+            </div>
+        </div>
+
+        <!-- Controls Footer -->
+        <footer class="controls-footer">
+            <button class="btn-ctrl" id="btn-play-pause" onclick="togglePlayPause()">
+                ▶ Play 5-Min Video
+            </button>
+            <button class="btn-ctrl" id="btn-voiceover" onclick="toggleVoiceover()">
+                🔊 Voiceover: ON
+            </button>
+
+            <div class="timeline-container">
+                <div class="timeline-track" onclick="seekVideo(event)">
+                    <div class="timeline-fill" id="timeline-fill"></div>
+                </div>
+                <div class="time-readout">
+                    <span id="time-curr">0:00</span>
+                    <span id="time-max">5:00</span>
+                </div>
+            </div>
+
+            <div class="scene-navigator">
+                <button class="scene-pill active" onclick="jumpToScene(0)">1</button>
+                <button class="scene-pill" onclick="jumpToScene(1)">2</button>
+                <button class="scene-pill" onclick="jumpToScene(2)">3</button>
+                <button class="scene-pill" onclick="jumpToScene(3)">4</button>
+                <button class="scene-pill" onclick="jumpToScene(4)">5</button>
+                <button class="scene-pill" onclick="jumpToScene(5)">6</button>
+                <button class="scene-pill" onclick="jumpToScene(6)">7</button>
+                <button class="scene-pill" onclick="jumpToScene(7)">8</button>
+                <button class="scene-pill" onclick="jumpToScene(8)">9</button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const scriptData5Min = [
+            {
+                id: "sc-1",
+                tag: "SCENE 1: EXECUTIVE OPENING & STRATEGIC VISION (0:00 - 0:35)",
+                duration: 35,
+                voText: "Welcome to OntoForge—the automated enterprise Knowledge Graph and Ontology Generation engine. In the modern digital economy, enterprise success hinges on data clarity. Yet, organizations struggle to unify disconnected relational schemas, legacy databases, and unstructured documents into a cohesive semantic model. OntoForge solves this challenge by automating W3C-standard ontology construction and live graph synchronization."
+            },
+            {
+                id: "sc-2",
+                tag: "SCENE 2: THE ENTERPRISE DATA DILEMMA (0:35 - 1:10)",
+                duration: 35,
+                voText: "Today, over eighty percent of enterprise data remains trapped in isolated databases and documents lacking explicit relationships. Traditional ontology engineering requires specialized domain teams spending upwards of six months building custom models. Without explicit graph context, generative AI and Retrieval-Augmented Generation applications produce costly hallucinations and unreliable business insights."
+            },
+            {
+                id: "sc-3",
+                tag: "SCENE 3: INTRODUCING ONTOFORGE (1:10 - 1:45)",
+                duration: 35,
+                voText: "OntoForge automates the entire knowledge graph lifecycle. By analyzing relational database schemas and unstructured text, OntoForge extracts W3C-standard OWL ontologies in seconds. It bridges legacy data infrastructure directly into live Neo4j knowledge graphs, enabling real-time graph analytics, automated schema governance, and hallucination-free enterprise AI."
+            },
+            {
+                id: "sc-4",
+                tag: "SCENE 4: APPLICATION SCREEN - CLASS MATRIX (1:45 - 2:30)",
+                duration: 45,
+                voText: "Here is the live OntoForge Class Matrix workspace. Domain experts and data architects gain an intuitive, visual dashboard to manage enterprise ontologies. Each class card displays its full URI namespace, parent-child inheritance, and attribute definitions. With our interactive Inspector Drawer, teams can modify properties, adjust data types, and review RDF triple declarations in real time."
+            },
+            {
+                id: "sc-5",
+                tag: "SCENE 5: APPLICATION SCREEN - SMART GOVERNANCE (2:30 - 3:15)",
+                duration: 45,
+                voText: "Maintaining schema integrity during refactoring is critical. OntoForge features smart cascading governance. When an obsolete class like Device is deleted, OntoForge automatically rebinds all child subclasses—such as TemperatureSensor—directly to owl:Thing. Foreign keys and orphan attributes are safely sanitized, guaranteeing zero broken dependencies across downstream applications."
+            },
+            {
+                id: "sc-6",
+                tag: "SCENE 6: APPLICATION SCREEN - GEMINI AI GRAPHRAG (3:15 - 4:00)",
+                duration: 45,
+                voText: "OntoForge combines graph databases with advanced Generative AI. Integrated directly with Gemini AI, OntoForge converts natural language business prompts into precise Cypher graph queries. Instead of guessing, the AI queries the live Neo4j database, retrieving exact node records and delivering accurate, deterministic answers grounded in enterprise truth."
+            },
+            {
+                id: "sc-7",
+                tag: "SCENE 7: MULTI-DATABASE & DUAL FRONTEND STACK (4:00 - 4:25)",
+                duration: 25,
+                voText: "OntoForge is architected for enterprise flexibility. Built on FastAPI and Angular 19, it supports dual relational and graph database persistence. Whether you choose our rich Angular dashboard or lightweight embedded FastAPI interface, OntoForge exports standard RDF Turtle files for seamless interoperability."
+            },
+            {
+                id: "sc-8",
+                tag: "SCENE 8: MEASURABLE BUSINESS IMPACT & ROI (4:25 - 4:45)",
+                duration: 20,
+                voText: "OntoForge delivers tangible business return on investment. Organizations achieve ten times faster ontology modeling speeds, eliminate schema breakage risks, and ground enterprise AI applications in full W3C-compliant knowledge graph truth."
+            },
+            {
+                id: "sc-9",
+                tag: "SCENE 9: ENTERPRISE DEPLOYMENT & OUTRO (4:45 - 5:00)",
+                duration: 15,
+                voText: "Ready to transform your enterprise data into actionable graph intelligence? Deploy OntoForge today across your private cloud or microservices architecture. Thank you!"
+            }
+        ];
+
+        let currentIdx = 0;
+        let isPlaying = false;
+        let voiceoverOn = true;
+        let currentSeconds = 0;
+        const totalSeconds = 300;
+        let timerInterval = null;
+        let synth = window.speechSynthesis;
+
+        function updateUI() {
+            scriptData5Min.forEach((item, i) => {
+                const el = document.getElementById(item.id);
+                const pill = document.querySelectorAll('.scene-pill')[i];
+                if (i === currentIdx) {
+                    el.classList.add('active');
+                    if (pill) pill.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                    if (pill) pill.classList.remove('active');
+                }
+            });
+
+            const curr = scriptData5Min[currentIdx];
+            document.getElementById('sub-tag-display').innerText = curr.tag;
+            document.getElementById('sub-body-display').innerText = curr.voText;
+
+            if (isPlaying && voiceoverOn && synth) {
+                synth.cancel();
+                const utterance = new SpeechSynthesisUtterance(curr.voText);
+                utterance.rate = 1.0;
+                synth.speak(utterance);
+            }
+        }
+
+        function togglePlayPause() {
+            isPlaying = !isPlaying;
+            const btn = document.getElementById('btn-play-pause');
+            if (isPlaying) {
+                btn.innerText = "⏸ Pause 5-Min Video";
+                btn.classList.add('active');
+                startTimer();
+                updateUI();
+            } else {
+                btn.innerText = "▶ Play 5-Min Video";
+                btn.classList.remove('active');
+                stopTimer();
+                if (synth) synth.cancel();
+            }
+        }
+
+        function toggleVoiceover() {
+            voiceoverOn = !voiceoverOn;
+            const btn = document.getElementById('btn-voiceover');
+            if (voiceoverOn) {
+                btn.innerText = "🔊 Voiceover: ON";
+                btn.classList.add('active');
+            } else {
+                btn.innerText = "🔇 Voiceover: OFF";
+                btn.classList.remove('active');
+                if (synth) synth.cancel();
+            }
+        }
+
+        function startTimer() {
+            stopTimer();
+            timerInterval = setInterval(() => {
+                currentSeconds++;
+                if (currentSeconds > totalSeconds) {
+                    currentSeconds = totalSeconds;
+                    togglePlayPause();
+                    return;
+                }
+
+                let accum = 0;
+                for (let i = 0; i < scriptData5Min.length; i++) {
+                    accum += scriptData5Min[i].duration;
+                    if (currentSeconds <= accum) {
+                        if (currentIdx !== i) {
+                            currentIdx = i;
+                            updateUI();
+                        }
+                        break;
+                    }
+                }
+
+                const pct = (currentSeconds / totalSeconds) * 100;
+                document.getElementById('timeline-fill').style.width = pct + '%';
+
+                const mins = Math.floor(currentSeconds / 60);
+                const secs = currentSeconds % 60;
+                document.getElementById('time-curr').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+        }
+
+        function jumpToScene(idx) {
+            currentIdx = idx;
+            let accum = 0;
+            for (let i = 0; i < idx; i++) {
+                accum += scriptData5Min[i].duration;
+            }
+            currentSeconds = accum;
+            document.getElementById('timeline-fill').style.width = ((currentSeconds / totalSeconds) * 100) + '%';
+            
+            const mins = Math.floor(currentSeconds / 60);
+            const secs = currentSeconds % 60;
+            document.getElementById('time-curr').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+            updateUI();
+        }
+
+        function seekVideo(e) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const pct = clickX / rect.width;
+            currentSeconds = Math.floor(pct * totalSeconds);
+
+            let accum = 0;
+            for (let i = 0; i < scriptData5Min.length; i++) {
+                accum += scriptData5Min[i].duration;
+                if (currentSeconds <= accum) {
+                    currentIdx = i;
+                    break;
+                }
+            }
+
+            document.getElementById('timeline-fill').style.width = (pct * 100) + '%';
+            updateUI();
+        }
+
+        window.onload = () => {
+            updateUI();
+        };
+    </script>
+</body>
+</html>

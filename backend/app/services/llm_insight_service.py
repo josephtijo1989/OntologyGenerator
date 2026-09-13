@@ -15,60 +15,107 @@ from app.graph.adapters.factory import GraphAdapterFactory
 from app.utilities.logger import logger
 
 
+
+
+
 class LLMInsightService:
     def __init__(self, db: Session):
         self.db = db
 
+    def get_or_create_project_owl_file(self, project_id: str, format_str: str = "turtle") -> Tuple[str, str]:
+        """
+        Exports and saves official W3C OWL / Turtle ontology file on disk per project, returning relative file path & content.
+        """
+        from app.services.ontology_service import OntologyService
+
+        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        storage_dir = os.path.join(backend_dir, "storage", "ontologies", project_id)
+        os.makedirs(storage_dir, exist_ok=True)
+
+        ext = "ttl" if format_str in ["turtle", "ttl"] else "owl"
+        file_name = f"ontology.{ext}"
+        full_path = os.path.join(storage_dir, file_name)
+        rel_path = f"storage/ontologies/{project_id}/{file_name}"
+
+        try:
+            onto_svc = OntologyService(self.db)
+            serialized_owl = onto_svc.export_ontology(project_id, format_str=format_str)
+            with open(full_path, "w", encoding="utf-8") as f:
+                f.write(serialized_owl)
+            logger.info(f"Saved project W3C OWL ontology file to: {rel_path} ({len(serialized_owl)} bytes)")
+            return rel_path, serialized_owl
+        except Exception as e:
+            logger.warning(f"Could not export OWL file for project {project_id}: {e}")
+            if os.path.exists(full_path):
+                try:
+                    with open(full_path, "r", encoding="utf-8") as f:
+                        return rel_path, f.read()
+                except Exception:
+                    pass
+            return rel_path, ""
+
     def _build_full_llm_prompt(
         self,
         user_prompt: str,
+        owl_file_path: str,
+        owl_content: str,
         class_names: List[str],
         dt_props: Dict[str, List[str]],
         relationships: List[Dict[str, Any]],
         business_rules: List[str],
         approved_examples: List[Tuple[str, str]]
     ) -> str:
-        lines = []
-        lines.append("Task: Generate Cypher statement to query a graph database.")
-        lines.append("\nInstructions:")
-        lines.append("Use only the provided relationship types and properties in the schema.")
-        lines.append("Do not use any other relationship types or properties that are not provided.")
-        lines.append("\nCRITICAL CYPHER RULES & CONCEPT MAPPING GUIDELINES:")
-        lines.append("1. Map natural language terms to exact Node Labels present in the W3C OWL Schema.")
-        lines.append("2. For questions asking about responsible entities or status, traverse relevant relationship edges between node labels and return entity attributes.")
-        lines.append("3. ALWAYS construct explicit WHERE clause filter conditions whenever the user prompt specifies filtering criteria, status constraints, numeric thresholds, date ranges, property keywords, or descriptive conditions. Extract filtering values dynamically from the user prompt and map them to exact datatype properties in the schema. Do not omit WHERE clauses when filtering is requested, and do not hardcode arbitrary filter values.")
-        lines.append("4. For ranking or highest value queries, use sum(coalesce(...)) with ORDER BY DESC LIMIT 15;")
-        lines.append("5. To count relationships or nodes, use count(n), never size().")
-        lines.append("6. In RETURN projections using coalesce(), NEVER duplicate identical column names (e.g. write `coalesce(i.status, i.id)` NOT `coalesce(i.status, i.status, i.id)`). Project only valid ontology schema attributes.")
-        lines.append("7. Use standard `MATCH (a:NodeA)-[r:REL_TYPE]->(b:NodeB)` pattern traversals for querying related concept nodes instead of `OPTIONAL MATCH`, unless optional left-outer join behavior is explicitly requested.")
-
+        ontology_text = owl_content.strip() if (owl_content and owl_content.strip()) else "No additional ontology provided."
         if business_rules:
-            lines.append("\nDomain Governance & Business Rules:")
-            for br in business_rules[:10]:
-                lines.append(f"- {br}")
+            ontology_text += "\n\nDomain Rules:\n" + "\n".join(f"- {br}" for br in business_rules)
 
-        lines.append("\nW3C OWL Schema & Graph Topology:")
+        schema_lines = []
         for c in class_names:
             props = dt_props.get(c, [])
-            props_str = ", ".join(props[:10]) if props else "id"
-            lines.append(f"Node Label :{c} (DatatypeProperties: {props_str})")
-
+            props_str = ", ".join(props) if props else "id"
+            schema_lines.append(f"Node Label :{c} (DatatypeProperties: {props_str})")
         if relationships:
-            lines.append("\nRelationship Edges:")
+            schema_lines.append("\nRelationships:")
             for rel in relationships:
-                lines.append(f"- (:{rel['source']}) -[:{rel['relationship']}]-> (:{rel['target']})")
+                schema_lines.append(f"- (:{rel['source']}) -[:{rel['relationship']}]-> (:{rel['target']})")
+        schema_text = "\n".join(schema_lines) if schema_lines else "Graph DB Schema"
 
+        example_text = ""
         if approved_examples:
-            lines.append("\nExamples of Correct Cypher Queries for similar questions:")
+            example_text = "Here are some examples of correct Cypher queries for specific questions:\n"
             for q_prompt, c_code in approved_examples[:5]:
-                lines.append(f"Question: {q_prompt}")
-                lines.append(f"Cypher: {c_code.strip()}\n")
+                example_text += f"Question: {q_prompt}\nCypher: {c_code.strip()}\n\n"
 
-        lines.append(f"\nThe user question is:\n\"{user_prompt}\"")
-        lines.append("\nNote: Do not include any explanations or apologies in your responses.")
-        lines.append("Do not include any text except the generated Cypher statement starting with comment // Cypher query synthesized from W3C OWL Ontology.")
+        prompt_parts = [
+            "Task: Generate Cypher statement to query a graph database.",
+            "Instructions:",
+            "Use only the provided relationship types and properties in the schema.",
+            "Do not use any other relationship types or properties that are not provided.",
+            "",
+            "CRITICAL CYPHER RULES:",
+            "1. If you use a WITH clause, you MUST include EVERY variable that you intend to use later in the query or in the RETURN statement.",
+            "2. Never leave variables out of a WITH clause if you are going to RETURN them.",
+            "3. To count relationships, you MUST use the COUNT clause, never the size() function.",
+            "",
+            "Domain Ontology & Rules:",
+            ontology_text,
+            "",
+            "Schema:",
+            schema_text,
+            ""
+        ]
 
-        return "\n".join(lines)
+        if example_text:
+            prompt_parts.append(example_text.strip())
+            prompt_parts.append("")
+
+        prompt_parts.append("Note: Do not include any explanations or apologies in your responses.")
+        prompt_parts.append("Do not include any text except the generated Cypher statement.")
+        prompt_parts.append("")
+        prompt_parts.append("The question is:")
+        prompt_parts.append(user_prompt)
+
+        return "\n".join(prompt_parts)
 
     def _find_similar_approved_cypher(self, project_id: str, prompt: str) -> Optional[Tuple[ApprovedCypherQuery, float]]:
         approved_items = self.db.query(ApprovedCypherQuery).filter(ApprovedCypherQuery.project_id == project_id).all()
@@ -132,187 +179,19 @@ class LLMInsightService:
 
     def validate_and_prune_cypher_with_target_db(self, project_id: str, cypher: str) -> str:
         """
-        Validates synthesized Cypher query against Target details saved in local SQLite DB
-        (TargetGraphNode, TargetGraphAttribute, TargetGraphRelationship) or Ontology definitions before execution.
-        Prunes non-existent properties from coalesce() projections and WHERE clauses.
+        Validates and cleans synthesized Cypher query before execution against Target Graph DB.
+        Direct pass-through of LLM generated Cypher query without destructive clause mutations.
         """
-        tg_nodes = self.db.query(TargetGraphNode).filter(TargetGraphNode.project_id == project_id).all()
-        node_attr_map = {}
-        valid_labels = {}
+        if not cypher:
+            return cypher
 
-        if tg_nodes:
-            node_ids = [n.id for n in tg_nodes]
-            tg_attrs = self.db.query(TargetGraphAttribute).filter(TargetGraphAttribute.node_id.in_(node_ids)).all() if node_ids else []
-            valid_labels = {n.node_label.lower(): n.node_label for n in tg_nodes}
-            for n in tg_nodes:
-                n_attrs = [a.attribute_name for a in tg_attrs if a.node_id == n.id]
-                node_attr_map[n.node_label.lower()] = set(n_attrs)
-        else:
-            classes = self.db.query(OntologyClass).filter(OntologyClass.project_id == project_id).all()
-            if classes:
-                c_ids = [c.id for c in classes]
-                attrs = self.db.query(OntologyAttribute).filter(OntologyAttribute.class_id.in_(c_ids)).all() if c_ids else []
-                valid_labels = {c.class_name.lower(): c.class_name for c in classes}
-                for c in classes:
-                    c_attrs = [a.relationship_name or a.attribute_name for a in attrs if a.class_id == c.id and a.property_type == "DatatypeProperty"]
-                    node_attr_map[c.class_name.lower()] = set(c_attrs)
+        cleaned = cypher.strip()
+        match = re.search(r'```(?:cypher)?\s*(.*?)\s*```', cleaned, re.DOTALL)
+        if match:
+            cleaned = match.group(1).strip()
 
-        if not node_attr_map:
-            m_tables = self.db.query(MetadataTable).filter(MetadataTable.project_id == project_id).all()
-            for t in m_tables:
-                lbl = t.concept_class_name or t.table_name
-                if lbl:
-                    valid_labels[lbl.lower()] = lbl
-                    node_attr_map[lbl.lower()] = set()
-
-        alias_to_label = {}
-        matches = re.findall(r'\(([\w]+):([\w]+)\)', cypher)
-        for alias, label in matches:
-            lbl_lower = label.lower()
-            if lbl_lower in valid_labels:
-                alias_to_label[alias] = valid_labels[lbl_lower]
-            else:
-                alias_to_label[alias] = label
-
-        def prune_coalesce(match_obj):
-            coalesce_content = match_obj.group(1)
-            args = [a.strip() for a in coalesce_content.split(',')]
-            
-            parsed = []
-            for arg in args:
-                if '.' in arg:
-                    alias, prop = arg.split('.', 1)
-                    canon = prop.replace("_", "").lower()
-                    has_under = "_" in prop
-                    is_camel = bool(re.search(r'[a-z][A-Z]', prop))
-                    parsed.append({"arg": arg, "alias": alias, "prop": prop, "canon": canon, "underscore": has_under, "is_camel": is_camel})
-                else:
-                    parsed.append({"arg": arg, "alias": "", "prop": "", "canon": "", "underscore": False, "is_camel": False})
-
-            # Check if there are non-id domain properties in args
-            non_id_props = [p for p in parsed if p["prop"] and p["prop"].lower() != 'id']
-            if non_id_props:
-                parsed = non_id_props
-
-            # Group by (alias, canon)
-            grouped = {}
-            for p in parsed:
-                key = (p["alias"], p["canon"]) if p["canon"] else p["arg"]
-                grouped.setdefault(key, []).append(p)
-
-            valid_args = []
-            for key, p_list in grouped.items():
-                if isinstance(key, tuple) and key[1]:
-                    alias, canon = key
-                    target_label = alias_to_label.get(alias)
-                    available_props = node_attr_map.get(target_label.lower()) if target_label else None
-                    
-                    matched_in_schema = []
-                    if available_props:
-                        for p in p_list:
-                            if p["prop"] in available_props or p["prop"].lower() in [ap.lower() for ap in available_props]:
-                                matched_in_schema.append(p)
-                    
-                    candidates = matched_in_schema if matched_in_schema else p_list
-                    best = sorted(candidates, key=lambda x: (not x["is_camel"], x["underscore"], len(x["prop"])))[0]
-                    valid_args.append(best["arg"])
-                else:
-                    valid_args.append(p_list[0]["arg"])
-
-            unique_valid = list(dict.fromkeys(valid_args))
-            if len(unique_valid) == 1:
-                return unique_valid[0]
-            else:
-                return f"coalesce({', '.join(unique_valid)})"
-
-        pruned_cypher = re.sub(r'coalesce\(([^)]+)\)', prune_coalesce, cypher)
-
-        def prune_where_cond(match_obj):
-            clause_str = match_obj.group(0)
-            if not clause_str.upper().startswith("WHERE"):
-                return clause_str
-
-            where_body = clause_str[5:].strip()
-            if not where_body:
-                return ""
-
-            where_parts = re.split(r'\s+AND\s+', where_body, flags=re.IGNORECASE)
-            valid_where_parts = []
-
-            for part in where_parts:
-                cleaned_part = part.strip()
-                sub_items = [i.strip() for i in re.split(r'\s+OR\s+', cleaned_part.strip('()'), flags=re.IGNORECASE) if i.strip()]
-                
-                exact_matched_items = []
-                for item in sub_items:
-                    prop_match = re.search(r'([\w]+)\.([\w]+)', item)
-                    if prop_match:
-                        alias, prop = prop_match.group(1), prop_match.group(2)
-                        target_label = alias_to_label.get(alias)
-                        if target_label and target_label.lower() in node_attr_map:
-                            available_props = node_attr_map[target_label.lower()]
-                            matching_ap = None
-                            if available_props:
-                                for ap in available_props:
-                                    if ap == prop or ap.lower() == prop.lower():
-                                        matching_ap = ap
-                                        break
-                                if matching_ap:
-                                    rewritten_item = re.sub(rf'\b{re.escape(alias)}\.{re.escape(prop)}\b', f"{alias}.{matching_ap}", item)
-                                    exact_matched_items.append(rewritten_item)
-                                else:
-                                    exact_matched_items.append(item)
-                            else:
-                                exact_matched_items.append(item)
-                        else:
-                            exact_matched_items.append(item)
-                    else:
-                        exact_matched_items.append(item)
-
-                target_items = exact_matched_items if exact_matched_items else sub_items
-
-                # Deduplicate and collapse camelCase vs snake_case_with_underscores
-                parsed = []
-                for item in target_items:
-                    m = re.search(r'([\w]+)\.([\w]+)', item)
-                    if m:
-                        a, p = m.group(1), m.group(2)
-                        canon = p.replace("_", "").lower()
-                        has_under = "_" in p
-                        parsed.append({"item": item, "alias": a, "canon": canon, "underscore": has_under})
-                    else:
-                        parsed.append({"item": item, "alias": "", "canon": "", "underscore": False})
-
-                grouped = {}
-                for p in parsed:
-                    key = (p["alias"], p["canon"]) if p["canon"] else p["item"]
-                    grouped.setdefault(key, []).append(p)
-
-                deduped_items = []
-                for key, p_list in grouped.items():
-                    if isinstance(key, tuple) and key[1]:
-                        non_under = [p for p in p_list if not p["underscore"]]
-                        if non_under:
-                            deduped_items.append(non_under[0]["item"])
-                        else:
-                            deduped_items.append(p_list[0]["item"])
-                    else:
-                        deduped_items.append(p_list[0]["item"])
-
-                unique_sub_items = list(dict.fromkeys(deduped_items))
-                if len(unique_sub_items) == 1:
-                    valid_where_parts.append(unique_sub_items[0])
-                elif len(unique_sub_items) > 1:
-                    valid_where_parts.append(f"({' OR '.join(unique_sub_items)})")
-
-            if valid_where_parts:
-                return "WHERE " + " AND ".join(valid_where_parts) + "\n"
-            return ""
-
-        pruned_cypher = re.sub(r'WHERE\s+.*?(?=\s+RETURN|\s+LIMIT|;|$)', prune_where_cond, pruned_cypher, flags=re.DOTALL | re.IGNORECASE)
-
-        logger.info(f"Validated and pruned Cypher query using local SQLite Target DB details for project {project_id}")
-        return pruned_cypher
+        logger.info(f"Validated Cypher query for project {project_id}")
+        return cleaned
 
     def generate_insights(self, project_id: str, req: LLMInsightRequest) -> LLMInsightResponse:
         start_time = time.time()
@@ -332,21 +211,19 @@ class LLMInsightService:
         dt_props = {}
         relationships = []
         class_names = []
+        class_metadata = {}
 
-        if tg_nodes:
-            class_names = [n.node_label for n in tg_nodes]
-            for n in tg_nodes:
-                c_props = [a.attribute_name for a in tg_attrs if a.node_id == n.id]
-                dt_props[n.node_label] = c_props
-            
-            for r in tg_rels:
-                rel = to_upper_snake_case(r.relationship_type)
-                relationships.append({"source": r.source_label, "relationship": rel, "target": r.target_label})
-        else:
+        # 1. Primary Context Source: W3C OWL Semantic Ontology Layer (OntologyClass & OntologyAttribute)
+        if classes:
             c_ids = [c.id for c in classes]
             c_map = {c.id: c.class_name for c in classes}
             attrs = self.db.query(OntologyAttribute).filter(OntologyAttribute.class_id.in_(c_ids)).all() if c_ids else []
             for c in classes:
+                t_name = c.mapped_table.table_name if c.mapped_table else ""
+                class_metadata[c.class_name] = {
+                    "comment": c.comment or "",
+                    "table_name": t_name
+                }
                 c_attrs = [a for a in attrs if a.class_id == c.id and a.property_type == "DatatypeProperty"]
                 props_list = []
                 for a in c_attrs:
@@ -356,6 +233,8 @@ class LLMInsightService:
                     if a.mapped_column and a.mapped_column.column_name and a.mapped_column.column_name not in props_list:
                         props_list.append(a.mapped_column.column_name)
                 dt_props[c.class_name] = props_list
+                if c.class_name not in class_names:
+                    class_names.append(c.class_name)
 
             obj_attrs = [a for a in attrs if a.property_type == "ObjectProperty" or a.target_class_name or a.target_class_id]
             for a in obj_attrs:
@@ -363,10 +242,28 @@ class LLMInsightService:
                 tgt = a.target_class_name or c_map.get(a.target_class_id)
                 if src and tgt:
                     rel = to_upper_snake_case(a.relationship_name or a.attribute_name or "RELATES_TO")
-                    relationships.append({"source": src, "relationship": rel, "target": tgt})
+                    rel_item = {"source": src, "relationship": rel, "target": tgt}
+                    if rel_item not in relationships:
+                        relationships.append(rel_item)
 
-            class_names = [c.class_name for c in classes]
+        # 2. Secondary Context Source: Merge TargetGraph Nodes & Relationship Types
+        if tg_nodes:
+            for n in tg_nodes:
+                if n.node_label not in class_names:
+                    class_names.append(n.node_label)
+                c_props = [a.attribute_name for a in tg_attrs if a.node_id == n.id]
+                existing_props = dt_props.setdefault(n.node_label, [])
+                for p in c_props:
+                    if p not in existing_props:
+                        existing_props.append(p)
+            
+            for r in tg_rels:
+                rel = to_upper_snake_case(r.relationship_type)
+                rel_item = {"source": r.source_label, "relationship": rel, "target": r.target_label}
+                if rel_item not in relationships:
+                    relationships.append(rel_item)
 
+        # 3. Fallback Context Source: Physical Metadata Tables if no ontology or graph nodes exist
         if not class_names:
             meta_tables = self.db.query(MetadataTable).filter(MetadataTable.project_id == project_id).all()
             if meta_tables:
@@ -376,9 +273,18 @@ class LLMInsightService:
                     cls_name = "".join(w.capitalize() for w in sing_name.split("_"))
                     col_names = [col.column_name for col in mt.columns] if mt.columns else []
                     dt_props[cls_name] = col_names
-                    class_names.append(cls_name)
+                    if cls_name not in class_names:
+                        class_names.append(cls_name)
 
         prompt = req.user_prompt.strip()
+
+        # 4. Fallback if project schema is unpopulated
+        if not class_names:
+            class_names = ["Entity"]
+            dt_props["Entity"] = ["id", "name", "status", "type", "created_date", "code", "amount"]
+
+        # Export and save official W3C OWL 2.0 DL ontology file on disk for project
+        owl_rel_path, owl_content = self.get_or_create_project_owl_file(project_id, format_str="turtle")
 
         # Load Business Governance Rules strings
         rule_strings = [f"{r.name}: {r.rule_definition or ''}" for r in b_rules]
@@ -387,11 +293,14 @@ class LLMInsightService:
         approved_all = self.get_approved_cyphers(project_id)
         approved_examples = [(a.question_prompt, a.approved_cypher) for a in approved_all]
 
+        # Construct full LLM prompt payload embedding the saved W3C OWL ontology file
+        full_llm_prompt = self._build_full_llm_prompt(prompt, owl_rel_path, owl_content, class_names, dt_props, relationships, rule_strings, approved_examples)
+
         is_raw_cypher = False
         # Check if user typed a raw Cypher query directly in the prompt text input
         if re.match(r'^(?:CYPHER\s+)?(?:MATCH|OPTIONAL\s+MATCH|WITH)\b', prompt, re.IGNORECASE):
             cypher_query = prompt
-            full_llm_prompt = "Direct Raw Cypher Statement Pass-Through"
+            full_llm_prompt = f"// Direct Raw Cypher Statement Pass-Through\n\n{full_llm_prompt}"
             is_raw_cypher = True
             logger.info("User prompt recognized as direct raw Cypher statement execution.")
         else:
@@ -405,11 +314,10 @@ class LLMInsightService:
                     f"// Approved Question: \"{approved_item.question_prompt}\"\n"
                     f"{approved_item.approved_cypher.strip()}"
                 )
-                full_llm_prompt = f"Approved Few-Shot Match ({pct_score}% match against: '{approved_item.question_prompt}')"
+                full_llm_prompt = f"// Approved Few-Shot Match ({pct_score}% match against: '{approved_item.question_prompt}')\n\n{full_llm_prompt}"
                 logger.info(f"Retrieved approved Cypher query for '{prompt}' with match score {pct_score}%")
             else:
-                full_llm_prompt = self._build_full_llm_prompt(prompt, class_names, dt_props, relationships, rule_strings, approved_examples)
-                cypher_query = self._call_llm_or_synthesizer(full_llm_prompt, prompt, class_names, dt_props, relationships)
+                cypher_query = self._call_llm_or_synthesizer(full_llm_prompt, prompt, class_names, dt_props, relationships, class_metadata)
 
         # Validate and prune Cypher query against local SQLite Target DB details before execution (unless raw pass-through)
         if not is_raw_cypher:
@@ -443,7 +351,7 @@ class LLMInsightService:
                 logger.warning(f"Error querying target graph DB for insights: {e}")
 
         # Natural Language Answer Generation (Stage 2 QA Synthesis)
-        helpful_answer = self._generate_natural_language_answer(prompt, cypher_query, real_data_records, is_target_online)
+        helpful_answer, qa_llm_prompt = self._generate_natural_language_answer(prompt, cypher_query, real_data_records, is_target_online)
 
         exec_summary = self._build_executive_summary(
             user_prompt=req.user_prompt,
@@ -476,12 +384,15 @@ class LLMInsightService:
             generated_cypher_query=cypher_query,
             ontology_context_used={
                 "project_name": project.name if project else "Enterprise Project",
+                "owl_file_path": owl_rel_path,
+                "owl_file_bytes": len(owl_content),
                 "classes_count": len(classes),
                 "object_properties_count": len(relationships),
                 "target_graph_type": target_type,
                 "target_db_online": is_target_online,
                 "records_analyzed": len(real_data_records),
-                "full_llm_prompt": full_llm_prompt
+                "full_llm_prompt": full_llm_prompt,
+                "qa_llm_prompt": qa_llm_prompt
             },
             insights=insights,
             cypher_data_records=real_data_records,
@@ -494,8 +405,9 @@ class LLMInsightService:
         cypher_query: str,
         records: List[Dict[str, Any]],
         is_target_online: bool
-    ) -> str:
+    ) -> Tuple[str, Optional[str]]:
         api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        qa_prompt = None
         if api_key:
             try:
                 import google.generativeai as genai
@@ -504,16 +416,18 @@ class LLMInsightService:
 
                 rec_str = json.dumps(records[:10], indent=2, default=str) if records else "No live records retrieved (target database offline or unpopulated)."
                 qa_prompt = (
-                    "You are a helpful assistant interacting with an enterprise graph database.\n"
-                    "Provide a clear, natural language explanation answering the user's question directly based on the Cypher query logic and graph schema.\n\n"
-                    f"Cypher Query Synthesized:\n{cypher_query}\n\n"
+                    "You are a helpful assistant interacting with a graph database.\n"
+                    "Use the following information retrieved from the database to answer the user's request.\n\n"
+                    "If the user asked to create, book, or update something, and the information contains an ID or details, "
+                    "you must confirm that the action was successful and summarize the details in a friendly way.\n"
+                    "If the information is empty, say you couldn't find the answer.\n\n"
                     f"Database Results:\n{rec_str}\n\n"
                     f"User Request:\n{user_prompt}\n\n"
-                    "Helpful Natural Language Answer:"
+                    "Helpful Answer:"
                 )
                 response = model.generate_content(qa_prompt)
                 if response and response.text:
-                    return response.text.strip()
+                    return response.text.strip(), qa_prompt
             except Exception as e:
                 logger.warning(f"Live Gemini QA Answer Generation failed: {e}")
 
@@ -531,20 +445,21 @@ class LLMInsightService:
 
             if summary_values:
                 val_summary = "; ".join(summary_values)
-                return f"Found **{num_recs} result(s)** in the graph database matching your request. Key data items: **{val_summary}**."
+                return f"Found **{num_recs} result(s)** in the graph database matching your request. Key data items: **{val_summary}**.", qa_prompt
             else:
-                return f"Found **{num_recs} record(s)** matching your query in the graph database."
+                return f"Found **{num_recs} record(s)** matching your query in the graph database.", qa_prompt
 
         # Synthesize fallback natural language answer based on query semantics
         q_lower = cypher_query.lower()
         if "order by" in q_lower and "sum(" in q_lower:
-            return f"To answer **\"{user_prompt}\"**, the graph engine joins the target domain nodes, aggregates monetary values using `sum()`, and ranks the top results in descending order."
+            ans = f"To answer **\"{user_prompt}\"**, the graph engine joins the target domain nodes, aggregates monetary values using `sum()`, and ranks the top results in descending order."
         elif "where" in q_lower:
-            return f"To answer **\"{user_prompt}\"**, the graph engine queries the ontology schema with explicit attribute filter conditions (`WHERE`) and retrieves matching entities."
+            ans = f"To answer **\"{user_prompt}\"**, the graph engine queries the ontology schema with explicit attribute filter conditions (`WHERE`) and retrieves matching entities."
         elif "count(" in q_lower:
-            return f"To determine the total count for **\"{user_prompt}\"**, the graph engine evaluates matching concept nodes using the `count()` aggregation function."
+            ans = f"To determine the total count for **\"{user_prompt}\"**, the graph engine evaluates matching concept nodes using the `count()` aggregation function."
         else:
-            return f"To answer **\"{user_prompt}\"**, the graph engine traverses the target graph topology matching node labels and relationship edges."
+            ans = f"To answer **\"{user_prompt}\"**, the graph engine traverses the target graph topology matching node labels and relationship edges."
+        return ans, qa_prompt
 
     def save_approved_cypher(self, project_id: str, req: ApprovedCypherCreate) -> ApprovedCypherQuery:
         existing = self.db.query(ApprovedCypherQuery).filter(
@@ -605,7 +520,7 @@ class LLMInsightService:
         logger.info(f"Deleted approved Cypher query {cypher_id}")
         return True
 
-    def _call_llm_or_synthesizer(self, full_prompt: str, user_prompt: str, class_names: List[str], dt_props: Dict[str, List[str]], relationships: List[Dict[str, Any]]) -> str:
+    def _call_llm_or_synthesizer(self, full_prompt: str, user_prompt: str, class_names: List[str], dt_props: Dict[str, List[str]], relationships: List[Dict[str, Any]], class_metadata: Dict[str, Any] = None) -> str:
         api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         if api_key:
             try:
@@ -622,385 +537,12 @@ class LLMInsightService:
             except Exception as e:
                 logger.warning(f"Live Gemini LLM API call failed: {e}")
 
-        return self._generate_ontology_referencing_cypher(user_prompt, class_names, dt_props, relationships)
-
-    def _generate_ontology_referencing_cypher(self, prompt: str, class_names: List[str], dt_props: Dict[str, List[str]], relationships: List[Dict[str, Any]]) -> str:
-        prompt_lower = prompt.lower()
-        prompt_tokens = set(re.findall(r'\w+', prompt_lower))
-        count_keywords = {"count", "how many", "number of", "total count", "count of"}
-        rank_keywords = {"highest", "lowest", "top", "most", "sum", "maximum", "largest"}
-
-        stop_nouns = {
-            'where', 'find', 'show', 'list', 'select', 'get', 'which', 'have', 'has', 'with', 'having',
-            'and', 'or', 'the', 'all', 'such', 'this', 'that', 'from', 'into', 'total', 'count', 'highest',
-            'lowest', 'top', 'most', 'value', 'amount', 'status', 'name', 'number', 'code', 'date', 'rate',
-            'tax', 'are', 'in', 'database', 'associated', 'their', 'how', 'many', 'much', 'currently', 'hold',
-            'active', 'outstanding', 'past', 'due', 'they', 'do', 'any', 'is', 'be', 'been', 'being', 'does',
-            'did', 'doing', 'was', 'were', 'for', 'by', 'at', 'on', 'if', 'then', 'else', 'when', 'who', 'whom'
-        }
-
-        # Available classes are project ontology classes, or dynamically extracted from user prompt
-        attr_suffix_words = {
-            'date', 'time', 'amount', 'offer', 'deadline', 'capital', 'count', 'number', 'code',
-            'status', 'id', 'name', 'rate', 'price', 'cost', 'total', 'val', 'value', 'flag',
-            'indicator', 'type', 'period', 'days', 'jurisdiction', 'description', 'discount', 'discounted',
-            'payment', 'available', 'due', 'approaching', 'active', 'overdue', 'multiple'
-        }
-        available_classes = list(class_names) if class_names else []
-        if not available_classes:
-            prompt_words = re.findall(r'\b[a-zA-Z]{3,}\b', prompt)
-            for w in prompt_words:
-                w_low = w.lower().rstrip('s')
-                if w.lower() not in stop_nouns and w_low not in attr_suffix_words:
-                    c_title = w_low.capitalize()
-                    if c_title not in available_classes:
-                        available_classes.append(c_title)
-
-            if not available_classes:
-                available_classes = ["Entity"]
-
-        # Dynamically extract potential attribute names from user prompt if dt_props for a concept class is empty
-        prompt_prop_matches = re.findall(r'\b[a-zA-Z]{3,}\b', prompt)
-        class_nouns = {c.lower() for c in available_classes} | {c.lower() + "s" for c in available_classes}
-        noise_words = {'true', 'false', 'none', 'null', 'and', 'where', 'find', 'show', 'list', 'approaching', 'due', 'active', 'with', 'their', 'all'}
-        extracted_props = [p for p in prompt_prop_matches if p.lower() not in stop_nouns and p.lower() not in class_nouns and p.lower() not in noise_words]
-        
-        # Ensure dt_props ONLY for available classes has extracted props if missing
-        for c in available_classes:
-            if not dt_props.get(c):
-                dt_props[c] = list(dict.fromkeys(["id"] + extracted_props))
-
-        class_scores = {}
-        for c_name in available_classes:
-            c_clean = c_name.lower()
-            score = 0
-            pos = prompt_lower.find(c_clean)
-            if pos == -1 and c_clean.endswith("s"):
-                pos = prompt_lower.find(c_clean[:-1])
-            elif pos == -1:
-                pos = prompt_lower.find(c_clean + "s")
-
-            if pos != -1:
-                score += 40 + max(0, 50 - pos)
-
-            # Extra match for compound class names like PurchaseOrder (purchase order)
-            c_spaced = re.sub(r'([a-z])([A-Z])', r'\1 \2', c_name).lower()
-            if c_spaced in prompt_lower:
-                score += 50
-
-            for token in prompt_tokens:
-                if len(token) >= 3 and token not in stop_nouns:
-                    if token == c_clean or token + "s" == c_clean or c_clean + "s" == token:
-                        score += 25
-                    elif token in c_clean:
-                        score += 5
-
-            # Property / keyword mapping boosts
-            c_props = [p.lower() for p in dt_props.get(c_name, [])]
-            for token in prompt_tokens:
-                if len(token) >= 3 and token not in stop_nouns:
-                    if any(token in p for p in c_props):
-                        score += 15
-
-            if score > 0:
-                class_scores[c_name] = score
-
-        sorted_matched = sorted(class_scores.keys(), key=lambda k: class_scores[k], reverse=True)
-
-        if not sorted_matched:
-            sorted_matched = available_classes[:1] if available_classes else ["Entity"]
-
-        primary_class = sorted_matched[0]
-
-        def get_props_return_str(cls_name: str, var_alias: str) -> str:
-            props = dt_props.get(cls_name, [])
-            selected = []
-            seen_canon_keys = set()
-            for p in props:
-                canon_key = p.replace("_", "").lower()
-                if canon_key not in seen_canon_keys:
-                    seen_canon_keys.add(canon_key)
-                    selected.append(f"{var_alias}.{p} AS {cls_name}_{p}")
-
-            if not selected:
-                selected = [f"{var_alias}.id AS {cls_name}_id"]
-
-            return ", ".join(selected[:10])
-
-        is_count_query = any(re.search(r'\b' + re.escape(ck) + r'\b', prompt_lower) for ck in count_keywords)
-
-        # Dynamic alias generator for matched concept classes
-        used_aliases = set()
-        def get_dynamic_alias(c_name: str) -> str:
-            caps = [ch.lower() for ch in c_name if ch.isupper()]
-            base = "".join(caps) if caps else c_name[0].lower()
-            alias = base
-            counter = 1
-            while alias in used_aliases:
-                counter += 1
-                alias = f"{base}{counter}"
-            used_aliases.add(alias)
-            return alias
-
-        class_aliases = {c: get_dynamic_alias(c) for c in sorted_matched}
-        p_alias = class_aliases.get(primary_class, "n")
-
-        if is_count_query:
-            return (
-                f"// Cypher query synthesized from W3C OWL Ontology Schema\n"
-                f"MATCH ({p_alias}:{primary_class})\n"
-                f"RETURN count({p_alias}) AS Total_{primary_class}s;"
-            )
-
-        def resolve_concept_alias(prop_keyword: str) -> str:
-            pk = prop_keyword.lower().strip()
-            # 1. Direct class name match FIRST against sorted_matched
-            for c_name in sorted_matched:
-                c_alias = class_aliases.get(c_name)
-                if not c_alias:
-                    continue
-                c_low = c_name.lower()
-                if pk == c_low or pk == c_low + "s" or pk + "s" == c_low or c_low in pk:
-                    return c_alias
-            # 2. Property list match SECOND against sorted_matched
-            pk_canon = pk.replace("_", "")
-            for c_name in sorted_matched:
-                c_alias = class_aliases.get(c_name)
-                if not c_alias:
-                    continue
-                c_props = dt_props.get(c_name, [])
-                for p in c_props:
-                    p_lower = p.lower()
-                    if pk == p_lower or pk_canon == p_lower.replace("_", ""):
-                        return c_alias
-            return p_alias
-
-        # Dynamic comparison and filtering criteria parsing across matched concepts
-        where_conditions = []
-
-        # 1. Parse explicit comparison operators like (Property) (Op) (Val)
-        raw_chunks = re.split(r'\n|\bAND\b|\band\b|;', prompt)
-        for chunk in raw_chunks:
-            clean_chunk = re.sub(r'[,;]+', ' ', chunk).strip()
-            if not clean_chunk:
-                continue
-            
-            # Check for explicit comparisons with operators >=, <=, >, <, =, !=, IS NOT NULL
-            match = re.search(r'(.+?)\s*(>=|<=|>|<|=|!=|is\s+approaching|is\s+due|is\s+active|is\s+not\s+null|is\s+overdue)\s*(.*)', clean_chunk, re.IGNORECASE)
-            if match:
-                left_raw, op, right_raw = match.group(1).strip(), match.group(2).strip(), match.group(3).strip()
-                left_words = [w for w in re.findall(r'[a-zA-Z0-9_]+', left_raw) if w.lower() not in ['where', 'and', 'or', 'find', 'all', 'such', 'show', 'list', 'the', 'a', 'an', 'is', 'are', 'which', 'with', 'for']]
-                
-                if left_words:
-                    target_alias = p_alias
-                    found_alias = None
-                    for w in reversed(left_words[:-1] if len(left_words) > 1 else left_words):
-                        w_lower = w.lower().rstrip('s')
-                        for c_name in sorted_matched:
-                            c_alias = class_aliases[c_name]
-                            if w_lower == c_name.lower() or w_lower == c_name.lower().rstrip('s'):
-                                found_alias = c_alias
-                                break
-                        if found_alias:
-                            break
-                    target_alias = found_alias or resolve_concept_alias(left_words[-1])
-                    prop_words = [w for w in left_words if not any(w.lower() in [c.lower(), c.lower() + "s", c.lower() + "es"] for c in class_aliases)]
-                    if prop_words:
-                        left_words = prop_words
-
-                    if left_words:
-                        prop_name = left_words[0].lower() + "".join(w.capitalize() for w in left_words[1:]) if len(left_words) > 1 else left_words[0]
-                    else:
-                        prop_name = "id"
-
-                    # Match exact property name against dt_props case-insensitively if available
-                    matched_prop = False
-                    for c_name in sorted_matched:
-                        c_alias = class_aliases[c_name]
-                        for p in dt_props.get(c_name, []):
-                            if p.lower() == prop_name.lower() or p.replace("_", "").lower() == prop_name.replace("_", "").lower():
-                                prop_name = p
-                                target_alias = c_alias
-                                matched_prop = True
-                                break
-                        if matched_prop:
-                            break
-                    
-                    op_upper = op.upper()
-                    if "APPROACHING" in op_upper or "DUE" in op_upper or "NOT NULL" in op_upper:
-                        where_conditions.append(f"{target_alias}.{prop_name} IS NOT NULL")
-                    elif "ACTIVE" in op_upper and not right_raw:
-                        where_conditions.append(f"{target_alias}.{prop_name} = 'Active'")
-                    elif "OVERDUE" in op_upper and not right_raw:
-                        where_conditions.append(f"{target_alias}.{prop_name} = 'Overdue'")
-                    else:
-                        if not right_raw:
-                            continue
-                        if re.match(r'^-?\d+(\.\d+)?$', right_raw) or (right_raw.startswith("'") and right_raw.endswith("'")) or right_raw.lower() in ['true', 'false']:
-                            right_val = right_raw
-                        else:
-                            r_words = [w for w in re.findall(r'[a-zA-Z0-9_]+', right_raw) if w.lower() not in ['where', 'and', 'or', 'find', 'all', 'such', 'show', 'list', 'the', 'a', 'an', 'is', 'are', 'which']]
-                            if len(r_words) > 1 and any(r_words[0].lower() == c.lower() for c in class_aliases):
-                                r_words = r_words[1:]
-                            if r_words:
-                                potential_prop = r_words[0].lower() + "".join(w.capitalize() for w in r_words[1:])
-                                if any(potential_prop.lower() in [p.lower() for p in dt_props.get(c, [])] for c in sorted_matched):
-                                    right_val = f"{target_alias}.{potential_prop}"
-                                else:
-                                    val_str = " ".join(r_words)
-                                    right_val = f"'{val_str.capitalize()}'" if len(r_words) == 1 else f"'{val_str}'"
-                            else:
-                                right_val = f"'{right_raw}'"
-                        
-                        op_sign = "=" if op.lower() in ["is", "has"] else op
-                        where_conditions.append(f"{target_alias}.{prop_name} {op_sign} {right_val}")
-
-        # 2. Dynamic schema property matching based on user prompt criteria
-        if not where_conditions:
-            sub_conds = []
-            
-            # Status / Priority words dynamically extracted from prompt
-            status_match = re.search(r'\b(active|pending|approved|rejected|completed|closed|open|overdue|hold|paid|unpaid|high|low|medium|draft|cancelled)\b', prompt_lower)
-            dynamic_status_val = status_match.group(1).capitalize() if status_match else None
-
-            # Numeric values dynamically extracted from prompt (e.g. over 60 days, > 1000)
-            num_match = re.search(r'\b(?:over|greater than|more than|>|above|>=)\s*(\d+(?:\.\d+)?)\b', prompt_lower)
-            dynamic_num_val = num_match.group(1) if num_match else None
-
-            # ONLY loop over matched concepts (sorted_matched[:2]) to prevent adding conditions on un-matched fallback concepts
-            for c_name in sorted_matched[:2]:
-                c_alias = class_aliases[c_name]
-                c_props = dt_props.get(c_name, [])
-                for p in c_props:
-                    p_lower = p.lower()
-                    if p_lower in class_nouns or p_lower in stop_nouns:
-                        continue
-
-                    words = [w for w in re.findall(r'[a-zA-Z]{3,}', re.sub(r'([a-z])([A-Z])', r'\1 \2', p).replace("_", " ")) if w.lower() not in ['and', 'the', 'for', 'id', 'type', 'code']]
-                    
-                    is_matched = any(w.lower() in prompt_lower for w in words if len(w) >= 3) or p_lower in prompt_lower
-                    
-                    if is_matched:
-                        if "status" in p_lower or "state" in p_lower:
-                            if dynamic_status_val:
-                                sub_conds.append(f"{c_alias}.{p} = '{dynamic_status_val}'")
-                            else:
-                                sub_conds.append(f"{c_alias}.{p} IS NOT NULL")
-                        elif "priority" in p_lower:
-                            if dynamic_status_val:
-                                sub_conds.append(f"{c_alias}.{p} = '{dynamic_status_val.upper()}'")
-                            elif any(k in prompt_lower for k in ["high", "top", "priority", "urgent"]):
-                                sub_conds.append(f"{c_alias}.{p} = 'HIGH'")
-                            else:
-                                sub_conds.append(f"{c_alias}.{p} IS NOT NULL")
-                        elif any(dk in p_lower for dk in ["date", "due"]):
-                            sub_conds.append(f"{c_alias}.{p} IS NOT NULL")
-                        elif any(ik in p_lower for ik in ["indicator", "flag", "jurisdiction"]):
-                            sub_conds.append(f"{c_alias}.{p} = true")
-                        elif any(mk in p_lower for mk in ["days", "overdue", "past"]):
-                            if dynamic_num_val:
-                                sub_conds.append(f"{c_alias}.{p} > {dynamic_num_val}")
-                            else:
-                                sub_conds.append(f"{c_alias}.{p} > 0")
-                        elif any(mk in p_lower for mk in ["amount", "price", "discount", "cost", "total", "value"]):
-                            if dynamic_num_val:
-                                sub_conds.append(f"{c_alias}.{p} >= {dynamic_num_val}")
-                            else:
-                                sub_conds.append(f"{c_alias}.{p} IS NOT NULL")
-                        else:
-                            sub_conds.append(f"{c_alias}.{p} IS NOT NULL")
-
-            if sub_conds:
-                where_conditions.append(" AND ".join(list(dict.fromkeys(sub_conds))))
-
-        # 3. Check for Financial Aggregation / Ranking query (e.g. "Which vendors have highest total invoice value")
-        is_rank_query = any(re.search(r'\b' + re.escape(rk) + r'\b', prompt_lower) for rk in rank_keywords)
-        if is_rank_query and not where_conditions:
-            p_props = dt_props.get(primary_class, [])
-            name_prop = next((p for p in p_props if "name" in p.lower()), "id")
-
-            if len(sorted_matched) >= 2:
-                second_class = sorted_matched[1]
-                s_alias = class_aliases.get(second_class, "s")
-                s_props = dt_props.get(second_class, [])
-                val_prop = next((p for p in s_props if any(k in p.lower() for k in ["amount", "value", "total", "revenue", "price", "cost"])), "id")
-
-                rel_between = [r for r in relationships if (r["source"] == primary_class and r["target"] == second_class) or (r["source"] == second_class and r["target"] == primary_class)]
-                if rel_between:
-                    rel = rel_between[0]
-                    rel_pattern = f"-[r:{rel['relationship']}]->" if rel["source"] == primary_class else f"<-[r:{rel['relationship']}]-"
-                else:
-                    rel_pattern = "-[r]-"
-
-                return (
-                    f"// Cypher query synthesized from W3C OWL Ontology Schema\n"
-                    f"MATCH ({p_alias}:{primary_class}){rel_pattern}({s_alias}:{second_class})\n"
-                    f"RETURN {p_alias}.{name_prop} AS {primary_class}_Name, sum({s_alias}.{val_prop}) AS Total_{val_prop.capitalize()}\n"
-                    f"ORDER BY Total_{val_prop.capitalize()} DESC\n"
-                    f"LIMIT 15;"
-                )
-            else:
-                val_prop = next((p for p in p_props if any(k in p.lower() for k in ["amount", "value", "total", "revenue", "price", "cost", "sales"])), "id")
-                return (
-                    f"// Cypher query synthesized from W3C OWL Ontology Schema\n"
-                    f"MATCH ({p_alias}:{primary_class})\n"
-                    f"RETURN {p_alias}.{name_prop} AS {primary_class}_Name, sum({p_alias}.{val_prop}) AS Total_{val_prop.capitalize()}\n"
-                    f"ORDER BY Total_{val_prop.capitalize()} DESC\n"
-                    f"LIMIT 15;"
-                )
-
-        where_clause = ("WHERE " + "\n  AND ".join(where_conditions)) if where_conditions else ""
-        where_str = f"{where_clause}\n" if where_clause else ""
-
-        # Multi-node relationship traversal if 2 or 3 concept classes exist
-        if len(sorted_matched) >= 2:
-            second_class = sorted_matched[1]
-            s_alias = class_aliases.get(second_class, "s")
-            p_props = get_props_return_str(primary_class, p_alias)
-            s_props = get_props_return_str(second_class, s_alias)
-            
-            rel_between1 = [r for r in relationships if (r["source"] == primary_class and r["target"] == second_class) or (r["source"] == second_class and r["target"] == primary_class)]
-            if rel_between1:
-                rel1 = rel_between1[0]
-                rel_pattern1 = f"-[r1:{rel1['relationship']}]->" if rel1["source"] == primary_class else f"<-[r1:{rel1['relationship']}]-"
-            else:
-                rel_pattern1 = "-[r1]-"
-
-            if len(sorted_matched) >= 3:
-                third_class = sorted_matched[2]
-                t_alias = class_aliases.get(third_class, "t")
-                t_props = get_props_return_str(third_class, t_alias)
-                rel_between2 = [r for r in relationships if (r["source"] == primary_class and r["target"] == third_class) or (r["source"] == third_class and r["target"] == primary_class)]
-                if rel_between2:
-                    rel2 = rel_between2[0]
-                    rel_pattern2 = f"-[r2:{rel2['relationship']}]->" if rel2["source"] == primary_class else f"<-[r2:{rel2['relationship']}]-"
-                else:
-                    rel_pattern2 = "-[r2]-"
-                
-                return (
-                    f"// Cypher query synthesized from W3C OWL Ontology Schema\n"
-                    f"MATCH ({p_alias}:{primary_class}){rel_pattern1}({s_alias}:{second_class})\n"
-                    f"MATCH ({p_alias}){rel_pattern2}({t_alias}:{third_class})\n"
-                    f"{where_str}"
-                    f"RETURN {p_props}, type(r1) AS Rel_{second_class}, {s_props}, type(r2) AS Rel_{third_class}, {t_props}\n"
-                    f"LIMIT 15;"
-                )
-
-            return (
-                f"// Cypher query synthesized from W3C OWL Ontology Schema\n"
-                f"MATCH ({p_alias}:{primary_class}){rel_pattern1}({s_alias}:{second_class})\n"
-                f"{where_str}"
-                f"RETURN {p_props}, type(r1) AS RelationshipType, {s_props}\n"
-                f"LIMIT 15;"
-            )
-
-        # Single concept query
-        c_props = get_props_return_str(primary_class, p_alias)
+        # Baseline Cypher query fallback if LLM is unavailable
+        primary_cls = class_names[0] if class_names else "Entity"
         return (
             f"// Cypher query synthesized from W3C OWL Ontology Schema\n"
-            f"MATCH ({p_alias}:{primary_class})\n"
-            f"{where_str}"
-            f"RETURN {c_props}\n"
+            f"MATCH (n:{primary_cls})\n"
+            f"RETURN n\n"
             f"LIMIT 15;"
         )
 
@@ -1127,11 +669,30 @@ class LLMInsightService:
         )
         
         # 2. Ontology & Schema Concepts Used
+        all_classes = [f"`:{c}`" for c in (class_names or [])]
+        all_classes_str = ", ".join(all_classes) if all_classes else "None Defined"
+
+        all_props = set()
+        if dt_props:
+            for c, props in dt_props.items():
+                for p in props:
+                    all_props.add(f"`{c}.{p}`")
+        sorted_all_props = sorted(all_props)
+        all_props_str = ", ".join(sorted_all_props[:30]) if sorted_all_props else "`id`"
+        if len(sorted_all_props) > 30:
+            all_props_str += f" *(+ {len(sorted_all_props) - 30} more attributes)*"
+
+        all_rels = [f"`(:{r['source']})-[:{r['relationship']}]->(:{r['target']})`" for r in (relationships or [])]
+        all_rels_str = ", ".join(all_rels[:15]) if all_rels else "None"
+        if len(all_rels) > 15:
+            all_rels_str += f" *(+ {len(all_rels) - 15} more edges)*"
+
         concepts_section = (
-            f"### 🧠 W3C OWL Ontology Concepts & Attributes Used\n"
-            f"- **Ontology Concepts (Classes)**: {', '.join(labels_list)}\n"
-            f"- **Ontology Datatype Attributes**: {', '.join(attrs_list)}\n"
-            f"- **Object Property Edges**: {', '.join(rels_list)}\n\n"
+            f"### 🧠 W3C OWL 2.0 DL Ontology Schema & Domain Context\n"
+            f"- **Project Ontology Classes ({len(class_names or [])})**: {all_classes_str}\n"
+            f"- **Datatype Properties & Attributes**: {all_props_str}\n"
+            f"- **Object Property Relationship Edges ({len(relationships or [])})**: {all_rels_str}\n"
+            f"- **Query Matched Concepts**: {', '.join(labels_list)} | **Query Attributes**: {', '.join(attrs_list)}\n\n"
         )
 
         # 3. Query Execution & Target DB Data Analytics

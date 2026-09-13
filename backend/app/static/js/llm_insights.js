@@ -213,7 +213,7 @@ function renderLLMInsights(data) {
     cypherBlock.innerText = data.generated_cypher_query || '// No Cypher query generated';
   }
 
-  // 2. Executive Summary & Meaningful Data Insights (Bottom Block)
+  // 2. Executive Summary & Meaningful Data Insights (Middle Block)
   const timeBadge = document.getElementById('llm-execution-time');
   if (timeBadge) timeBadge.innerText = `${data.execution_time_ms}ms`;
 
@@ -222,17 +222,41 @@ function renderLLMInsights(data) {
     summaryText.innerHTML = formatLLMMarkdown(data.executive_summary || '');
   }
 
-  // 3. Target Graph Database Records Table
+  // 3. Raw Prompt Sent to LLM (Context & Prompt Log Block)
+  const promptBlock = document.getElementById('llm-full-prompt-block');
+  const promptMeta = document.getElementById('llm-prompt-meta-info');
+  if (promptBlock) {
+    const fullPrompt = data.ontology_context_used?.full_llm_prompt || 'No prompt content captured.';
+    const qaPrompt = data.ontology_context_used?.qa_llm_prompt;
+    
+    let displayContent = fullPrompt;
+    if (qaPrompt) {
+      displayContent = `=== STAGE 1: CYPHER SYNTHESIS PROMPT ===\n\n${fullPrompt}\n\n========================================\n=== STAGE 2: NATURAL LANGUAGE QA PROMPT ===\n\n${qaPrompt}`;
+    }
+    
+    promptBlock.innerText = displayContent;
+    if (promptMeta) {
+      const charCount = displayContent.length;
+      const lineCount = displayContent.split('\n').length;
+      const targetGraph = data.ontology_context_used?.target_graph_type || 'GraphDB';
+      const classesCount = data.ontology_context_used?.classes_count || 0;
+      const relsCount = data.ontology_context_used?.object_properties_count || 0;
+      promptMeta.innerText = `Full context payload sent to AI Reasoning Engine (${charCount} chars, ${lineCount} lines) | Ontology: ${classesCount} classes, ${relsCount} rels | Target DB: ${targetGraph}`;
+    }
+  }
+
+  // 4. Target Graph Database Records Table
   const recordsCard = document.getElementById('llm-records-card');
   const recordsTableContainer = document.getElementById('llm-records-table-container');
   const recordCountBadge = document.getElementById('llm-record-count-badge');
 
+  const recs = data.cypher_data_records || data.records || [];
   if (recordsCard && recordsTableContainer) {
-    if (data.records && data.records.length > 0) {
+    if (recs && recs.length > 0) {
       recordsCard.style.display = 'block';
-      if (recordCountBadge) recordCountBadge.innerText = `${data.records.length} Record${data.records.length > 1 ? 's' : ''}`;
+      if (recordCountBadge) recordCountBadge.innerText = `${recs.length} Record${recs.length > 1 ? 's' : ''}`;
       
-      const headers = Object.keys(data.records[0]);
+      const headers = Object.keys(recs[0]);
       let tblHtml = '<table class="data-table" style="width: 100%; border-collapse: collapse; font-size: 12px;">';
       tblHtml += '<thead><tr style="background: rgba(16, 185, 129, 0.15); border-bottom: 2px solid var(--accent-emerald);">';
       headers.forEach(h => {
@@ -240,7 +264,7 @@ function renderLLMInsights(data) {
       });
       tblHtml += '</tr></thead><tbody>';
 
-      data.records.forEach((row, idx) => {
+      recs.forEach((row, idx) => {
         const bg = idx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.02)';
         tblHtml += `<tr style="background: ${bg}; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">`;
         headers.forEach(h => {
@@ -265,6 +289,31 @@ function copyLLMCypherQuery() {
   if (codeBlock && codeBlock.innerText) {
     navigator.clipboard.writeText(codeBlock.innerText);
     if (typeof showToast === 'function') showToast('📋 Cypher query copied to clipboard!', 'success');
+  }
+}
+
+function copyLLMFullPrompt() {
+  const promptBlock = document.getElementById('llm-full-prompt-block');
+  if (promptBlock && promptBlock.innerText) {
+    navigator.clipboard.writeText(promptBlock.innerText);
+    if (typeof showToast === 'function') showToast('📋 Full LLM Prompt payload copied to clipboard!', 'success');
+  }
+}
+
+function toggleLLMPromptVisibility() {
+  const wrapper = document.getElementById('llm-prompt-wrapper');
+  const icon = document.getElementById('llm-prompt-toggle-icon');
+  const text = document.getElementById('llm-prompt-toggle-text');
+  if (wrapper) {
+    if (wrapper.style.display === 'none') {
+      wrapper.style.display = 'block';
+      if (icon) icon.innerText = '👁️';
+      if (text) text.innerText = 'Collapse Prompt';
+    } else {
+      wrapper.style.display = 'none';
+      if (icon) icon.innerText = '📖';
+      if (text) text.innerText = 'Expand Prompt';
+    }
   }
 }
 

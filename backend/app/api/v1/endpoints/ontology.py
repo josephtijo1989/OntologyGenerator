@@ -44,6 +44,17 @@ def update_ontology_class(project_id: str, class_name: str, req: OntologyClassUp
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+@router.delete("/projects/{project_id}/ontology/classes/{class_name}", response_model=OntologyModelResponse)
+def delete_ontology_class(project_id: str, class_name: str, db: Session = Depends(get_db)):
+    svc = OntologyService(db)
+    try:
+        return svc.delete_class(project_id, class_name)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
 @router.post("/projects/{project_id}/ontology/export")
 def export_ontology(project_id: str, req: OntologyExportRequest, db: Session = Depends(get_db)):
     svc = OntologyService(db)

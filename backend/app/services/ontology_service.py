@@ -1,7 +1,7 @@
 from typing import Dict, Any, List
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from app.models.domain import OntologyClass, OntologyAttribute, MetadataTable, MetadataColumn
+from app.models.domain import OntologyClass, OntologyAttribute, MetadataTable, MetadataColumn, TargetGraphNode
 from app.repositories.connection_repository import OntologyConfigRepository
 from app.ontology.generator import OntologyGenerator
 from app.ontology.exporter import OntologyExporter
@@ -554,3 +554,38 @@ class OntologyService:
 
         onto_result = self.generator.generate_ontology(raw_catalogs, rules=raw_rules, base_iri=base_iri, prefix=prefix)
         return self.exporter.export(onto_result["graph"], format_str=format_str)
+
+    def delete_class(self, project_id: str, class_name: str) -> OntologyModelResponse:
+        matched_c = self.db.query(OntologyClass).filter(
+            OntologyClass.project_id == project_id,
+            func.lower(OntologyClass.class_name) == class_name.lower()
+        ).first()
+
+        if not matched_c:
+            raise ValueError(f"Ontology class '{class_name}' not found in project.")
+
+        # Reassign subclasses that inherited from this deleted class back to owl:Thing
+        subclasses = self.db.query(OntologyClass).filter(
+            OntologyClass.project_id == project_id,
+            func.lower(OntologyClass.subclass_of) == class_name.lower()
+        ).all()
+        for sc in subclasses:
+            sc.subclass_of = "owl:Thing"
+
+        # Delete associated attributes where this class is parent or target
+        self.db.query(OntologyAttribute).filter(
+            (OntologyAttribute.class_id == matched_c.id) |
+            (OntologyAttribute.target_class_id == matched_c.id)
+        ).delete(synchronize_session=False)
+
+        # Clear references in TargetGraphNode
+        self.db.query(TargetGraphNode).filter(
+            TargetGraphNode.ontology_class_id == matched_c.id
+        ).update({TargetGraphNode.ontology_class_id: None}, synchronize_session=False)
+
+        # Delete the class itself
+        self.db.delete(matched_c)
+        self.db.commit()
+        logger.info(f"Deleted OntologyClass '{class_name}' from project {project_id}.")
+
+        return self.generate_ontology(project_id)

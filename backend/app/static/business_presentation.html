@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OntoForge - Executive Business Presentation & Application Showcase</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #0B0F19;
+            --bg-card: rgba(18, 24, 38, 0.75);
+            --bg-card-hover: rgba(26, 34, 53, 0.9);
+            --border-glow: rgba(99, 102, 241, 0.3);
+            --border-light: rgba(255, 255, 255, 0.08);
+            --accent-indigo: #6366F1;
+            --accent-cyan: #06B6D4;
+            --accent-violet: #8B5CF6;
+            --accent-emerald: #10B981;
+            --accent-rose: #F43F5E;
+            --text-heading: #F8FAFC;
+            --text-body: #94A3B8;
+            --text-muted: #64748B;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-heading);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 45%),
+                radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.12) 0%, transparent 45%),
+                radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.05) 0%, transparent 60%);
+        }
+
+        /* Top Progress Line */
+        .progress-line-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+
+        .progress-line-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-indigo), var(--accent-cyan), var(--accent-violet));
+            transition: width 0.3s ease;
+            box-shadow: 0 0 12px var(--accent-cyan);
+        }
+
+        /* Navigation Bar */
+        .exec-nav {
+            padding: 18px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(11, 15, 25, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-light);
+            position: sticky;
+            top: 4px;
+            z-index: 90;
+        }
+
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-box {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-cyan));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: #FFFFFF;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .logo-text {
+            font-size: 1.35rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(90deg, #FFFFFF, #CBD5E1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .exec-badge {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid var(--accent-indigo);
+            color: #A5B4FC;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-exec {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-light);
+            color: var(--text-heading);
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-exec:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--accent-indigo);
+            transform: translateY(-1px);
+        }
+
+        .btn-exec.active {
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-violet));
+            border-color: transparent;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        /* Presentation Canvas Area */
+        .presentation-viewport {
+            flex: 1;
+            max-width: 1300px;
+            width: 94%;
+            margin: 30px auto;
+            position: relative;
+            min-height: 650px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slide {
+            position: absolute;
+            inset: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 20px;
+            padding: 48px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8), 0 0 50px rgba(99, 102, 241, 0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px) scale(0.98);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        /* Slide Typography */
+        .slide-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+
+        .slide-num-pill {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.1);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .slide-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+            background: linear-gradient(135deg, #FFFFFF 30%, #CBD5E1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .slide-subtitle {
+            font-size: 1.05rem;
+            color: var(--text-body);
+            margin-top: 8px;
+            max-width: 800px;
+            line-height: 1.5;
+        }
+
+        .slide-body {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        /* Interactive Screen Container */
+        .app-screen-window {
+            width: 100%;
+            background: #0D1322;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .app-title-bar {
+            background: #161F33;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .window-dots {
+            display: flex;
+            gap: 8px;
+        }
+        .w-dot { width: 11px; height: 11px; border-radius: 50%; }
+        .w-red { background: #FF5F56; }
+        .w-yellow { background: #FFBD2E; }
+        .w-green { background: #27C93F; }
+
+        .app-screen-content {
+            padding: 24px;
+        }
+
+        /* Screen 1: Dashboard Overview */
+        .dash-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .dash-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .dash-val {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--accent-indigo);
+        }
+        .dash-lbl {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        /* Screen 2: Class Matrix */
+        .matrix-grid-mock {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .class-card-exec {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 18px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .class-card-exec:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
+        }
+
+        .class-name-tag {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .btn-delete-exec {
+            background: rgba(244, 63, 94, 0.15);
+            border: 1px solid var(--accent-rose);
+            color: #FDA4AF;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-delete-exec:hover {
+            background: var(--accent-rose);
+            color: white;
+        }
+
+        .attr-pill-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .attr-pill {
+            background: rgba(255, 255, 255, 0.06);
+            color: #E2E8F0;
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Screen 3: Rebinding Inspector */
+        .rebinding-flow {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px dashed var(--accent-violet);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .rebound-node {
+            background: rgba(99, 102, 241, 0.2);
+            border: 2px solid var(--accent-indigo);
+            padding: 16px 24px;
+            border-radius: 10px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .arrow-flow {
+            color: var(--accent-cyan);
+            font-size: 1.5rem;
+            animation: moveArrow 1.5s infinite;
+        }
+
+        @keyframes moveArrow {
+            0% { transform: translateX(-5px); opacity: 0.5; }
+            50% { transform: translateX(5px); opacity: 1; }
+            100% { transform: translateX(-5px); opacity: 0.5; }
+        }
+
+        /* Screen 4: Gemini Cypher Engine */
+        .cypher-console {
+            background: #050811;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .prompt-input-sim {
+            color: var(--accent-cyan);
+            font-size: 0.95rem;
+            margin-bottom: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 10px;
+        }
+
+        .code-output-sim {
+            color: var(--accent-emerald);
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        /* Metrics Showcase Grid */
+        .exec-metrics-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            width: 100%;
+        }
+
+        .exec-stat-card {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 28px 20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .exec-stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-indigo), var(--accent-cyan));
+        }
+
+        .exec-stat-num {
+            font-size: 3.2rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #FFFFFF, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .exec-stat-lbl {
+            font-size: 0.85rem;
+            color: var(--text-body);
+            font-weight: 600;
+        }
+
+        /* Bottom Controls Bar */
+        .exec-footer {
+            padding: 16px 40px;
+            background: rgba(11, 15, 25, 0.95);
+            border-top: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .voiceover-banner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            max-width: 70%;
+        }
+
+        .vo-indicator {
+            width: 10px;
+            height: 10px;
+            background: var(--accent-emerald);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-emerald);
+            animation: pulseGlow 1.5s infinite;
+        }
+
+        @keyframes pulseGlow {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+
+        .vo-text {
+            font-size: 0.9rem;
+            color: #E2E8F0;
+            font-weight: 500;
+        }
+
+        .slide-nav-pills {
+            display: flex;
+            gap: 8px;
+        }
+
+        .pill-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-light);
+            color: var(--text-muted);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pill-btn.active {
+            background: var(--accent-indigo);
+            color: white;
+            border-color: var(--accent-indigo);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Progress Line -->
+    <div class="progress-line-container">
+        <div class="progress-line-fill" id="progress-line"></div>
+    </div>
+
+    <!-- Navigation Header -->
+    <nav class="exec-nav">
+        <div class="logo-group">
+            <div class="logo-box">OF</div>
+            <div>
+                <div class="logo-text">OntoForge</div>
+                <div style="font-size: 0.7rem; color: var(--text-muted);">Enterprise Knowledge Graph Engine</div>
+            </div>
+        </div>
+
+        <div class="exec-badge">Executive Briefing & Application Showcase</div>
+
+        <div class="nav-controls">
+            <button class="btn-exec active" id="btn-autoplay" onclick="toggleAutoPlay()">
+                <span id="icon-play">⏸</span> <span id="label-play">Autoplay: ON</span>
+            </button>
+            <button class="btn-exec" id="btn-voiceover" onclick="toggleVoiceover()">
+                🔊 Voiceover: ON
+            </button>
+            <button class="btn-exec" onclick="prevSlide()">‹ Prev</button>
+            <button class="btn-exec" onclick="nextSlide()">Next ›</button>
+        </div>
+    </nav>
+
+    <!-- Viewport Container -->
+    <main class="presentation-viewport">
+
+        <!-- SLIDE 1: Title & Executive Summary -->
+        <section class="slide active" id="slide-0">
+            <div class="slide-header">
+                <div>
+                    <h1 class="slide-title">Unlocking Enterprise Knowledge Graphs</h1>
+                    <p class="slide-subtitle">Automating RDF/OWL Ontology Extraction, Schema Governance & Neo4j Integration with AI</p>
+                </div>
+                <span class="slide-num-pill">01 / 08</span>
+            </div>
+
+            <div class="slide-body" style="flex-direction: column; text-align: center;">
+                <div style="font-size: 4.5rem; font-weight: 800; background: linear-gradient(135deg, #FFFFFF, var(--accent-indigo), var(--accent-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 16px;">
+                    OntoForge
+                </div>
+                <p style="font-size: 1.25rem; color: var(--text-body); max-width: 750px; margin-bottom: 32px; line-height: 1.6;">
+                    The end-to-end enterprise solution for transforming raw relational schemas and unstructured data into W3C-standard Knowledge Graphs.
+                </p>
+                
+                <div style="display: flex; gap: 24px; justify-content: center;">
+                    <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid var(--accent-indigo); padding: 14px 24px; border-radius: 12px; font-weight: 600; color: #A5B4FC;">
+                        🚀 10x Faster Time-to-Market
+                    </div>
+                    <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid var(--accent-cyan); padding: 14px 24px; border-radius: 12px; font-weight: 600; color: #6EE7B7;">
+                        🛡️ Zero AI Hallucinations
+                    </div>
+                    <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid var(--accent-violet); padding: 14px 24px; border-radius: 12px; font-weight: 600; color: #C084FC;">
+                        ⚡ Native Neo4j & RDF Sync
+                    </div>
+                </div>
+            </div>
+
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-align: center;">
+                Press [Spacebar] or Use On-Screen Controls to Navigate Interactive Showcase
+            </div>
+        </section>
+
+        <!-- SLIDE 2: The Enterprise Challenge -->
+        <section class="slide" id="slide-1">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">The Enterprise Data Challenge</h2>
+                    <p class="slide-subtitle">Siloed Data & Manual Ontology Construction Cost Organizations Millions</p>
+                </div>
+                <span class="slide-num-pill">02 / 08</span>
+            </div>
+
+            <div class="slide-body">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; width: 100%;">
+                    <div style="background: rgba(244, 63, 94, 0.05); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 16px; padding: 28px;">
+                        <div style="font-size: 2.2rem; margin-bottom: 12px;">📁 80%+</div>
+                        <h4 style="color: #FDA4AF; font-size: 1.1rem; margin-bottom: 8px;">Siloed Data</h4>
+                        <p style="color: var(--text-body); font-size: 0.9rem; line-height: 1.5;">Relational DBs, PDFs, and legacy tables lack explicit semantic relationships.</p>
+                    </div>
+
+                    <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 16px; padding: 28px;">
+                        <div style="font-size: 2.2rem; margin-bottom: 12px;">⏳ 6 Months</div>
+                        <h4 style="color: #FDE68A; font-size: 1.1rem; margin-bottom: 8px;">Manual Modeling</h4>
+                        <p style="color: var(--text-body); font-size: 0.9rem; line-height: 1.5;">Traditional W3C ontology engineering requires specialized domain teams.</p>
+                    </div>
+
+                    <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 16px; padding: 28px;">
+                        <div style="font-size: 2.2rem; margin-bottom: 12px;">⚠️ Hallucinations</div>
+                        <h4 style="color: #FCA5A5; font-size: 1.1rem; margin-bottom: 8px;">RAG Failure</h4>
+                        <p style="color: var(--text-body); font-size: 0.9rem; line-height: 1.5;">LLMs produce wrong answers without verified graph topology grounding.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 3: OntoForge Solution Pipeline -->
+        <section class="slide" id="slide-2">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">End-to-End Solution Architecture</h2>
+                    <p class="slide-subtitle">From Raw Schemas to Live Neo4j Graph Intelligence in 4 Automated Steps</p>
+                </div>
+                <span class="slide-num-pill">03 / 08</span>
+            </div>
+
+            <div class="slide-body">
+                <div style="display: flex; gap: 16px; align-items: center; width: 100%;">
+                    <div style="flex: 1; background: rgba(30, 41, 59, 0.8); border: 1px solid var(--border-glow); padding: 20px; border-radius: 12px; text-align: center;">
+                        <div style="color: var(--accent-cyan); font-weight: 700; margin-bottom: 6px;">1. Connect Data</div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">SQL Databases, CSVs, OWL Ontologies</p>
+                    </div>
+                    <div class="arrow-flow">➔</div>
+                    <div style="flex: 1; background: rgba(30, 41, 59, 0.8); border: 1px solid var(--border-glow); padding: 20px; border-radius: 12px; text-align: center;">
+                        <div style="color: var(--accent-indigo); font-weight: 700; margin-bottom: 6px;">2. Auto-Extract</div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">Ontology Classes & Attribute Mapping</p>
+                    </div>
+                    <div class="arrow-flow">➔</div>
+                    <div style="flex: 1; background: rgba(30, 41, 59, 0.8); border: 1px solid var(--border-glow); padding: 20px; border-radius: 12px; text-align: center;">
+                        <div style="color: var(--accent-violet); font-weight: 700; margin-bottom: 6px;">3. Refine & Govern</div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">Class Deletion & Subclass Rebinding</p>
+                    </div>
+                    <div class="arrow-flow">➔</div>
+                    <div style="flex: 1; background: rgba(16, 185, 129, 0.15); border: 1px solid var(--accent-emerald); padding: 20px; border-radius: 12px; text-align: center;">
+                        <div style="color: var(--accent-emerald); font-weight: 700; margin-bottom: 6px;">4. Neo4j & AI GraphRAG</div>
+                        <p style="font-size: 0.8rem; color: #A7F3D0;">Cypher Execution & Gemini Insights</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 4: Live Screen - Class Matrix & Dashboard -->
+        <section class="slide" id="slide-3">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">Application Screen: Class Matrix Dashboard</h2>
+                    <p class="slide-subtitle">Real-Time Visual Management of Enterprise Ontology Classes & Attributes</p>
+                </div>
+                <span class="slide-num-pill">04 / 08</span>
+            </div>
+
+            <div class="slide-body">
+                <div class="app-screen-window">
+                    <div class="app-title-bar">
+                        <div class="window-dots">
+                            <div class="w-dot w-red"></div>
+                            <div class="w-dot w-yellow"></div>
+                            <div class="w-dot w-green"></div>
+                        </div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono';">http://localhost:4200/ontology-editor</span>
+                        <span style="font-size: 0.75rem; color: var(--accent-emerald);">● Neo4j Connected</span>
+                    </div>
+                    <div class="app-screen-content">
+                        <div class="dash-grid">
+                            <div class="dash-card"><div class="dash-val">14</div><div class="dash-lbl">Classes</div></div>
+                            <div class="dash-card"><div class="dash-val">42</div><div class="dash-lbl">Attributes</div></div>
+                            <div class="dash-card"><div class="dash-val">128</div><div class="dash-lbl">RDF Triples</div></div>
+                            <div class="dash-card"><div class="dash-val" style="color: var(--accent-emerald);">Active</div><div class="dash-lbl">Graph Status</div></div>
+                        </div>
+                        <div class="matrix-grid-mock">
+                            <div class="class-card-exec">
+                                <div class="class-name-tag">
+                                    <span>Device</span>
+                                    <button class="btn-delete-exec">🗑️ Delete</button>
+                                </div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">URI: http://onto.org/Device</div>
+                                <div class="attr-pill-group">
+                                    <span class="attr-pill">id: string</span>
+                                    <span class="attr-pill">serialNo: string</span>
+                                    <span class="attr-pill">status: string</span>
+                                </div>
+                            </div>
+
+                            <div class="class-card-exec">
+                                <div class="class-name-tag">
+                                    <span>TemperatureSensor</span>
+                                    <button class="btn-delete-exec">🗑️ Delete</button>
+                                </div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">subClassOf: Device</div>
+                                <div class="attr-pill-group">
+                                    <span class="attr-pill">temperature: float</span>
+                                    <span class="attr-pill">unit: string</span>
+                                </div>
+                            </div>
+
+                            <div class="class-card-exec">
+                                <div class="class-name-tag">
+                                    <span>Location</span>
+                                    <button class="btn-delete-exec">🗑️ Delete</button>
+                                </div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">URI: http://onto.org/Location</div>
+                                <div class="attr-pill-group">
+                                    <span class="attr-pill">building: string</span>
+                                    <span class="attr-pill">room: string</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 5: Live Screen - Class Deletion & Smart Rebinding -->
+        <section class="slide" id="slide-4">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">Application Screen: Smart Schema Governance</h2>
+                    <p class="slide-subtitle">Cascading Class Deletion with Automatic Subclass Rebinding to owl:Thing</p>
+                </div>
+                <span class="slide-num-pill">05 / 08</span>
+            </div>
+
+            <div class="slide-body">
+                <div class="app-screen-window">
+                    <div class="app-title-bar">
+                        <div class="window-dots"><div class="w-dot w-red"></div><div class="w-dot w-yellow"></div><div class="w-dot w-green"></div></div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">Inspector Drawer - Cascading Dependency Protection</span>
+                        <span style="font-size: 0.75rem; color: var(--accent-cyan);">Safe Delete Active</span>
+                    </div>
+                    <div class="app-screen-content">
+                        <div class="rebinding-flow">
+                            <div>
+                                <div style="color: var(--accent-rose); font-weight: 700; font-size: 0.85rem; margin-bottom: 4px;">DELETED CLASS</div>
+                                <div class="rebound-node" style="border-color: var(--accent-rose); background: rgba(244,63,94,0.1);">Device</div>
+                            </div>
+                            <div class="arrow-flow">➔ Rebind Subclasses ➔</div>
+                            <div>
+                                <div style="color: var(--accent-emerald); font-weight: 700; font-size: 0.85rem; margin-bottom: 4px;">NEW PARENT CLASS</div>
+                                <div class="rebound-node" style="border-color: var(--accent-emerald); background: rgba(16,185,129,0.1);">owl:Thing</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 16px; background: rgba(0,0,0,0.4); padding: 14px; border-radius: 8px; font-size: 0.85rem; color: #CBD5E1; line-height: 1.5;">
+                            ✔ <strong>Zero Broken Dependencies:</strong> When class <code>Device</code> is deleted, child class <code>TemperatureSensor</code> is safely rebound to <code>owl:Thing</code>, and all associated target graph node foreign keys are purged.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 6: Live Screen - Gemini AI Cypher Insights -->
+        <section class="slide" id="slide-5">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">Application Screen: Gemini AI GraphRAG</h2>
+                    <p class="slide-subtitle">Converting Natural Language Questions into Deterministic Cypher Queries</p>
+                </div>
+                <span class="slide-num-pill">06 / 08</span>
+            </div>
+
+            <div class="slide-body">
+                <div class="app-screen-window">
+                    <div class="app-title-bar">
+                        <div class="window-dots"><div class="w-dot w-red"></div><div class="w-dot w-yellow"></div><div class="w-dot w-green"></div></div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">Gemini AI Graph Insights Service</span>
+                        <span style="font-size: 0.75rem; color: var(--accent-violet);">Gemini 1.5 Pro Active</span>
+                    </div>
+                    <div class="app-screen-content">
+                        <div class="cypher-console">
+                            <div class="prompt-input-sim">
+                                💬 <strong>Natural Language Prompt:</strong> "Find all sensors with temperature higher than 85 degrees and return their facility location."
+                            </div>
+                            <div class="code-output-sim">
+                                // Auto-Generated Cypher Query<br>
+                                MATCH (s:TemperatureSensor)-[:LOCATED_IN]->(l:Location)<br>
+                                WHERE s.temperature > 85.0<br>
+                                RETURN s.id AS SensorID, s.temperature AS TempValue, l.facilityName AS Facility<br><br>
+                                <span style="color: #6EE7B7;">✔ 4 Matching Graph Nodes Retrieved from Neo4j (Deterministic Grounding)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 7: Business Impact & Metrics -->
+        <section class="slide" id="slide-6">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">Enterprise Business Impact</h2>
+                    <p class="slide-subtitle">Measurable ROI & Technical Governance for High-Scale Enterprise AI</p>
+                </div>
+                <span class="slide-num-pill">07 / 08</span>
+            </div>
+
+            <div class="slide-body">
+                <div class="exec-metrics-container">
+                    <div class="exec-stat-card">
+                        <div class="exec-stat-num">10x</div>
+                        <div class="exec-stat-lbl">Faster Ontology Modeling</div>
+                    </div>
+                    <div class="exec-stat-card">
+                        <div class="exec-stat-num">100%</div>
+                        <div class="exec-stat-lbl">W3C OWL/RDF Standardized</div>
+                    </div>
+                    <div class="exec-stat-card">
+                        <div class="exec-stat-num">0%</div>
+                        <div class="exec-stat-lbl">Downstream App Breakage</div>
+                    </div>
+                    <div class="exec-stat-card">
+                        <div class="exec-stat-num">100%</div>
+                        <div class="exec-stat-lbl">Hallucination-Free GraphRAG</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 8: Outro & Call to Action -->
+        <section class="slide" id="slide-7">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">Deploy OntoForge Today</h2>
+                    <p class="slide-subtitle">Transforming Enterprise Data into Actionable Knowledge Graph Intelligence</p>
+                </div>
+                <span class="slide-num-pill">08 / 08</span>
+            </div>
+
+            <div class="slide-body" style="flex-direction: column; text-align: center;">
+                <div style="font-size: 3rem; font-weight: 800; color: #FFFFFF; margin-bottom: 12px;">
+                    Ready for Production
+                </div>
+                <p style="color: var(--text-body); max-width: 650px; font-size: 1.1rem; line-height: 1.6; margin-bottom: 32px;">
+                    Available in On-Premises Docker containers, Private Cloud SaaS, and FastAPI Embedded Microservice deployments.
+                </p>
+
+                <div style="display: flex; gap: 16px; justify-content: center;">
+                    <a href="http://127.0.0.1:8000/app" target="_blank" style="text-decoration: none;">
+                        <button class="btn-exec active" style="padding: 14px 28px; font-size: 1rem;">
+                            🚀 Launch Live FastAPI App
+                        </button>
+                    </a>
+                    <a href="http://localhost:4200" target="_blank" style="text-decoration: none;">
+                        <button class="btn-exec" style="padding: 14px 28px; font-size: 1rem; border-color: var(--accent-cyan); color: var(--accent-cyan);">
+                            ⚡ Launch Angular 19 Dashboard
+                        </button>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer Controls & Narration Ticker -->
+    <footer class="exec-footer">
+        <div class="voiceover-banner">
+            <div class="vo-indicator"></div>
+            <div class="vo-text" id="vo-caption">
+                Loading executive narration...
+            </div>
+        </div>
+
+        <div class="slide-nav-pills">
+            <button class="pill-btn active" onclick="goToSlide(0)">1</button>
+            <button class="pill-btn" onclick="goToSlide(1)">2</button>
+            <button class="pill-btn" onclick="goToSlide(2)">3</button>
+            <button class="pill-btn" onclick="goToSlide(3)">4</button>
+            <button class="pill-btn" onclick="goToSlide(4)">5</button>
+            <button class="pill-btn" onclick="goToSlide(5)">6</button>
+            <button class="pill-btn" onclick="goToSlide(6)">7</button>
+            <button class="pill-btn" onclick="goToSlide(7)">8</button>
+        </div>
+    </footer>
+
+    <script>
+        const slides = [
+            {
+                id: "slide-0",
+                duration: 8,
+                voText: "Welcome to OntoForge—the automated enterprise Knowledge Graph and Ontology Generation engine powering high-precision graph intelligence."
+            },
+            {
+                id: "slide-1",
+                duration: 10,
+                voText: "Over eighty percent of enterprise data remains trapped in unstructured tables and PDFs. Manual ontology engineering takes months, while standard RAG applications suffer from hallucinations."
+            },
+            {
+                id: "slide-2",
+                duration: 9,
+                voText: "OntoForge automates the entire lifecycle: connecting data sources, extracting classes, enabling dynamic schema governance, and syncing directly with live Neo4j databases."
+            },
+            {
+                id: "slide-3",
+                duration: 11,
+                voText: "Here is the live OntoForge Class Matrix Dashboard. Domain experts can visually inspect ontology classes, view URI structures, manage attributes, and trigger one-click class actions."
+            },
+            {
+                id: "slide-4",
+                duration: 12,
+                voText: "OntoForge guarantees schema protection. When an ontology class is deleted, child subclasses are automatically rebound to owl:Thing, maintaining graph integrity across all downstream applications."
+            },
+            {
+                id: "slide-5",
+                duration: 11,
+                voText: "Integrated with Gemini AI, OntoForge turns natural language business prompts into precise Cypher graph queries, delivering deterministic, hallucination-free answers."
+            },
+            {
+                id: "slide-6",
+                duration: 9,
+                voText: "OntoForge delivers ten times faster modeling speed, zero broken downstream dependencies, and total W3C OWL and RDF compliance."
+            },
+            {
+                id: "slide-7",
+                duration: 8,
+                voText: "Deploy OntoForge today across your private cloud or microservices architecture and unlock enterprise knowledge graph intelligence. Thank you."
+            }
+        ];
+
+        let currentSlideIndex = 0;
+        let isAutoPlay = true;
+        let isVoiceover = true;
+        let slideTimer = null;
+        let synth = window.speechSynthesis;
+
+        function showSlide(index) {
+            slides.forEach((s, idx) => {
+                const el = document.getElementById(s.id);
+                const pill = document.querySelectorAll('.pill-btn')[idx];
+                if (idx === index) {
+                    el.classList.add('active');
+                    if (pill) pill.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                    if (pill) pill.classList.remove('active');
+                }
+            });
+
+            // Update Progress Bar
+            const pct = ((index + 1) / slides.length) * 100;
+            document.getElementById('progress-line').style.width = pct + '%';
+
+            // Update Voiceover Caption
+            const slideObj = slides[index];
+            document.getElementById('vo-caption').innerText = slideObj.voText;
+
+            // Trigger Voiceover Audio
+            if (isVoiceover && synth) {
+                synth.cancel();
+                const utterance = new SpeechSynthesisUtterance(slideObj.voText);
+                utterance.rate = 1.0;
+                synth.speak(utterance);
+            }
+
+            // Schedule Next Slide if Autoplay
+            if (isAutoPlay) {
+                resetAutoPlayTimer();
+            }
+        }
+
+        function resetAutoPlayTimer() {
+            if (slideTimer) clearTimeout(slideTimer);
+            const dur = slides[currentSlideIndex].duration * 1000;
+            slideTimer = setTimeout(() => {
+                nextSlide();
+            }, dur);
+        }
+
+        function nextSlide() {
+            currentSlideIndex = (currentSlideIndex + 1) % slides.length;
+            showSlide(currentSlideIndex);
+        }
+
+        function prevSlide() {
+            currentSlideIndex = (currentSlideIndex - 1 + slides.length) % slides.length;
+            showSlide(currentSlideIndex);
+        }
+
+        function goToSlide(idx) {
+            currentSlideIndex = idx;
+            showSlide(currentSlideIndex);
+        }
+
+        function toggleAutoPlay() {
+            isAutoPlay = !isAutoPlay;
+            const btnLabel = document.getElementById('label-play');
+            const icon = document.getElementById('icon-play');
+            const btn = document.getElementById('btn-autoplay');
+            if (isAutoPlay) {
+                btnLabel.innerText = "Autoplay: ON";
+                icon.innerText = "⏸";
+                btn.classList.add('active');
+                resetAutoPlayTimer();
+            } else {
+                btnLabel.innerText = "Autoplay: OFF";
+                icon.innerText = "▶";
+                btn.classList.remove('active');
+                if (slideTimer) clearTimeout(slideTimer);
+            }
+        }
+
+        function toggleVoiceover() {
+            isVoiceover = !isVoiceover;
+            const btn = document.getElementById('btn-voiceover');
+            if (isVoiceover) {
+                btn.innerText = "🔊 Voiceover: ON";
+                btn.classList.add('active');
+                showSlide(currentSlideIndex);
+            } else {
+                btn.innerText = "🔇 Voiceover: OFF";
+                btn.classList.remove('active');
+                if (synth) synth.cancel();
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+
+        window.onload = () => {
+            showSlide(0);
+        };
+    </script>
+</body>
+</html>

@@ -99,4 +99,5 @@ desktop.ini
 ~$*.docx
 ~$*.pptx
 ~$*.xlsx
-
+# Storage directory
+backend/storage/

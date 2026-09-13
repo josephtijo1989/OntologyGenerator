@@ -100,6 +100,10 @@ export class ApiService {
     return this.http.put<any>(`${this.baseUrl}/projects/${projectId}/ontology/classes/${className}`, payload);
   }
 
+  deleteOntologyClass(projectId: string, className: string): Observable<any> {
+    return this.http.delete<any>(`${this.baseUrl}/projects/${projectId}/ontology/classes/${className}`);
+  }
+
   exportOntology(projectId: string, format: string): Observable<string> {
     return this.http.post(`${this.baseUrl}/projects/${projectId}/ontology/export`, { format }, { responseType: 'text' });
   }

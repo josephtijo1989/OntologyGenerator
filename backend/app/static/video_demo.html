@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OntoForge - 3 Minute Interactive Product Video Showcase</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #090D16;
+            --card-bg: rgba(15, 23, 42, 0.75);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-purple: #8B5CF6;
+            --accent-cyan: #06B6D4;
+            --accent-blue: #3B82F6;
+            --accent-red: #EF4444;
+            --accent-green: #10B981;
+            --text-main: #F8FAFC;
+            --text-muted: #94A3B8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.15) 0%, transparent 40%);
+        }
+
+        .video-container {
+            width: 92%;
+            max-width: 1200px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(139, 92, 246, 0.2);
+            backdrop-filter: blur(16px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Header */
+        .video-header {
+            padding: 16px 24px;
+            background: rgba(15, 23, 42, 0.9);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: white;
+            box-shadow: 0 0 12px rgba(139, 92, 246, 0.5);
+        }
+
+        .brand-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #FFFFFF, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .badge-3min {
+            background: rgba(139, 92, 246, 0.2);
+            border: 1px solid var(--accent-purple);
+            color: var(--accent-cyan);
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Video Display Stage */
+        .stage {
+            position: relative;
+            width: 100%;
+            height: 540px;
+            background: #030712;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Scene Elements */
+        .scene {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease, transform 0.6s ease;
+            transform: scale(0.98);
+        }
+
+        .scene.active {
+            opacity: 1;
+            visibility: visible;
+            transform: scale(1);
+        }
+
+        /* Scene 1 Visuals */
+        .data-chaos {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .chaos-card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            animation: pulseWarning 2s infinite alternate;
+        }
+
+        @keyframes pulseWarning {
+            0% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.2); }
+            100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); }
+        }
+
+        .chaos-tag {
+            background: var(--accent-red);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* Scene 2 Logo Reveal */
+        .hero-logo {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #FFFFFF 20%, var(--accent-purple) 60%, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(139, 92, 246, 0.4);
+            margin-bottom: 12px;
+        }
+
+        .hero-tagline {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        /* Graph Canvas Graphic */
+        .graph-nodes-graphic {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            margin-top: 30px;
+        }
+
+        .node-circle {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(6, 182, 212, 0.3));
+            border: 2px solid var(--accent-cyan);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: white;
+            box-shadow: 0 0 15px var(--accent-cyan);
+            position: relative;
+        }
+
+        .node-edge {
+            width: 80px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+            position: relative;
+        }
+
+        .node-edge::after {
+            content: 'subClassOf';
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.65rem;
+            color: var(--accent-cyan);
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* Scene 3 UI Simulation */
+        .demo-ui-window {
+            width: 100%;
+            max-width: 850px;
+            background: #0F172A;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .window-header {
+            background: #1E293B;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .dot-red { background: #EF4444; }
+        .dot-yellow { background: #F59E0B; }
+        .dot-green { background: #10B981; }
+
+        .window-body {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+        }
+
+        .class-card-mock {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid var(--accent-purple);
+            border-radius: 8px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+        }
+
+        .btn-delete-demo {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid var(--accent-red);
+            color: #FCA5A5;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            width: fit-content;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            animation: pulseDelete 1.5s infinite;
+        }
+
+        @keyframes pulseDelete {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .drawer-mock {
+            background: rgba(15, 23, 42, 0.9);
+            border-left: 1px solid var(--border-color);
+            padding: 12px;
+            font-size: 0.8rem;
+        }
+
+        /* Scene 4 AI Prompt Simulator */
+        .ai-sim-box {
+            width: 100%;
+            max-width: 800px;
+            background: #020617;
+            border: 1px solid var(--accent-cyan);
+            border-radius: 12px;
+            padding: 24px;
+            font-family: 'Fira Code', monospace;
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.2);
+        }
+
+        .prompt-line {
+            color: var(--accent-cyan);
+            margin-bottom: 16px;
+            font-size: 0.95rem;
+        }
+
+        .cypher-line {
+            color: #A7F3D0;
+            background: rgba(16, 185, 129, 0.1);
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 3px solid var(--accent-green);
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        /* Scene 5 Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .metric-num {
+            font-size: 2.8rem;
+            font-weight: 800;
+            color: var(--accent-cyan);
+            margin-bottom: 6px;
+        }
+
+        .metric-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* Lower Overlay / Subtitles */
+        .subtitle-bar {
+            padding: 16px 24px;
+            background: rgba(15, 23, 42, 0.95);
+            border-top: 1px solid var(--border-color);
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .subtitle-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent-purple);
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .subtitle-text {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #F1F5F9;
+            font-weight: 500;
+        }
+
+        /* Controls Bar */
+        .controls-bar {
+            padding: 14px 24px;
+            background: rgba(2, 6, 23, 0.95);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .btn-control {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+        }
+
+        .btn-control:hover {
+            background: var(--accent-purple);
+            border-color: var(--accent-purple);
+        }
+
+        .btn-control.active {
+            background: var(--accent-cyan);
+            color: black;
+            border-color: var(--accent-cyan);
+        }
+
+        .timeline-slider-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .timeline-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .timeline-progress {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-purple), var(--accent-cyan));
+            transition: width 0.1s linear;
+        }
+
+        .time-display {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'Fira Code', monospace;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .scene-pills {
+            display: flex;
+            gap: 6px;
+        }
+
+        .pill-scene {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pill-scene.active {
+            background: rgba(139, 92, 246, 0.25);
+            border-color: var(--accent-purple);
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="video-container">
+        <!-- Header -->
+        <div class="video-header">
+            <div class="brand">
+                <div class="brand-icon">OF</div>
+                <div class="brand-title">OntoForge</div>
+            </div>
+            <div class="badge-3min">3-Minute Product Presentation Video</div>
+        </div>
+
+        <!-- Stage -->
+        <div class="stage">
+
+            <!-- Scene 1: The Problem -->
+            <div class="scene" id="scene-1">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h2 style="font-size: 1.8rem; color: #FCA5A5; margin-bottom: 8px;">The Enterprise Data Crisis</h2>
+                    <p style="color: var(--text-muted); font-size: 0.95rem;">80%+ Enterprise Data is Unstructured & Siloed</p>
+                </div>
+                <div class="data-chaos">
+                    <div class="chaos-card">
+                        <div class="chaos-tag">PROBLEM #1</div>
+                        <h4 style="margin-top: 10px; color: #F1F5F9;">Disconnected Schemas</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">SQL tables & PDFs lacking semantic relationships.</p>
+                    </div>
+                    <div class="chaos-card">
+                        <div class="chaos-tag">PROBLEM #2</div>
+                        <h4 style="margin-top: 10px; color: #F1F5F9;">Manual Modeling</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Months of manual domain-expert ontology labor.</p>
+                    </div>
+                    <div class="chaos-card">
+                        <div class="chaos-tag">PROBLEM #3</div>
+                        <h4 style="margin-top: 10px; color: #F1F5F9;">LLM Hallucinations</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">RAG applications failing without explicit knowledge graph context.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene 2: Introducing OntoForge -->
+            <div class="scene" id="scene-2">
+                <div class="hero-logo">OntoForge</div>
+                <div class="hero-tagline">AI-Powered Enterprise Knowledge Graph & Ontology Generation Engine</div>
+                <div class="graph-nodes-graphic">
+                    <div class="node-circle">Device</div>
+                    <div class="node-edge"></div>
+                    <div class="node-circle">Sensor</div>
+                    <div class="node-edge"></div>
+                    <div class="node-circle">Reading</div>
+                </div>
+            </div>
+
+            <!-- Scene 3: Live UI Demo -->
+            <div class="scene" id="scene-3">
+                <div class="demo-ui-window">
+                    <div class="window-header">
+                        <div class="dot dot-red"></div>
+                        <div class="dot dot-yellow"></div>
+                        <div class="dot dot-green"></div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); margin-left: 8px;">OntoForge Dashboard - Interactive Class Editor</span>
+                    </div>
+                    <div class="window-body">
+                        <div class="class-card-mock">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <strong style="color: var(--accent-cyan); font-size: 1rem;">Class: TemperatureSensor</strong>
+                                <button class="btn-delete-demo" onclick="alert('Demo: Class deleted. Subclasses automatically rebound to owl:Thing!')">
+                                    🗑️ Delete Class
+                                </button>
+                            </div>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">URI: http://www.w3.org/2002/07/owl#Thing -> TemperatureSensor</span>
+                            <div style="font-size: 0.75rem; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; color: #A7F3D0;">
+                                Attributes: sensorId (string), value (float), status (string)
+                            </div>
+                        </div>
+                        <div class="drawer-mock">
+                            <strong style="color: var(--accent-purple);">Inspector Drawer</strong>
+                            <p style="color: var(--text-muted); margin-top: 6px;">Status: Active</p>
+                            <p style="color: #10B981; margin-top: 4px;">✔ Subclass rebinding active</p>
+                            <p style="color: #10B981; margin-top: 4px;">✔ Neo4j sync ready</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene 4: Gemini AI Cypher Insights -->
+            <div class="scene" id="scene-4">
+                <div class="ai-sim-box">
+                    <div class="prompt-line">
+                        🤖 <strong>User Prompt:</strong> "Show me all high-temperature sensors and their location details."
+                    </div>
+                    <div class="cypher-line">
+                        // Gemini Auto-Generated Cypher Query<br>
+                        MATCH (s:Sensor)-[:LOCATED_IN]->(l:Location)<br>
+                        WHERE s.temperature > 85.0<br>
+                        RETURN s.id AS SensorID, s.temperature AS Temp, l.name AS FacilityLocation
+                    </div>
+                    <div style="margin-top: 14px; font-size: 0.8rem; color: var(--accent-cyan); display: flex; align-items: center; gap: 8px;">
+                        <span style="width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%;"></span>
+                        Live Neo4j graph response retrieved (3 nodes matched, 0 hallucinations)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene 5: Enterprise Architecture & ROI -->
+            <div class="scene" id="scene-5">
+                <h3 style="font-size: 1.5rem; margin-bottom: 24px; color: #FFFFFF;">Enterprise ROI & High-Performance Architecture</h3>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-num">10x</div>
+                        <div class="metric-label">Faster Modeling Speed</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-num">100%</div>
+                        <div class="metric-label">W3C OWL/RDF Compliant</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-num">0%</div>
+                        <div class="metric-label">Schema Breakage Risk</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene 6: Outro & Call to Action -->
+            <div class="scene" id="scene-6">
+                <div class="hero-logo" style="font-size: 3rem;">OntoForge</div>
+                <p style="font-size: 1.2rem; color: #F1F5F9; margin-bottom: 20px;">Unlock Enterprise Knowledge Graph Intelligence Today</p>
+                <div style="display: flex; gap: 16px;">
+                    <a href="https://github.com/josephtijo1989/OntologyGenerator" target="_blank" style="text-decoration: none;">
+                        <button class="btn-control active" style="padding: 12px 24px; font-size: 1rem;">
+                            🚀 View GitHub Repository
+                        </button>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Subtitles Ticker -->
+        <div class="subtitle-bar">
+            <div class="subtitle-label" id="vo-scene-label">SCENE 1: THE ENTERPRISE DATA CRISIS</div>
+            <div class="subtitle-text" id="vo-text-display">
+                Loading presentation script...
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-bar">
+            <button class="btn-control" id="btn-play-pause" onclick="togglePlayPause()">
+                ▶ Play Video
+            </button>
+
+            <button class="btn-control" id="btn-voiceover" onclick="toggleVoiceover()">
+                🔊 Voiceover: ON
+            </button>
+
+            <div class="timeline-slider-container">
+                <div class="timeline-bar" onclick="seekVideo(event)">
+                    <div class="timeline-progress" id="timeline-progress"></div>
+                </div>
+                <div class="time-display">
+                    <span id="time-current">0:00</span>
+                    <span id="time-total">3:00</span>
+                </div>
+            </div>
+
+            <div class="scene-pills">
+                <button class="pill-scene active" onclick="jumpToScene(0)">1</button>
+                <button class="pill-scene" onclick="jumpToScene(1)">2</button>
+                <button class="pill-scene" onclick="jumpToScene(2)">3</button>
+                <button class="pill-scene" onclick="jumpToScene(3)">4</button>
+                <button class="pill-scene" onclick="jumpToScene(4)">5</button>
+                <button class="pill-scene" onclick="jumpToScene(5)">6</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const scriptData = [
+            {
+                sceneId: "scene-1",
+                label: "SCENE 1: THE ENTERPRISE DATA CRISIS (0:00 - 0:25)",
+                duration: 25,
+                voText: "In today's data-driven world, enterprises sit on goldmines of information locked away in complex SQL tables and PDFs. Without explicit knowledge graph relationships, modern AI applications suffer from hallucinations, broken queries, and months of manual ontology engineering."
+            },
+            {
+                sceneId: "scene-2",
+                label: "SCENE 2: INTRODUCING ONTOFORGE (0:25 - 0:55)",
+                duration: 30,
+                voText: "Meet OntoForge—the next-generation AI-powered Knowledge Graph and Ontology Generation engine. OntoForge automates schema extraction, standardization, and knowledge graph mapping in minutes—not months."
+            },
+            {
+                sceneId: "scene-3",
+                label: "SCENE 3: LIVE UI & WORKFLOW DEMO (0:55 - 1:45)",
+                duration: 50,
+                voText: "With one click, OntoForge extracts structured ontology classes and relationships. Our full-lifecycle editor allows you to inspect properties or delete obsolete classes safely, automatically rebinding orphan subclasses to owl:Thing and syncing directly to Neo4j graph databases."
+            },
+            {
+                sceneId: "scene-4",
+                label: "SCENE 4: GEMINI AI & CYPHER GRAPHRAG (1:45 - 2:25)",
+                duration: 40,
+                voText: "OntoForge integrates with Gemini AI to convert natural language prompts into precise Cypher graph queries, delivering deterministic, hallucination-free answers grounded in live graph data."
+            },
+            {
+                sceneId: "scene-5",
+                label: "SCENE 5: ENTERPRISE ROI & ARCHITECTURE (2:25 - 2:50)",
+                duration: 25,
+                voText: "Built on FastAPI, Angular 19, and Neo4j, OntoForge delivers ten times faster modeling speed while guaranteeing full compliance with global W3C standards."
+            },
+            {
+                sceneId: "scene-6",
+                label: "SCENE 6: CALL TO ACTION & OUTRO (2:50 - 3:00)",
+                duration: 10,
+                voText: "Transform your enterprise knowledge into actionable intelligence today with OntoForge. Thank you!"
+            }
+        ];
+
+        let currentSceneIndex = 0;
+        let isPlaying = false;
+        let voiceoverEnabled = true;
+        let currentSeconds = 0;
+        const totalSeconds = 180;
+        let timerInterval = null;
+        let synth = window.speechSynthesis;
+
+        function updateUI() {
+            // Update scenes visibility
+            scriptData.forEach((item, idx) => {
+                const el = document.getElementById(item.sceneId);
+                const pill = document.querySelectorAll('.pill-scene')[idx];
+                if (idx === currentSceneIndex) {
+                    el.classList.add('active');
+                    if (pill) pill.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                    if (pill) pill.classList.remove('active');
+                }
+            });
+
+            // Update subtitles
+            const currentItem = scriptData[currentSceneIndex];
+            document.getElementById('vo-scene-label').innerText = currentItem.label;
+            document.getElementById('vo-text-display').innerText = currentItem.voText;
+
+            // Speak Voiceover if enabled and playing
+            if (isPlaying && voiceoverEnabled && synth) {
+                synth.cancel();
+                const utterance = new SpeechSynthesisUtterance(currentItem.voText);
+                utterance.rate = 1.05;
+                synth.speak(utterance);
+            }
+        }
+
+        function togglePlayPause() {
+            isPlaying = !isPlaying;
+            const btn = document.getElementById('btn-play-pause');
+            if (isPlaying) {
+                btn.innerHTML = "⏸ Pause Video";
+                btn.classList.add('active');
+                startTimer();
+                updateUI();
+            } else {
+                btn.innerHTML = "▶ Play Video";
+                btn.classList.remove('active');
+                stopTimer();
+                if (synth) synth.cancel();
+            }
+        }
+
+        function toggleVoiceover() {
+            voiceoverEnabled = !voiceoverEnabled;
+            const btn = document.getElementById('btn-voiceover');
+            if (voiceoverEnabled) {
+                btn.innerText = "🔊 Voiceover: ON";
+                btn.classList.add('active');
+            } else {
+                btn.innerText = "🔇 Voiceover: OFF";
+                btn.classList.remove('active');
+                if (synth) synth.cancel();
+            }
+        }
+
+        function startTimer() {
+            stopTimer();
+            timerInterval = setInterval(() => {
+                currentSeconds++;
+                if (currentSeconds > totalSeconds) {
+                    currentSeconds = totalSeconds;
+                    togglePlayPause();
+                    return;
+                }
+
+                // Check scene boundaries
+                let accum = 0;
+                for (let i = 0; i < scriptData.length; i++) {
+                    accum += scriptData[i].duration;
+                    if (currentSeconds <= accum) {
+                        if (currentSceneIndex !== i) {
+                            currentSceneIndex = i;
+                            updateUI();
+                        }
+                        break;
+                    }
+                }
+
+                // Update timeline progress
+                const pct = (currentSeconds / totalSeconds) * 100;
+                document.getElementById('timeline-progress').style.width = pct + '%';
+                
+                // Update time display
+                const mins = Math.floor(currentSeconds / 60);
+                const secs = currentSeconds % 60;
+                document.getElementById('time-current').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+        }
+
+        function jumpToScene(idx) {
+            currentSceneIndex = idx;
+            let accum = 0;
+            for (let i = 0; i < idx; i++) {
+                accum += scriptData[i].duration;
+            }
+            currentSeconds = accum;
+            const pct = (currentSeconds / totalSeconds) * 100;
+            document.getElementById('timeline-progress').style.width = pct + '%';
+            
+            const mins = Math.floor(currentSeconds / 60);
+            const secs = currentSeconds % 60;
+            document.getElementById('time-current').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+            updateUI();
+        }
+
+        function seekVideo(e) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const pct = clickX / rect.width;
+            currentSeconds = Math.floor(pct * totalSeconds);
+            
+            // Find corresponding scene
+            let accum = 0;
+            for (let i = 0; i < scriptData.length; i++) {
+                accum += scriptData[i].duration;
+                if (currentSeconds <= accum) {
+                    currentSceneIndex = i;
+                    break;
+                }
+            }
+            
+            document.getElementById('timeline-progress').style.width = (pct * 100) + '%';
+            updateUI();
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            updateUI();
+        };
+    </script>
+</body>
+</html>

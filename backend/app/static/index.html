@@ -13,20 +13,20 @@
 <body class="light-theme">
   <!-- Navbar -->
   <header class="navbar">
-    <!-- Left: Branding & Tagline -->
-    <div class="brand" style="display: flex; align-items: center; gap: 10px;">
-      <span class="logo-icon" style="font-size: 22px;">⚡</span>
+    <!-- Left: Official Branding & Tagline -->
+    <div class="brand" style="display: flex; align-items: center; gap: 12px;">
+      <img src="/static/img/ontoforge_logo.png" alt="OntoForge Logo" style="height: 38px; width: auto; object-fit: contain;">
       <div style="display: flex; flex-direction: column; line-height: 1.2;">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="logo-text" style="font-size: 18px; font-weight: 700; background: linear-gradient(135deg, #0284c7, #4f46e5); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">OntoForge</span>
-          <span class="badge" style="font-size: 10px; padding: 2px 7px;">v1.0 Enterprise</span>
+          <span style="font-size: 11px; font-weight: 700; background: #e0e7ff; color: #4f46e5; padding: 2px 8px; border-radius: 12px; text-transform: uppercase;">v1.0 Enterprise</span>
         </div>
         <span style="font-size: 11px; color: var(--text-secondary); font-weight: 500; letter-spacing: 0.1px;">Transform source metadata into semantic knowledge</span>
       </div>
     </div>
 
-    <!-- Right: Active Project Selector & Creation -->
+    <!-- Right: Active Project Selector & Creation & Demo Presentation Button -->
     <div class="navbar-right" style="display: flex; align-items: center; gap: 10px;">
+      <button class="btn-primary" style="background: linear-gradient(135deg, #4f46e5, #0284c7); font-weight: 700; height: 36px; padding: 0 16px; font-size: 13px; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);" onclick="startDemoTour()">🎬 Launch Presentation Tour</button>
       <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Active Project:</span>
       <select id="projectSelect" class="project-selector" onchange="onProjectChanged(this.value)" style="min-width: 240px; height: 36px; font-size: 13px; font-weight: 600;">
         <!-- Dynamically Populated Projects -->
@@ -1151,7 +1151,28 @@
             <div id="llm-exec-summary-text" style="font-size: 13px; color: var(--text-primary); line-height: 1.6;"></div>
           </div>
 
-          <!-- 3. Target Graph DB Live Data Extracts Table -->
+          <!-- 3. Raw Prompt Sent to LLM (Context & Instructions Log) -->
+          <div class="glass-card" style="padding: 18px; border-left: 4px solid var(--accent-indigo);">
+            <div class="flex-between" style="margin-bottom: 10px;">
+              <h3 style="margin: 0; font-size: 15px; color: var(--accent-indigo); display: flex; align-items: center; gap: 8px;">
+                <span>📝 Prompt Sent to LLM (Context & Instructions Log)</span>
+              </h3>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn-sm" style="background: rgba(99, 102, 241, 0.15); color: var(--accent-indigo); border: 1px solid rgba(99, 102, 241, 0.3); font-weight: 600;" onclick="toggleLLMPromptVisibility()">
+                  <span id="llm-prompt-toggle-icon">👁️</span> <span id="llm-prompt-toggle-text">Collapse Prompt</span>
+                </button>
+                <button class="btn-sm" style="font-weight: 600;" onclick="copyLLMFullPrompt()">📋 Copy LLM Prompt</button>
+              </div>
+            </div>
+            <div id="llm-prompt-wrapper">
+              <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 600;" id="llm-prompt-meta-info">
+                Full context payload sent to AI Reasoning Engine including W3C OWL Schema, Datatype Properties, Business Rules, and Few-Shot Templates.
+              </div>
+              <pre id="llm-full-prompt-block" style="background: #0f172a; border-radius: 8px; border: 1px solid var(--border-color); padding: 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #38bdf8; overflow: auto; min-height: 120px; max-height: 500px; margin: 0; line-height: 1.5; white-space: pre-wrap; word-break: break-word;"></pre>
+            </div>
+          </div>
+
+          <!-- 4. Target Graph DB Live Data Extracts Table -->
           <div id="llm-records-card" class="glass-card" style="display: none; padding: 18px; border-left: 4px solid var(--accent-emerald);">
             <div class="flex-between" style="margin-bottom: 10px;">
               <h3 style="margin: 0; font-size: 15px; color: var(--accent-emerald); display: flex; align-items: center; gap: 8px;">
@@ -1607,8 +1628,11 @@
       </div>
 
       <div class="flex-between" style="margin-top: 16px;">
-        <button class="btn-secondary" onclick="closeModal('ontologyClassModal')">Cancel</button>
-        <button class="btn-primary" onclick="submitUpdateOntologyClass()">Save Ontology Class & Properties</button>
+        <button class="btn-danger" onclick="deleteOntologyClassFromModal()" style="font-weight: 600;">🗑️ Delete Class</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-secondary" onclick="closeModal('ontologyClassModal')">Cancel</button>
+          <button class="btn-primary" onclick="submitUpdateOntologyClass()">Save Ontology Class & Properties</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1916,22 +1940,23 @@
   <div id="toast-container" style="position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 10px; z-index: 999999; pointer-events: none;"></div>
 
   <!-- Modularized Application Scripts -->
-  <script src="/static/js/toast.js?v=20.0"></script>
-  <script src="/static/js/confirm.js?v=20.0"></script>
-  <script src="/static/js/app.js?v=20.0"></script>
-  <script src="/static/js/dashboard.js?v=20.0"></script>
-  <script src="/static/js/connectors.js?v=20.0"></script>
-  <script src="/static/js/metadata.js?v=20.0"></script>
-  <script src="/static/js/profiling.js?v=20.0"></script>
-  <script src="/static/js/rules.js?v=20.0"></script>
-  <script src="/static/js/ontology.js?v=20.0"></script>
-  <script src="/static/js/ontology_graph.js?v=20.0"></script>
-  <script src="/static/js/ontology_viewer.js?v=20.0"></script>
-  <script src="/static/js/graph.js?v=20.0"></script>
-  <script src="/static/js/data_movement.js?v=20.0"></script>
-  <script src="/static/js/schema_matrix.js?v=20.0"></script>
-  <script src="/static/js/graph_profiler.js?v=20.0"></script>
-  <script src="/static/js/llm_insights.js?v=20.0"></script>
-  <script src="/static/js/projects.js?v=20.0"></script>
+  <script src="/static/js/toast.js?v=22.0"></script>
+  <script src="/static/js/confirm.js?v=22.0"></script>
+  <script src="/static/js/app.js?v=22.0"></script>
+  <script src="/static/js/dashboard.js?v=22.0"></script>
+  <script src="/static/js/connectors.js?v=22.0"></script>
+  <script src="/static/js/metadata.js?v=22.0"></script>
+  <script src="/static/js/profiling.js?v=22.0"></script>
+  <script src="/static/js/rules.js?v=22.0"></script>
+  <script src="/static/js/ontology.js?v=22.0"></script>
+  <script src="/static/js/ontology_graph.js?v=22.0"></script>
+  <script src="/static/js/ontology_viewer.js?v=22.0"></script>
+  <script src="/static/js/graph.js?v=22.0"></script>
+  <script src="/static/js/data_movement.js?v=22.0"></script>
+  <script src="/static/js/schema_matrix.js?v=22.0"></script>
+  <script src="/static/js/graph_profiler.js?v=22.0"></script>
+  <script src="/static/js/llm_insights.js?v=22.0"></script>
+  <script src="/static/js/projects.js?v=22.0"></script>
+  <script src="/static/js/demo_tour.js?v=1.0"></script>
 </body>
 </html>

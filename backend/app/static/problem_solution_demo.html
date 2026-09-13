@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OntoForge - Animated Problem vs. Solution Showcase</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #F8FAFC;
+            --bg-card: #FFFFFF;
+            --border-light: #E2E8F0;
+            --border-indigo: #C7D2FE;
+            --accent-indigo: #4F46E5;
+            --accent-cyan: #0284C7;
+            --accent-violet: #7C3AED;
+            --accent-emerald: #059669;
+            --accent-rose: #DC2626;
+            --text-heading: #0F172A;
+            --text-body: #334155;
+            --text-muted: #64748B;
+            --shadow-card: 0 20px 40px -15px rgba(15, 23, 42, 0.08);
+            --shadow-window: 0 25px 50px -12px rgba(15, 23, 42, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-heading);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Canvas Background */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .main-wrapper {
+            position: relative;
+            z-index: 10;
+            width: 94%;
+            max-width: 1280px;
+            margin: 20px auto;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid var(--border-light);
+            border-radius: 24px;
+            box-shadow: var(--shadow-window);
+            backdrop-filter: blur(16px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header-bar {
+            padding: 18px 32px;
+            background: #FFFFFF;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-box {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-cyan));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: white;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+        }
+
+        .logo-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--text-heading);
+        }
+
+        .badge-mode {
+            background: #EEF2FF;
+            border: 1px solid var(--border-indigo);
+            color: var(--accent-indigo);
+            font-size: 0.75rem;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        /* Story Stage */
+        .story-stage {
+            position: relative;
+            width: 100%;
+            height: 570px;
+            background: #F8FAFC;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .story-slide {
+            position: absolute;
+            inset: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px) scale(0.97);
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .story-slide.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        /* Split View Grid: Problem vs Solution */
+        .split-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .problem-card {
+            background: #FEF2F2;
+            border: 2px solid #FCA5A5;
+            border-radius: 16px;
+            padding: 24px;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(220, 38, 38, 0.08);
+            animation: floatProblem 3s infinite ease-in-out;
+        }
+
+        @keyframes floatProblem {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+
+        .solution-card {
+            background: #ECFDF5;
+            border: 2px solid #6EE7B7;
+            border-radius: 16px;
+            padding: 24px;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(5, 150, 105, 0.08);
+            animation: floatSolution 3s 1.5s infinite ease-in-out;
+        }
+
+        @keyframes floatSolution {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+
+        .card-tag-problem {
+            background: var(--accent-rose);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 20px;
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            text-transform: uppercase;
+        }
+
+        .card-tag-solution {
+            background: var(--accent-emerald);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 20px;
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            text-transform: uppercase;
+        }
+
+        /* Interactive Canvas for Node Rebinding Animation */
+        .rebinding-canvas-box {
+            width: 100%;
+            height: 220px;
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+        }
+
+        .node-box {
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: all 0.6s ease;
+        }
+
+        .node-parent {
+            background: #EEF2FF;
+            border: 2px solid var(--accent-indigo);
+            color: var(--accent-indigo);
+        }
+
+        .node-deleted {
+            background: #FEF2F2;
+            border: 2px solid var(--accent-rose);
+            color: var(--accent-rose);
+            text-decoration: line-through;
+            animation: dissolveNode 2s infinite alternate;
+        }
+
+        @keyframes dissolveNode {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0.3; transform: scale(0.9); }
+        }
+
+        .node-child {
+            background: #ECFDF5;
+            border: 2px solid var(--accent-emerald);
+            color: var(--accent-emerald);
+            animation: rebindMove 3s infinite ease-in-out;
+        }
+
+        @keyframes rebindMove {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* Typewriter Code Demo */
+        .typewriter-box {
+            background: #0F172A;
+            border: 1px solid var(--accent-cyan);
+            border-radius: 12px;
+            padding: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            color: #F8FAFC;
+            width: 100%;
+            box-shadow: 0 10px 25px rgba(2, 132, 199, 0.15);
+        }
+
+        /* Controls Footer */
+        .footer-controls {
+            padding: 16px 32px;
+            background: #FFFFFF;
+            border-top: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .btn-ctrl {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            color: var(--text-heading);
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        }
+
+        .btn-ctrl:hover {
+            border-color: var(--accent-indigo);
+            color: var(--accent-indigo);
+        }
+
+        .btn-ctrl.active {
+            background: var(--accent-indigo);
+            color: white;
+            border-color: var(--accent-indigo);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+
+        .timeline-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .timeline-track {
+            width: 100%;
+            height: 8px;
+            background: #E2E8F0;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .timeline-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-indigo), var(--accent-cyan));
+            transition: width 0.1s linear;
+        }
+
+        .time-readout {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .nav-pills {
+            display: flex;
+            gap: 4px;
+        }
+
+        .nav-pill {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            color: var(--text-muted);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .nav-pill.active {
+            background: var(--accent-indigo);
+            color: white;
+            border-color: var(--accent-indigo);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Dynamic Animated Network Canvas Background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <div class="main-wrapper">
+        <!-- Header -->
+        <header class="header-bar">
+            <div class="logo-group">
+                <div class="logo-box">OF</div>
+                <div class="logo-title">OntoForge</div>
+            </div>
+            <div class="badge-mode">Animated Problem vs. Solution Showcase</div>
+        </header>
+
+        <!-- Stage -->
+        <main class="story-stage">
+
+            <!-- SLIDE 1: Intro Story Hero -->
+            <div class="story-slide active" id="st-1">
+                <h1 style="font-size: 2.5rem; font-weight: 800; text-align: center; margin-bottom: 12px; letter-spacing: -0.5px;">
+                    How OntoForge Solves Enterprise Data Chaos
+                </h1>
+                <p style="font-size: 1.15rem; color: var(--text-muted); text-align: center; max-width: 750px; margin-bottom: 32px;">
+                    A step-by-step animated journey detailing the 4 critical enterprise data problems and how OntoForge solves each one automatically.
+                </p>
+                <button class="btn-ctrl active" style="padding: 14px 28px; font-size: 1rem;" onclick="jumpToSlide(1)">
+                    ▶ Start Problem vs. Solution Storyline
+                </button>
+            </div>
+
+            <!-- SLIDE 2: Problem 1 vs Solution 1 (Siloed Data -> Automated Extraction) -->
+            <div class="story-slide" id="st-2">
+                <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 24px;">1. Siloed Data vs. Automated Schema Extraction</h2>
+                <div class="split-grid">
+                    <div class="problem-card">
+                        <div class="card-tag-problem">🔴 THE PROBLEM</div>
+                        <h3 style="color: var(--accent-rose); font-size: 1.2rem; margin-top: 8px; margin-bottom: 8px;">Trapped Enterprise Data</h3>
+                        <p style="color: var(--text-body); font-size: 0.9rem; line-height: 1.5;">
+                            Relational SQL tables, PDFs, and CSVs exist in isolated silos lacking explicit semantic relationships. Teams spend months attempting to connect data manually.
+                        </p>
+                    </div>
+
+                    <div class="solution-card">
+                        <div class="card-tag-solution">🟢 ONTOFORGE SOLUTION</div>
+                        <h3 style="color: var(--accent-emerald); font-size: 1.2rem; margin-top: 8px; margin-bottom: 8px;">1-Click Auto-Extraction</h3>
+                        <p style="color: var(--text-body); font-size: 0.9rem; line-height: 1.5;">
+                            OntoForge parses target schemas automatically, converting raw SQL tables into W3C-standard OWL/RDF class cards with live relationship properties in seconds.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLIDE 3: Problem 2 vs Solution 2 (Schema Breakage -> Smart Subclass Rebinding) -->
+            <div class="story-slide" id="st-3">
+                <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 16px;">2. Broken Dependencies vs. Smart Subclass Rebinding</h2>
+                <div class="rebinding-canvas-box" style="max-width: 900px; margin-bottom: 16px;">
+                    <div class="node-box node-deleted">DELETED CLASS:<br>Device</div>
+                    <div style="font-size: 1.5rem; color: var(--accent-indigo); font-weight: 800;">➔ Smart Rebind ➔</div>
+                    <div class="node-box node-parent">NEW PARENT:<br>owl:Thing</div>
+                    <div class="node-box node-child">SUBCLASS:<br>TemperatureSensor</div>
+                </div>
+                <div class="split-grid" style="max-width: 900px;">
+                    <div class="problem-card" style="padding: 16px;">
+                        <div class="card-tag-problem">🔴 THE PROBLEM</div>
+                        <p style="font-size: 0.85rem; color: var(--text-body);">Deleting a database class breaks downstream child classes and crashes dependent applications.</p>
+                    </div>
+                    <div class="solution-card" style="padding: 16px;">
+                        <div class="card-tag-solution">🟢 ONTOFORGE SOLUTION</div>
+                        <p style="font-size: 0.85rem; color: var(--text-body);">Child subclasses automatically rebind to <code>owl:Thing</code>, maintaining graph integrity with 0% data loss.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLIDE 4: Problem 3 vs Solution 3 (AI Hallucinations -> Gemini Cypher GraphRAG) -->
+            <div class="story-slide" id="st-4">
+                <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 16px;">3. AI Hallucinations vs. Gemini Cypher GraphRAG</h2>
+                <div class="typewriter-box" style="max-width: 850px; margin-bottom: 16px;">
+                    <div style="color: var(--accent-cyan); margin-bottom: 8px; font-size: 0.85rem;">
+                        💬 Prompt: "Find all high-temperature sensors and their location."
+                    </div>
+                    <div id="typewriter-code" style="color: #6EE7B7; font-size: 0.8rem; line-height: 1.5;">
+                        MATCH (s:TemperatureSensor)-[:LOCATED_IN]->(l:Location)<br>
+                        WHERE s.temperature > 85.0<br>
+                        RETURN s.id, s.temperature, l.name<br>
+                        <span style="color: #A7F3D0;">✔ 100% Deterministic Answer from Live Neo4j Graph DB</span>
+                    </div>
+                </div>
+                <div class="split-grid" style="max-width: 850px;">
+                    <div class="problem-card" style="padding: 14px;">
+                        <div class="card-tag-problem">🔴 THE PROBLEM</div>
+                        <p style="font-size: 0.85rem; color: var(--text-body);">Standard RAG produces costly hallucinations without explicit graph grounding.</p>
+                    </div>
+                    <div class="solution-card" style="padding: 14px;">
+                        <div class="card-tag-solution">🟢 ONTOFORGE SOLUTION</div>
+                        <p style="font-size: 0.85rem; color: var(--text-body);">Gemini AI executes precise Cypher queries against Neo4j for 100% accurate graph answers.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLIDE 5: Problem 4 vs Solution 4 (Slow 6 Months -> 10x Modeling Speedup) -->
+            <div class="story-slide" id="st-5">
+                <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 24px;">4. 6-Month Manual Effort vs. 10x Modeling Speedup</h2>
+                <div style="display: flex; gap: 24px; width: 100%; max-width: 850px;">
+                    <div style="flex: 1; background: #FEF2F2; border: 2px solid #FCA5A5; padding: 24px; border-radius: 16px; text-align: center;">
+                        <div style="font-size: 3rem; font-weight: 800; color: var(--accent-rose);">6 Months</div>
+                        <strong style="color: var(--accent-rose);">Traditional Manual Modeling</strong>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px;">High manual labor cost & slow time-to-market.</p>
+                    </div>
+                    <div style="flex: 1; background: #ECFDF5; border: 2px solid #6EE7B7; padding: 24px; border-radius: 16px; text-align: center;">
+                        <div style="font-size: 3rem; font-weight: 800; color: var(--accent-emerald);">30 Sec</div>
+                        <strong style="color: var(--accent-emerald);">OntoForge Automated Engine</strong>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px;">Instant extraction & live Neo4j graph sync.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLIDE 6: Summary & Call to Action -->
+            <div class="story-slide" id="st-6">
+                <h1 style="font-size: 3rem; font-weight: 800; text-align: center; margin-bottom: 12px;">OntoForge</h1>
+                <p style="font-size: 1.2rem; color: var(--text-body); text-align: center; margin-bottom: 28px;">
+                    Transforming Enterprise Data Chaos into Actionable Knowledge Graph Intelligence
+                </p>
+                <a href="https://github.com/josephtijo1989/OntologyGenerator" target="_blank" style="text-decoration: none;">
+                    <button class="btn-ctrl active" style="padding: 14px 28px; font-size: 1rem;">
+                        🚀 Launch OntoForge Today on GitHub / Private Cloud
+                    </button>
+                </a>
+            </div>
+
+        </main>
+
+        <!-- Subtitles Ticker -->
+        <div style="padding: 16px 32px; background: #FFFFFF; border-top: 1px solid var(--border-light); min-height: 80px;">
+            <div style="font-size: 0.7rem; color: var(--accent-indigo); font-weight: 800; text-transform: uppercase;" id="story-tag">
+                STORYLINE OVERVIEW
+            </div>
+            <div style="font-size: 0.95rem; color: var(--text-body); margin-top: 4px; font-weight: 500;" id="story-caption">
+                Welcome to the OntoForge Animated Problem vs. Solution Showcase.
+            </div>
+        </div>
+
+        <!-- Controls Footer -->
+        <footer class="footer-controls">
+            <button class="btn-ctrl" id="btn-play-pause" onclick="togglePlayPause()">
+                ▶ Play Storyline
+            </button>
+            <button class="btn-ctrl" id="btn-voiceover" onclick="toggleVoiceover()">
+                🔊 Voiceover: ON
+            </button>
+
+            <div class="timeline-box">
+                <div class="timeline-track" onclick="seekSlide(event)">
+                    <div class="timeline-fill" id="timeline-fill"></div>
+                </div>
+                <div class="time-readout">
+                    <span id="time-curr">0:00</span>
+                    <span id="time-max">3:00</span>
+                </div>
+            </div>
+
+            <div class="nav-pills">
+                <button class="nav-pill active" onclick="jumpToSlide(0)">1</button>
+                <button class="nav-pill" onclick="jumpToSlide(1)">2</button>
+                <button class="nav-pill" onclick="jumpToSlide(2)">3</button>
+                <button class="nav-pill" onclick="jumpToSlide(3)">4</button>
+                <button class="nav-pill" onclick="jumpToSlide(4)">5</button>
+                <button class="nav-pill" onclick="jumpToSlide(5)">6</button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // HTML5 Canvas Background Network Animation
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const nodes = [];
+        for (let i = 0; i < 35; i++) {
+            nodes.push({
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                vx: (Math.random() - 0.5) * 0.7,
+                vy: (Math.random() - 0.5) * 0.7,
+                radius: Math.random() * 3 + 2
+            });
+        }
+
+        function drawBg() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const dx = nodes[i].x - nodes[j].x;
+                    const dy = nodes[i].y - nodes[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 130) {
+                        ctx.beginPath();
+                        ctx.moveTo(nodes[i].x, nodes[i].y);
+                        ctx.lineTo(nodes[j].x, nodes[j].y);
+                        ctx.strokeStyle = `rgba(79, 70, 229, ${1 - dist / 130})`;
+                        ctx.lineWidth = 0.8;
+                        ctx.stroke();
+                    }
+                }
+            }
+            nodes.forEach(n => {
+                n.x += n.vx; n.y += n.vy;
+                if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+                if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+                ctx.beginPath(); ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#4F46E5'; ctx.fill();
+            });
+            requestAnimationFrame(drawBg);
+        }
+        drawBg();
+
+        // Story Slides Data
+        const storySlides = [
+            {
+                id: "st-1",
+                tag: "INTRO: HOW ONTOFORGE SOLVES DATA CHAOS",
+                duration: 15,
+                voText: "Welcome to the OntoForge problem and solution showcase. Here is how OntoForge solves the four biggest enterprise data and AI challenges."
+            },
+            {
+                id: "st-2",
+                tag: "1. SILOED DATA vs. AUTOMATED EXTRACTION",
+                duration: 30,
+                voText: "Problem One: Enterprise data is trapped in isolated SQL tables and PDFs without explicit semantic relationships. OntoForge solves this by parsing target database schemas automatically and extracting structured W3C-standard OWL ontologies in seconds."
+            },
+            {
+                id: "st-3",
+                tag: "2. BROKEN DEPENDENCIES vs. SMART SUBCLASS REBINDING",
+                duration: 35,
+                voText: "Problem Two: Modifying a database schema breaks child classes and crashes downstream applications. OntoForge solves this with smart cascading governance. When a class is deleted, child subclasses automatically rebind to owl:Thing, maintaining graph integrity with zero data loss."
+            },
+            {
+                id: "st-4",
+                tag: "3. AI HALLUCINATIONS vs. GEMINI CYPHER GRAPHRAG",
+                duration: 35,
+                voText: "Problem Three: Generative AI and standard RAG models produce costly hallucinations when relying on raw text. OntoForge integrates directly with Gemini AI to convert natural language prompts into precise Cypher graph queries against Neo4j, delivering 100% accurate, deterministic answers."
+            },
+            {
+                id: "st-5",
+                tag: "4. 6-MONTH MANUAL EFFORT vs. 10x MODELING SPEED",
+                duration: 30,
+                voText: "Problem Four: Building enterprise ontologies manually takes upwards of six months of specialized domain labor. OntoForge delivers ten times faster modeling speed, taking you from raw schemas to live knowledge graphs in seconds."
+            },
+            {
+                id: "st-6",
+                tag: "CONCLUSION: UNLOCK ENTERPRISE GRAPH INTELLIGENCE",
+                duration: 15,
+                voText: "Stop struggling with unstructured data chaos. Transform your enterprise knowledge into actionable graph intelligence today with OntoForge. Thank you!"
+            }
+        ];
+
+        let currentIdx = 0;
+        let isPlaying = false;
+        let voiceoverOn = true;
+        let currentSecs = 0;
+        const totalSecs = 160;
+        let timer = null;
+        let synth = window.speechSynthesis;
+
+        function updateUI() {
+            storySlides.forEach((item, i) => {
+                const el = document.getElementById(item.id);
+                const pill = document.querySelectorAll('.nav-pill')[i];
+                if (i === currentIdx) {
+                    el.classList.add('active');
+                    if (pill) pill.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                    if (pill) pill.classList.remove('active');
+                }
+            });
+
+            const curr = storySlides[currentIdx];
+            document.getElementById('story-tag').innerText = curr.tag;
+            document.getElementById('story-caption').innerText = curr.voText;
+
+            if (isPlaying && voiceoverOn && synth) {
+                synth.cancel();
+                const ut = new SpeechSynthesisUtterance(curr.voText);
+                ut.rate = 1.0;
+                synth.speak(ut);
+            }
+        }
+
+        function togglePlayPause() {
+            isPlaying = !isPlaying;
+            const btn = document.getElementById('btn-play-pause');
+            if (isPlaying) {
+                btn.innerText = "⏸ Pause Storyline";
+                btn.classList.add('active');
+                startTimer();
+                updateUI();
+            } else {
+                btn.innerText = "▶ Play Storyline";
+                btn.classList.remove('active');
+                stopTimer();
+                if (synth) synth.cancel();
+            }
+        }
+
+        function toggleVoiceover() {
+            voiceoverOn = !voiceoverOn;
+            const btn = document.getElementById('btn-voiceover');
+            if (voiceoverOn) {
+                btn.innerText = "🔊 Voiceover: ON";
+                btn.classList.add('active');
+            } else {
+                btn.innerText = "🔇 Voiceover: OFF";
+                btn.classList.remove('active');
+                if (synth) synth.cancel();
+            }
+        }
+
+        function startTimer() {
+            stopTimer();
+            timer = setInterval(() => {
+                currentSecs++;
+                if (currentSecs > totalSecs) {
+                    currentSecs = totalSecs;
+                    togglePlayPause();
+                    return;
+                }
+
+                let accum = 0;
+                for (let i = 0; i < storySlides.length; i++) {
+                    accum += storySlides[i].duration;
+                    if (currentSecs <= accum) {
+                        if (currentIdx !== i) {
+                            currentIdx = i;
+                            updateUI();
+                        }
+                        break;
+                    }
+                }
+
+                const pct = (currentSecs / totalSecs) * 100;
+                document.getElementById('timeline-fill').style.width = pct + '%';
+
+                const mins = Math.floor(currentSecs / 60);
+                const secs = currentSecs % 60;
+                document.getElementById('time-curr').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            }, 1000);
+        }
+
+        function stopTimer() { if (timer) clearInterval(timer); }
+
+        function jumpToSlide(idx) {
+            currentIdx = idx;
+            let accum = 0;
+            for (let i = 0; i < idx; i++) { accum += storySlides[i].duration; }
+            currentSecs = accum;
+            document.getElementById('timeline-fill').style.width = ((currentSecs / totalSecs) * 100) + '%';
+            
+            const mins = Math.floor(currentSecs / 60);
+            const secs = currentSecs % 60;
+            document.getElementById('time-curr').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            updateUI();
+        }
+
+        function seekSlide(e) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const pct = (e.clientX - rect.left) / rect.width;
+            currentSecs = Math.floor(pct * totalSecs);
+            let accum = 0;
+            for (let i = 0; i < storySlides.length; i++) {
+                accum += storySlides[i].duration;
+                if (currentSecs <= accum) { currentIdx = i; break; }
+            }
+            document.getElementById('timeline-fill').style.width = (pct * 100) + '%';
+            updateUI();
+        }
+
+        window.onload = () => { updateUI(); };
+    </script>
+</body>
+</html>

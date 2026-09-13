@@ -206,6 +206,13 @@ def test_projects_crud_and_ontology_relationships():
     assert new_subclass is not None
     assert new_subclass["subclass_of"] == [class_label]
 
+    # 10c. Test Delete Ontology Class in Project Ontology
+    delete_class_resp = client.delete(f"/api/v1/projects/{project_id}/ontology/classes/{subclass_name}")
+    assert delete_class_resp.status_code == 200
+    onto_after_delete = delete_class_resp.json()
+    deleted_subclass = next((c for c in onto_after_delete["classes"] if c["label"] == subclass_name), None)
+    assert deleted_subclass is None, f"Expected class {subclass_name} to be deleted"
+
     # 11. Test Export Turtle (.ttl) containing owl:inverseOf and owl:hasKey
     export_ttl_resp = client.post(f"/api/v1/projects/{project_id}/ontology/export", json={"format": "Turtle"})
     assert export_ttl_resp.status_code == 200

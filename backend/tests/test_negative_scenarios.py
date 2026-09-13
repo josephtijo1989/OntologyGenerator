@@ -169,6 +169,11 @@ class TestOntologyAndParserNegativeScenarios:
         assert response.status_code == 400
         assert "not found" in response.json()["detail"].lower()
 
+    def test_delete_non_existent_ontology_class(self, active_project_id):
+        response = client.delete(f"/api/v1/projects/{active_project_id}/ontology/classes/NonExistentClass")
+        assert response.status_code == 404
+        assert "not found" in response.json()["detail"].lower()
+
     def test_export_ontology_unsupported_format(self, active_project_id):
         response = client.post(f"/api/v1/projects/{active_project_id}/ontology/export", json={
             "format": "INVALID_YAML"

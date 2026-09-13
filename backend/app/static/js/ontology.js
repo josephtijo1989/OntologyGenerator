@@ -237,6 +237,7 @@ async function loadOntology() {
             </div>
             <div style="display: flex; gap: 8px;">
               <button class="btn-primary glow-btn" style="font-size: 11px; padding: 4px 12px;" onclick="openOntologyClassModal(${idx})">✏️ Quick Edit / Full Modal & Properties</button>
+              <button class="btn-danger" style="font-size: 11px; padding: 4px 12px;" onclick="deleteOntologyClass('${c.label}')" title="Delete Class">🗑️ Delete</button>
             </div>
           </div>
 
@@ -587,4 +588,35 @@ async function exportOntologyOWL() {
       alert('OWL/XML (.owl) Export downloaded successfully!');
     }
   } catch (e) { alert('Failed to export OWL/XML ontology'); }
+}
+
+async function deleteOntologyClass(className) {
+  if (!className || !currentProjectId) return;
+  if (confirm(`Are you sure you want to delete ontology class "${className}"? This will remove all associated properties and relationships from the project.`)) {
+    try {
+      const res = await fetch(`${API_BASE}/projects/${currentProjectId}/ontology/classes/${encodeURIComponent(className)}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        if (typeof showToast === 'function') showToast(`Ontology class "${className}" deleted successfully!`, 'success');
+        if (typeof closeModal === 'function') closeModal('ontologyClassModal');
+        await loadOntology();
+        if (typeof initOntologyGraph === 'function') {
+          initOntologyGraph();
+        }
+      } else {
+        const err = await res.json();
+        if (typeof showToast === 'function') showToast(`Failed to delete class: ${err.detail || 'Error'}`, 'error');
+      }
+    } catch (e) {
+      if (typeof showToast === 'function') showToast('Network error deleting ontology class', 'error');
+    }
+  }
+}
+
+function deleteOntologyClassFromModal() {
+  const oldLabel = document.getElementById('ocm-old-label')?.value;
+  if (oldLabel) {
+    deleteOntologyClass(oldLabel);
+  }
 }

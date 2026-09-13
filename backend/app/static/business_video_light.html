@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OntoForge - Highly Animated Executive Presentation (Light Theme)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #F8FAFC;
+            --bg-card: #FFFFFF;
+            --border-light: #E2E8F0;
+            --border-indigo: #C7D2FE;
+            --accent-indigo: #4F46E5;
+            --accent-cyan: #0284C7;
+            --accent-violet: #7C3AED;
+            --accent-emerald: #059669;
+            --accent-rose: #DC2626;
+            --text-heading: #0F172A;
+            --text-body: #334155;
+            --text-muted: #64748B;
+            --shadow-card: 0 20px 40px -15px rgba(15, 23, 42, 0.08);
+            --shadow-window: 0 25px 50px -12px rgba(15, 23, 42, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-heading);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Animated Graph Background Canvas */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.65;
+        }
+
+        .video-container-animated {
+            position: relative;
+            z-index: 10;
+            width: 94%;
+            max-width: 1280px;
+            margin: 20px auto;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid var(--border-light);
+            border-radius: 24px;
+            box-shadow: var(--shadow-window);
+            backdrop-filter: blur(16px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .exec-header-light {
+            padding: 16px 32px;
+            background: #FFFFFF;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-box-light {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-cyan));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: white;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+            animation: pulseBox 3s infinite ease-in-out;
+        }
+
+        @keyframes pulseBox {
+            0%, 100% { transform: scale(1); box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3); }
+            50% { transform: scale(1.05); box-shadow: 0 6px 20px rgba(79, 70, 229, 0.5); }
+        }
+
+        .logo-title-light {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--text-heading);
+            letter-spacing: -0.5px;
+        }
+
+        .pill-theme-light {
+            background: #EEF2FF;
+            border: 1px solid var(--border-indigo);
+            color: var(--accent-indigo);
+            font-size: 0.75rem;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Stage */
+        .stage-light {
+            position: relative;
+            width: 100%;
+            height: 570px;
+            background: #F8FAFC;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .scene {
+            position: absolute;
+            inset: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transform: scale(0.95) translateY(20px);
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .scene.active {
+            opacity: 1;
+            visibility: visible;
+            transform: scale(1) translateY(0);
+        }
+
+        /* Staggered Animations for Scene Elements */
+        .scene.active .anim-1 { animation: slideUpFade 0.6s 0.1s both; }
+        .scene.active .anim-2 { animation: slideUpFade 0.6s 0.25s both; }
+        .scene.active .anim-3 { animation: slideUpFade 0.6s 0.4s both; }
+        .scene.active .anim-4 { animation: slideUpFade 0.6s 0.55s both; }
+
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .headline-light {
+            font-size: 2.3rem;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin-bottom: 10px;
+            text-align: center;
+            letter-spacing: -0.5px;
+        }
+
+        .sub-light {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            text-align: center;
+            max-width: 780px;
+            margin-bottom: 28px;
+            line-height: 1.5;
+        }
+
+        /* Application UI Window Frame */
+        .app-window-animated {
+            width: 100%;
+            max-width: 900px;
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-card);
+            position: relative;
+        }
+
+        .app-window-header-light {
+            background: #F1F5F9;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .dots { display: flex; gap: 8px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .d-red { background: #EF4444; }
+        .d-yellow { background: #F59E0B; }
+        .d-green { background: #10B981; }
+
+        .app-window-body-light {
+            padding: 24px;
+            position: relative;
+        }
+
+        /* Virtual Cursor Simulator */
+        .virtual-cursor {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%234F46E5' viewBox='0 0 24 24'%3E%3Cpath d='M3 3l7 18 3-7 7-3L3 3z'/%3E%3C/svg%3E") no-repeat center/contain;
+            z-index: 50;
+            pointer-events: none;
+            transition: all 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+            opacity: 0;
+        }
+
+        .virtual-cursor.active {
+            opacity: 1;
+        }
+
+        /* Cards Layout */
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            width: 100%;
+        }
+
+        .card-animated {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .card-animated:hover {
+            border-color: var(--accent-indigo);
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 12px 28px rgba(79, 70, 229, 0.12);
+        }
+
+        .class-title-light {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--accent-indigo);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .btn-del-animated {
+            background: #FEF2F2;
+            border: 1px solid #FCA5A5;
+            color: var(--accent-rose);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-del-animated:hover {
+            background: var(--accent-rose);
+            color: white;
+            box-shadow: 0 0 12px rgba(220, 38, 38, 0.4);
+        }
+
+        .attr-pill-light {
+            background: #F1F5F9;
+            color: var(--text-body);
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            display: inline-block;
+            margin-top: 6px;
+            margin-right: 4px;
+        }
+
+        /* Animated Rebinding Flow */
+        .rebinding-flow-animated {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            background: #F8FAFC;
+            border: 2px dashed var(--accent-indigo);
+            border-radius: 14px;
+            padding: 28px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .rebound-pill-animated {
+            background: #FFFFFF;
+            border: 2px solid var(--accent-indigo);
+            padding: 14px 24px;
+            border-radius: 10px;
+            font-weight: 700;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+            transition: all 0.5s ease;
+        }
+
+        .deleted-node-anim {
+            border-color: var(--accent-rose) !important;
+            background: #FEF2F2 !important;
+            color: var(--accent-rose) !important;
+            animation: strikeOut 2s infinite ease-in-out;
+        }
+
+        @keyframes strikeOut {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.95); text-decoration: line-through; }
+        }
+
+        .arrow-pulse {
+            color: var(--accent-indigo);
+            font-size: 1.8rem;
+            font-weight: 800;
+            animation: arrowSlide 1.2s infinite ease-in-out;
+        }
+
+        @keyframes arrowSlide {
+            0% { transform: translateX(-6px); opacity: 0.4; }
+            50% { transform: translateX(6px); opacity: 1; }
+            100% { transform: translateX(-6px); opacity: 0.4; }
+        }
+
+        /* Animated Typewriter Cypher Console */
+        .cypher-box-animated {
+            background: #0F172A;
+            border: 1px solid var(--accent-cyan);
+            border-radius: 12px;
+            padding: 22px;
+            font-family: 'JetBrains Mono', monospace;
+            color: #F8FAFC;
+            box-shadow: 0 10px 30px rgba(2, 132, 199, 0.15);
+        }
+
+        /* Metrics Showcase */
+        .metrics-4-animated {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .stat-card-animated {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 26px 18px;
+            text-align: center;
+            box-shadow: var(--shadow-card);
+            border-top: 4px solid var(--accent-indigo);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .stat-card-animated:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 16px 32px rgba(79, 70, 229, 0.12);
+        }
+
+        .stat-num-animated {
+            font-size: 3.2rem;
+            font-weight: 800;
+            color: var(--accent-indigo);
+            margin-bottom: 4px;
+            letter-spacing: -1px;
+        }
+
+        .stat-lbl-light {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Subtitles Ticker Bar */
+        .subtitles-ticker-light {
+            padding: 16px 32px;
+            background: #FFFFFF;
+            border-top: 1px solid var(--border-light);
+            min-height: 85px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .sub-tag-light {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent-indigo);
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .sub-body-light {
+            font-size: 0.95rem;
+            color: var(--text-body);
+            line-height: 1.5;
+            font-weight: 500;
+        }
+
+        /* Controls Footer */
+        .controls-footer-light {
+            padding: 16px 32px;
+            background: #F8FAFC;
+            border-top: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .btn-ctrl-light {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            color: var(--text-heading);
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+        }
+
+        .btn-ctrl-light:hover {
+            border-color: var(--accent-indigo);
+            color: var(--accent-indigo);
+        }
+
+        .btn-ctrl-light.active {
+            background: var(--accent-indigo);
+            color: white;
+            border-color: var(--accent-indigo);
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+        }
+
+        .timeline-container-light {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .timeline-track-light {
+            width: 100%;
+            height: 8px;
+            background: #E2E8F0;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .timeline-fill-light {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-indigo), var(--accent-cyan));
+            transition: width 0.1s linear;
+        }
+
+        .time-readout-light {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .scene-navigator-light {
+            display: flex;
+            gap: 4px;
+        }
+
+        .scene-pill-light {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            color: var(--text-muted);
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .scene-pill-light.active {
+            background: var(--accent-indigo);
+            color: white;
+            border-color: var(--accent-indigo);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HTML5 Graph Background Canvas -->
+    <canvas id="bg-canvas"></canvas>
+
+    <div class="video-container-animated">
+        <!-- Header -->
+        <header class="exec-header-light">
+            <div class="logo-group">
+                <div class="logo-box-light">OF</div>
+                <div class="logo-title-light">OntoForge</div>
+            </div>
+            <div class="pill-theme-light">Highly Animated 5-Minute Executive Presentation</div>
+        </header>
+
+        <!-- Stage -->
+        <main class="stage-light">
+
+            <!-- SCENE 1: Executive Opening -->
+            <div class="scene active" id="sc-1">
+                <h1 class="headline-light anim-1">Unlocking Enterprise Knowledge Graphs</h1>
+                <p class="sub-light anim-2">Automated W3C OWL/RDF Ontology Extraction & Live Neo4j Graph Synchronization</p>
+                <div class="anim-3" style="display: flex; gap: 20px;">
+                    <div style="background: #EEF2FF; border: 1px solid var(--border-indigo); padding: 16px 28px; border-radius: 12px; font-weight: 700; color: var(--accent-indigo); box-shadow: 0 4px 12px rgba(79,70,229,0.1);">
+                        🚀 10x Modeling Speedup
+                    </div>
+                    <div style="background: #ECFDF5; border: 1px solid #A7F3D0; padding: 16px 28px; border-radius: 12px; font-weight: 700; color: var(--accent-emerald); box-shadow: 0 4px 12px rgba(5,150,105,0.1);">
+                        🛡️ Zero AI Hallucinations
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 2: The Enterprise Dilemma -->
+            <div class="scene" id="sc-2">
+                <h2 class="headline-light anim-1" style="color: var(--accent-rose);">The Enterprise Data Dilemma</h2>
+                <p class="sub-light anim-2">Siloed Schemas & Manual Ontology Construction Cost Organizations Millions</p>
+                <div class="grid-3 anim-3" style="max-width: 850px;">
+                    <div class="card-animated" style="border-color: #FCA5A5; text-align: center;">
+                        <h4 style="color: var(--accent-rose); margin-bottom: 6px;">80%+ Siloed Data</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);">SQL tables & PDFs lacking semantic relationships.</p>
+                    </div>
+                    <div class="card-animated" style="border-color: #FCD34D; text-align: center;">
+                        <h4 style="color: #D97706; margin-bottom: 6px;">6 Months Manual Labor</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);">Expensive domain-expert ontology modeling.</p>
+                    </div>
+                    <div class="card-animated" style="border-color: #FCA5A5; text-align: center;">
+                        <h4 style="color: var(--accent-rose); margin-bottom: 6px;">RAG Hallucinations</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);">LLMs returning wrong answers without graph context.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 3: Solution Architecture -->
+            <div class="scene" id="sc-3">
+                <h2 class="headline-light anim-1">Automated 4-Step Solution Architecture</h2>
+                <p class="sub-light anim-2">From Raw Relational Schemas to Live Neo4j Graph Intelligence</p>
+                <div class="anim-3" style="display: flex; gap: 14px; align-items: center; width: 100%; max-width: 850px;">
+                    <div class="card-animated" style="flex: 1; text-align: center; border-color: var(--accent-cyan);">
+                        <strong style="color: var(--accent-cyan); font-size: 0.9rem;">1. Data Ingestion</strong>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">SQL & Unstructured Text</p>
+                    </div>
+                    <span class="arrow-pulse">➔</span>
+                    <div class="card-animated" style="flex: 1; text-align: center; border-color: var(--accent-indigo);">
+                        <strong style="color: var(--accent-indigo); font-size: 0.9rem;">2. Auto-Extraction</strong>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">OWL/RDF Class Matrix</p>
+                    </div>
+                    <span class="arrow-pulse">➔</span>
+                    <div class="card-animated" style="flex: 1; text-align: center; border-color: var(--accent-violet);">
+                        <strong style="color: var(--accent-violet); font-size: 0.9rem;">3. Refine & Govern</strong>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Subclass Rebinding</p>
+                    </div>
+                    <span class="arrow-pulse">➔</span>
+                    <div class="card-animated" style="flex: 1; text-align: center; background: #ECFDF5; border-color: var(--accent-emerald);">
+                        <strong style="color: var(--accent-emerald); font-size: 0.9rem;">4. Neo4j & AI Sync</strong>
+                        <p style="font-size: 0.75rem; color: #047857; margin-top: 4px;">Cypher & Gemini Insights</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 4: App Screen — Class Matrix -->
+            <div class="scene" id="sc-4">
+                <div class="app-window-animated anim-2" id="window-sc-4">
+                    <!-- Simulated Cursor -->
+                    <div class="virtual-cursor" id="cursor-sc-4"></div>
+
+                    <div class="app-window-header-light">
+                        <div class="dots"><div class="dot d-red"></div><div class="dot d-yellow"></div><div class="dot d-green"></div></div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono';">OntoForge Workspace - Class Matrix & Property Inspector</span>
+                        <span style="font-size: 0.75rem; color: var(--accent-emerald); font-weight: 700;">● Neo4j Live</span>
+                    </div>
+                    <div class="app-window-body-light">
+                        <div class="grid-3">
+                            <div class="card-animated" id="card-device">
+                                <div class="class-title-light">
+                                    <span>Device</span>
+                                    <button class="btn-del-animated" id="btn-del-target">🗑️ Delete</button>
+                                </div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted);">URI: http://onto.org/Device</div>
+                                <span class="attr-pill-light">id: string</span><span class="attr-pill-light">status: string</span>
+                            </div>
+
+                            <div class="card-animated">
+                                <div class="class-title-light">
+                                    <span>TemperatureSensor</span>
+                                    <button class="btn-del-animated">🗑️ Delete</button>
+                                </div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted);">subClassOf: Device</div>
+                                <span class="attr-pill-light">temp: float</span><span class="attr-pill-light">unit: string</span>
+                            </div>
+
+                            <div class="card-animated">
+                                <div class="class-title-light">
+                                    <span>Location</span>
+                                    <button class="btn-del-animated">🗑️ Delete</button>
+                                </div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted);">URI: http://onto.org/Location</div>
+                                <span class="attr-pill-light">facility: string</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 5: App Screen — Smart Rebinding -->
+            <div class="scene" id="sc-5">
+                <div class="app-window-animated anim-2">
+                    <div class="app-window-header-light">
+                        <div class="dots"><div class="dot d-red"></div><div class="dot d-yellow"></div><div class="dot d-green"></div></div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">Cascading Dependency Protection</span>
+                        <span style="font-size: 0.75rem; color: var(--accent-indigo); font-weight: 700;">Smart Rebinding Active</span>
+                    </div>
+                    <div class="app-window-body-light">
+                        <div class="rebinding-flow-animated">
+                            <div style="text-align: center;">
+                                <div style="font-size: 0.75rem; color: var(--accent-rose); font-weight: 700; margin-bottom: 4px;">DELETED CLASS</div>
+                                <div class="rebound-pill-animated deleted-node-anim">Device</div>
+                            </div>
+                            <span class="arrow-pulse">➔ Rebind Subclasses ➔</span>
+                            <div style="text-align: center;">
+                                <div style="font-size: 0.75rem; color: var(--accent-emerald); font-weight: 700; margin-bottom: 4px;">NEW PARENT CLASS</div>
+                                <div class="rebound-pill-animated" style="border-color: var(--accent-emerald); background: #ECFDF5; color: var(--accent-emerald);">owl:Thing</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 16px; background: #F1F5F9; padding: 12px; border-radius: 6px; font-size: 0.85rem; color: var(--text-body);">
+                            ✔ <strong>Subclass Rebound:</strong> <code>TemperatureSensor</code> rebound to <code>owl:Thing</code>. TargetGraphNode foreign keys sanitized with zero data loss.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 6: App Screen — Gemini Cypher Engine -->
+            <div class="scene" id="sc-6">
+                <div class="app-window-animated anim-2">
+                    <div class="app-window-header-light">
+                        <div class="dots"><div class="dot d-red"></div><div class="dot d-yellow"></div><div class="dot d-green"></div></div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">Gemini AI GraphRAG Console</span>
+                        <span style="font-size: 0.75rem; color: var(--accent-indigo); font-weight: 700;">Gemini 1.5 Pro</span>
+                    </div>
+                    <div class="app-window-body-light">
+                        <div class="cypher-box-animated">
+                            <div style="color: var(--accent-cyan); margin-bottom: 10px; font-size: 0.9rem;">
+                                💬 <strong>User Prompt:</strong> <span id="typed-prompt-text"></span>
+                            </div>
+                            <div id="cypher-code-block" style="color: #6EE7B7; font-size: 0.8rem; line-height: 1.6; opacity: 0; transition: opacity 0.8s;">
+                                // Gemini Auto-Generated Cypher Query<br>
+                                MATCH (s:TemperatureSensor)-[:LOCATED_IN]->(l:Location)<br>
+                                WHERE s.temperature > 85.0<br>
+                                RETURN s.id AS SensorID, s.temperature AS TempValue, l.facilityName AS Facility<br><br>
+                                <span style="color: #A7F3D0; font-weight: bold;">✔ 4 Graph Nodes Returned from Neo4j (Deterministic Grounding)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 7: Tech Stack -->
+            <div class="scene" id="sc-7">
+                <h2 class="headline-light anim-1">Multi-Database Architecture & Stack</h2>
+                <p class="sub-light anim-2">FastAPI + Angular 19 + Neo4j + SQLite/Postgres Dual Persistence</p>
+                <div class="anim-3" style="display: flex; gap: 16px; width: 100%; max-width: 850px; justify-content: center;">
+                    <div class="card-animated" style="flex: 1; text-align: center;">
+                        <h4 style="color: var(--accent-indigo);">FastAPI Backend</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Modular async Python services</p>
+                    </div>
+                    <div class="card-animated" style="flex: 1; text-align: center;">
+                        <h4 style="color: var(--accent-cyan);">Angular 19 UI</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Reactive component state dashboard</p>
+                    </div>
+                    <div class="card-animated" style="flex: 1; text-align: center;">
+                        <h4 style="color: var(--accent-emerald);">Neo4j Graph DB</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Native Cypher graph projections</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 8: ROI & Impact -->
+            <div class="scene" id="sc-8">
+                <h2 class="headline-light anim-1">Measurable Business Impact</h2>
+                <p class="sub-light anim-2">Quantifiable ROI for Enterprise Knowledge Modeling & AI</p>
+                <div class="metrics-4-animated anim-3">
+                    <div class="stat-card-animated">
+                        <div class="stat-num-animated" id="counter-1">0x</div>
+                        <div class="stat-lbl-light">Faster Modeling Speed</div>
+                    </div>
+                    <div class="stat-card-animated">
+                        <div class="stat-num-animated" id="counter-2">0%</div>
+                        <div class="stat-lbl-light">W3C OWL/RDF Compliant</div>
+                    </div>
+                    <div class="stat-card-animated">
+                        <div class="stat-num-animated" id="counter-3">0%</div>
+                        <div class="stat-lbl-light">Schema Breakage Risk</div>
+                    </div>
+                    <div class="stat-card-animated">
+                        <div class="stat-num-animated" id="counter-4">0%</div>
+                        <div class="stat-lbl-light">Deterministic GraphRAG</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 9: Outro & Deployment -->
+            <div class="scene" id="sc-9">
+                <div class="anim-1" style="font-size: 3.5rem; font-weight: 800; color: var(--text-heading); margin-bottom: 12px;">
+                    OntoForge
+                </div>
+                <p class="sub-light anim-2">Transform Enterprise Data into Actionable Knowledge Graph Intelligence</p>
+                <a class="anim-3" href="https://github.com/josephtijo1989/OntologyGenerator" target="_blank" style="text-decoration: none;">
+                    <button class="btn-ctrl-light active" style="padding: 14px 28px; font-size: 1rem;">
+                        🚀 Launch Today on GitHub / Private Cloud
+                    </button>
+                </a>
+            </div>
+
+        </main>
+
+        <!-- Subtitles Ticker -->
+        <div class="subtitles-ticker-light">
+            <div class="sub-tag-light" id="sub-tag-display">SCENE 1: EXECUTIVE OPENING (0:00 - 0:35)</div>
+            <div class="sub-body-light" id="sub-body-display">
+                Loading presentation script...
+            </div>
+        </div>
+
+        <!-- Controls Footer -->
+        <footer class="controls-footer-light">
+            <button class="btn-ctrl-light" id="btn-play-pause" onclick="togglePlayPause()">
+                ▶ Play 5-Min Video
+            </button>
+            <button class="btn-ctrl-light" id="btn-voiceover" onclick="toggleVoiceover()">
+                🔊 Voiceover: ON
+            </button>
+
+            <div class="timeline-container-light">
+                <div class="timeline-track-light" onclick="seekVideo(event)">
+                    <div class="timeline-fill-light" id="timeline-fill"></div>
+                </div>
+                <div class="time-readout-light">
+                    <span id="time-curr">0:00</span>
+                    <span id="time-max">5:00</span>
+                </div>
+            </div>
+
+            <div class="scene-navigator-light">
+                <button class="scene-pill-light active" onclick="jumpToScene(0)">1</button>
+                <button class="scene-pill-light" onclick="jumpToScene(1)">2</button>
+                <button class="scene-pill-light" onclick="jumpToScene(2)">3</button>
+                <button class="scene-pill-light" onclick="jumpToScene(3)">4</button>
+                <button class="scene-pill-light" onclick="jumpToScene(4)">5</button>
+                <button class="scene-pill-light" onclick="jumpToScene(5)">6</button>
+                <button class="scene-pill-light" onclick="jumpToScene(6)">7</button>
+                <button class="scene-pill-light" onclick="jumpToScene(7)">8</button>
+                <button class="scene-pill-light" onclick="jumpToScene(8)">9</button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // HTML5 Canvas Interactive Animated Background Network
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const nodes = [];
+        const numNodes = 40;
+        for (let i = 0; i < numNodes; i++) {
+            nodes.push({
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                vx: (Math.random() - 0.5) * 0.8,
+                vy: (Math.random() - 0.5) * 0.8,
+                radius: Math.random() * 3 + 2,
+                color: i % 2 === 0 ? '#4F46E5' : '#0284C7'
+            });
+        }
+
+        function drawBackground() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw connecting edges
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const dx = nodes[i].x - nodes[j].x;
+                    const dy = nodes[i].y - nodes[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 140) {
+                        ctx.beginPath();
+                        ctx.moveTo(nodes[i].x, nodes[i].y);
+                        ctx.lineTo(nodes[j].x, nodes[j].y);
+                        ctx.strokeStyle = `rgba(99, 102, 241, ${1 - dist / 140})`;
+                        ctx.lineWidth = 0.8;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // Update & Draw nodes
+            nodes.forEach(n => {
+                n.x += n.vx;
+                n.y += n.vy;
+
+                if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+                if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+                ctx.fillStyle = n.color;
+                ctx.fill();
+            });
+
+            requestAnimationFrame(drawBackground);
+        }
+        drawBackground();
+
+        // 5-Minute Presentation Script Data
+        const scriptData = [
+            {
+                id: "sc-1",
+                tag: "SCENE 1: EXECUTIVE OPENING & STRATEGIC VISION (0:00 - 0:35)",
+                duration: 35,
+                voText: "Welcome to OntoForge—the automated enterprise Knowledge Graph and Ontology Generation engine. In the modern digital economy, enterprise success hinges on data clarity. Yet, organizations struggle to unify disconnected relational schemas, legacy databases, and unstructured documents into a cohesive semantic model. OntoForge solves this challenge by automating W3C-standard ontology construction and live graph synchronization."
+            },
+            {
+                id: "sc-2",
+                tag: "SCENE 2: THE ENTERPRISE DATA DILEMMA (0:35 - 1:10)",
+                duration: 35,
+                voText: "Today, over eighty percent of enterprise data remains trapped in isolated databases and documents lacking explicit relationships. Traditional ontology engineering requires specialized domain teams spending upwards of six months building custom models. Without explicit graph context, generative AI and Retrieval-Augmented Generation applications produce costly hallucinations and unreliable business insights."
+            },
+            {
+                id: "sc-3",
+                tag: "SCENE 3: INTRODUCING ONTOFORGE (1:10 - 1:45)",
+                duration: 35,
+                voText: "OntoForge automates the entire knowledge graph lifecycle. By analyzing relational database schemas and unstructured text, OntoForge extracts W3C-standard OWL ontologies in seconds. It bridges legacy data infrastructure directly into live Neo4j knowledge graphs, enabling real-time graph analytics, automated schema governance, and hallucination-free enterprise AI."
+            },
+            {
+                id: "sc-4",
+                tag: "SCENE 4: APPLICATION SCREEN - CLASS MATRIX (1:45 - 2:30)",
+                duration: 45,
+                voText: "Here is the live OntoForge Class Matrix workspace. Domain experts and data architects gain an intuitive, visual dashboard to manage enterprise ontologies. Each class card displays its full URI namespace, parent-child inheritance, and attribute definitions. With our interactive Inspector Drawer, teams can modify properties, adjust data types, and review RDF triple declarations in real time."
+            },
+            {
+                id: "sc-5",
+                tag: "SCENE 5: APPLICATION SCREEN - SMART GOVERNANCE (2:30 - 3:15)",
+                duration: 45,
+                voText: "Maintaining schema integrity during refactoring is critical. OntoForge features smart cascading governance. When an obsolete class like Device is deleted, OntoForge automatically rebinds all child subclasses—such as TemperatureSensor—directly to owl:Thing. Foreign keys and orphan attributes are safely sanitized, guaranteeing zero broken dependencies across downstream applications."
+            },
+            {
+                id: "sc-6",
+                tag: "SCENE 6: APPLICATION SCREEN - GEMINI AI GRAPHRAG (3:15 - 4:00)",
+                duration: 45,
+                voText: "OntoForge combines graph databases with advanced Generative AI. Integrated directly with Gemini AI, OntoForge converts natural language business prompts into precise Cypher graph queries. Instead of guessing, the AI queries the live Neo4j database, retrieving exact node records and delivering accurate, deterministic answers grounded in enterprise truth."
+            },
+            {
+                id: "sc-7",
+                tag: "SCENE 7: MULTI-DATABASE & DUAL FRONTEND STACK (4:00 - 4:25)",
+                duration: 25,
+                voText: "OntoForge is architected for enterprise flexibility. Built on FastAPI and Angular 19, it supports dual relational and graph database persistence. Whether you choose our rich Angular dashboard or lightweight embedded FastAPI interface, OntoForge exports standard RDF Turtle files for seamless interoperability."
+            },
+            {
+                id: "sc-8",
+                tag: "SCENE 8: MEASURABLE BUSINESS IMPACT & ROI (4:25 - 4:45)",
+                duration: 20,
+                voText: "OntoForge delivers tangible business return on investment. Organizations achieve ten times faster ontology modeling speeds, eliminate schema breakage risks, and ground enterprise AI applications in full W3C-compliant knowledge graph truth."
+            },
+            {
+                id: "sc-9",
+                tag: "SCENE 9: ENTERPRISE DEPLOYMENT & OUTRO (4:45 - 5:00)",
+                duration: 15,
+                voText: "Ready to transform your enterprise data into actionable graph intelligence? Deploy OntoForge today across your private cloud or microservices architecture. Thank you!"
+            }
+        ];
+
+        let currentIdx = 0;
+        let isPlaying = false;
+        let voiceoverOn = true;
+        let currentSeconds = 0;
+        const totalSeconds = 300;
+        let timerInterval = null;
+        let synth = window.speechSynthesis;
+
+        // Custom Micro-Animations per Scene
+        function triggerSceneMicroAnimations(index) {
+            // Scene 4: Virtual Cursor Simulation
+            const cursor = document.getElementById('cursor-sc-4');
+            if (index === 3 && cursor) {
+                cursor.classList.add('active');
+                cursor.style.top = '10%';
+                cursor.style.left = '10%';
+                setTimeout(() => {
+                    cursor.style.top = '35%';
+                    cursor.style.left = '25%';
+                }, 1000);
+            } else if (cursor) {
+                cursor.classList.remove('active');
+            }
+
+            // Scene 6: Typewriter Effect
+            if (index === 5) {
+                const text = "Find all sensors with temperature above 85 degrees and return their facility location.";
+                const container = document.getElementById('typed-prompt-text');
+                const codeBlock = document.getElementById('cypher-code-block');
+                container.innerText = "";
+                codeBlock.style.opacity = 0;
+                let i = 0;
+                const typeInterval = setInterval(() => {
+                    if (i < text.length) {
+                        container.innerText += text.charAt(i);
+                        i++;
+                    } else {
+                        clearInterval(typeInterval);
+                        setTimeout(() => { codeBlock.style.opacity = 1; }, 400);
+                    }
+                }, 40);
+            }
+
+            // Scene 8: Animated Counter Count-up
+            if (index === 7) {
+                animateCounter('counter-1', 10, 'x');
+                animateCounter('counter-2', 100, '%');
+                animateCounter('counter-3', 0, '%');
+                animateCounter('counter-4', 100, '%');
+            }
+        }
+
+        function animateCounter(id, target, suffix) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            let current = 0;
+            const step = Math.max(1, Math.floor(target / 25));
+            const timer = setInterval(() => {
+                current += step;
+                if (current >= target) {
+                    current = target;
+                    clearInterval(timer);
+                }
+                el.innerText = current + suffix;
+            }, 30);
+        }
+
+        function updateUI() {
+            scriptData.forEach((item, i) => {
+                const el = document.getElementById(item.id);
+                const pill = document.querySelectorAll('.scene-pill-light')[i];
+                if (i === currentIdx) {
+                    el.classList.add('active');
+                    if (pill) pill.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                    if (pill) pill.classList.remove('active');
+                }
+            });
+
+            const curr = scriptData[currentIdx];
+            document.getElementById('sub-tag-display').innerText = curr.tag;
+            document.getElementById('sub-body-display').innerText = curr.voText;
+
+            triggerSceneMicroAnimations(currentIdx);
+
+            if (isPlaying && voiceoverOn && synth) {
+                synth.cancel();
+                const utterance = new SpeechSynthesisUtterance(curr.voText);
+                utterance.rate = 1.0;
+                synth.speak(utterance);
+            }
+        }
+
+        function togglePlayPause() {
+            isPlaying = !isPlaying;
+            const btn = document.getElementById('btn-play-pause');
+            if (isPlaying) {
+                btn.innerText = "⏸ Pause 5-Min Video";
+                btn.classList.add('active');
+                startTimer();
+                updateUI();
+            } else {
+                btn.innerText = "▶ Play 5-Min Video";
+                btn.classList.remove('active');
+                stopTimer();
+                if (synth) synth.cancel();
+            }
+        }
+
+        function toggleVoiceover() {
+            voiceoverOn = !voiceoverOn;
+            const btn = document.getElementById('btn-voiceover');
+            if (voiceoverOn) {
+                btn.innerText = "🔊 Voiceover: ON";
+                btn.classList.add('active');
+            } else {
+                btn.innerText = "🔇 Voiceover: OFF";
+                btn.classList.remove('active');
+                if (synth) synth.cancel();
+            }
+        }
+
+        function startTimer() {
+            stopTimer();
+            timerInterval = setInterval(() => {
+                currentSeconds++;
+                if (currentSeconds > totalSeconds) {
+                    currentSeconds = totalSeconds;
+                    togglePlayPause();
+                    return;
+                }
+
+                let accum = 0;
+                for (let i = 0; i < scriptData.length; i++) {
+                    accum += scriptData[i].duration;
+                    if (currentSeconds <= accum) {
+                        if (currentIdx !== i) {
+                            currentIdx = i;
+                            updateUI();
+                        }
+                        break;
+                    }
+                }
+
+                const pct = (currentSeconds / totalSeconds) * 100;
+                document.getElementById('timeline-fill').style.width = pct + '%';
+
+                const mins = Math.floor(currentSeconds / 60);
+                const secs = currentSeconds % 60;
+                document.getElementById('time-curr').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+        }
+
+        function jumpToScene(idx) {
+            currentIdx = idx;
+            let accum = 0;
+            for (let i = 0; i < idx; i++) {
+                accum += scriptData[i].duration;
+            }
+            currentSeconds = accum;
+            document.getElementById('timeline-fill').style.width = ((currentSeconds / totalSeconds) * 100) + '%';
+            
+            const mins = Math.floor(currentSeconds / 60);
+            const secs = currentSeconds % 60;
+            document.getElementById('time-curr').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+            updateUI();
+        }
+
+        function seekVideo(e) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const pct = clickX / rect.width;
+            currentSeconds = Math.floor(pct * totalSeconds);
+
+            let accum = 0;
+            for (let i = 0; i < scriptData.length; i++) {
+                accum += scriptData[i].duration;
+                if (currentSeconds <= accum) {
+                    currentIdx = i;
+                    break;
+                }
+            }
+
+            document.getElementById('timeline-fill').style.width = (pct * 100) + '%';
+            updateUI();
+        }
+
+        window.onload = () => {
+            updateUI();
+        };
+    </script>
+</body>
+</html>
