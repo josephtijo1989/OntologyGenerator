@@ -62,39 +62,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function switchToTab(viewId) {
-  let mappedViewId = viewId;
-  if (viewId === 'profiling' || viewId === 'rules') mappedViewId = 'metadata';
-  if (viewId === 'ontology-graph') mappedViewId = 'ontology';
-  if (viewId === 'graph-profiler') mappedViewId = 'graph';
-
-  const navBtn = document.querySelector(`.nav-btn[data-view="${mappedViewId}"]`) || document.querySelector(`.nav-btn[data-view="${viewId}"]`);
-  
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
-
+  const navBtn = document.querySelector(`.nav-btn[data-view="${viewId}"]`);
   if (navBtn) {
-    navBtn.classList.add('active');
+    navBtn.click();
+  } else {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+    const targetPanel = document.getElementById('panel-' + viewId);
+    if (targetPanel) targetPanel.classList.add('active');
   }
-
-  const targetPanel = document.getElementById('panel-' + viewId);
-  if (targetPanel) {
-    targetPanel.classList.add('active');
-  }
-
-  // Trigger view initializations
-  if (viewId === 'graph') initCytoscapeGraph();
-  if (viewId === 'ontology-graph') initOntologyGraph();
-  if (viewId === 'ontology-viewer') initOntologyViewer();
-  if (viewId === 'data-movement') initDataMovementView();
-  if (viewId === 'schema-matrix') { if (typeof loadSchemaMappingMatrix === 'function') loadSchemaMappingMatrix(); }
-  if (viewId === 'graph-profiler') { if (typeof loadGraphSchemaProfile === 'function') loadGraphSchemaProfile(); }
-  if (viewId === 'metadata') loadMetadata();
-  if (viewId === 'profiling') loadProfiling();
-  if (viewId === 'ontology') loadOntology();
-  if (viewId === 'connectors') loadConnectors();
-  if (viewId === 'rules') loadRules();
-  if (viewId === 'llm-insights') { if (typeof loadPresetQueryPills === 'function') loadPresetQueryPills(); }
-  if (viewId === 'saved-cyphers') { if (typeof loadSavedCypherQueries === 'function') loadSavedCypherQueries(); }
 }
 
 function openModal(id) {
