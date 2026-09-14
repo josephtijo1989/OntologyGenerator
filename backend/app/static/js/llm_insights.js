@@ -66,29 +66,6 @@ async function loadPresetQueryPills() {
 async function renderDefaultPresetPills(container) {
   if (!container) return;
 
-  const defaultPills = [
-    {
-      title: '📊 Vendor Contract Risks',
-      prompt: 'Which vendors currently hold active contracts with multiple jurisdiction indicators, and do they have any outstanding invoices past their due date?',
-      style: { bg: 'rgba(99, 102, 241, 0.12)', color: 'var(--accent-indigo)', border: 'rgba(99, 102, 241, 0.3)' }
-    },
-    {
-      title: '🔍 Overdue Invoices (>60 Days)',
-      prompt: 'Which invoices are tied to aging report data with over 60 days past due specifically because of an applied hold reason?',
-      style: { bg: 'rgba(16, 185, 129, 0.12)', color: 'var(--accent-emerald)', border: 'rgba(16, 185, 129, 0.3)' }
-    },
-    {
-      title: '🕸️ Product Reorder & PO Audit',
-      prompt: 'Are there products falling below their reorder level that are not currently linked to a purchase order via the item ID?',
-      style: { bg: 'rgba(6, 182, 212, 0.12)', color: 'var(--accent-cyan)', border: 'rgba(6, 182, 212, 0.3)' }
-    },
-    {
-      title: '⚡ Project Budget Variance',
-      prompt: 'For projects past their planned end date, what is the variance between the budgeted amount and the total invoice product amount billed?',
-      style: { bg: 'rgba(245, 158, 11, 0.12)', color: 'var(--accent-amber)', border: 'rgba(245, 158, 11, 0.3)' }
-    }
-  ];
-
   if (currentProjectId) {
     try {
       const res = await fetch(`${API_BASE}/projects/${currentProjectId}/ontology/generate`);
@@ -100,7 +77,7 @@ async function renderDefaultPresetPills(container) {
             .map(c => typeof c === 'string' ? c : (c.class_name || c.name || c.node_label || ''))
             .filter(n => Boolean(n) && n.toLowerCase() !== 'concepts');
           
-          if (names.length >= 2) {
+          if (names.length > 0) {
             let html = '';
             const styles = [
               { bg: 'rgba(99, 102, 241, 0.12)', color: 'var(--accent-indigo)', border: 'rgba(99, 102, 241, 0.3)', icon: '📊' },
@@ -109,7 +86,7 @@ async function renderDefaultPresetPills(container) {
               { bg: 'rgba(245, 158, 11, 0.12)', color: 'var(--accent-amber)', border: 'rgba(245, 158, 11, 0.3)', icon: '⚡' }
             ];
 
-            const topNames = [...new Set(names)].slice(0, 4);
+            const topNames = [...new Set(names)].slice(0, 5);
             topNames.forEach((cName, idx) => {
               const st = styles[idx % styles.length];
               const prompt = `Show concept details, attributes, and relationships for :${cName}`;
@@ -130,15 +107,7 @@ async function renderDefaultPresetPills(container) {
     }
   }
 
-  let html = '';
-  defaultPills.forEach(p => {
-    html += `
-      <button class="btn-sm" style="background: ${p.style.bg}; color: ${p.style.color}; border: 1px solid ${p.style.border}; font-weight: 600;" onclick="selectLLMPrompt('${escapeHtml(p.prompt)}')">
-        ${escapeHtml(p.title)}
-      </button>
-    `;
-  });
-  container.innerHTML = html;
+  container.innerHTML = '';
 }
 
 async function runLLMInsight() {
