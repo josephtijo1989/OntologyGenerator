@@ -181,10 +181,35 @@ class DataMovementService:
                     tg_attr = tg_attr_map.get((tg_node.id, attr_name.lower())) or tg_attr_map.get((tg_node.id, col.column_name.lower()))
                     if tg_attr:
                         target_prop = f"n.{tg_attr.attribute_name}"
+                    elif mapped_attr:
+                        rel_or_attr = mapped_attr.relationship_name or attr_name
+                        if prop_type == "DatatypeProperty":
+                            target_prop = f"n.{to_camel_case(rel_or_attr)}"
+                        else:
+                            tgt_cls = mapped_attr.target_class_name or (col.foreign_table_name.title() if col.foreign_table_name else 'Entity')
+                            target_prop = f"-[:{to_upper_snake_case(rel_or_attr)}]-> (:{tgt_cls})"
                     else:
-                        target_prop = f"n.{to_camel_case(mapped_attr.relationship_name or attr_name)}" if prop_type == "DatatypeProperty" else f"-[:{to_upper_snake_case(mapped_attr.relationship_name or attr_name)}]-> (:{mapped_attr.target_class_name or 'Entity'})" if mapped_attr else f"-[:HAS_{col.foreign_table_name.upper() if col.foreign_table_name else 'REL'}]->"
+                        if prop_type == "DatatypeProperty":
+                            target_prop = f"n.{to_camel_case(col.column_name)}"
+                        else:
+                            rel_label = f"HAS_{col.foreign_table_name.upper()}" if col.foreign_table_name else "RELATES_TO"
+                            tgt_cls = col.foreign_table_name.title() if col.foreign_table_name else "Entity"
+                            target_prop = f"-[:{rel_label}]-> (:{tgt_cls})"
                 else:
-                    target_prop = f"n.{to_camel_case(mapped_attr.relationship_name or attr_name)}" if prop_type == "DatatypeProperty" else f"-[:{to_upper_snake_case(mapped_attr.relationship_name or attr_name)}]-> (:{mapped_attr.target_class_name or 'Entity'})" if mapped_attr else f"-[:HAS_{col.foreign_table_name.upper() if col.foreign_table_name else 'REL'}]->"
+                    if mapped_attr:
+                        rel_or_attr = mapped_attr.relationship_name or attr_name
+                        if prop_type == "DatatypeProperty":
+                            target_prop = f"n.{to_camel_case(rel_or_attr)}"
+                        else:
+                            tgt_cls = mapped_attr.target_class_name or (col.foreign_table_name.title() if col.foreign_table_name else 'Entity')
+                            target_prop = f"-[:{to_upper_snake_case(rel_or_attr)}]-> (:{tgt_cls})"
+                    else:
+                        if prop_type == "DatatypeProperty":
+                            target_prop = f"n.{to_camel_case(col.column_name)}"
+                        else:
+                            rel_label = f"HAS_{col.foreign_table_name.upper()}" if col.foreign_table_name else "RELATES_TO"
+                            tgt_cls = col.foreign_table_name.title() if col.foreign_table_name else "Entity"
+                            target_prop = f"-[:{rel_label}]-> (:{tgt_cls})"
 
                 column_mappings.append({
                     "source_table": f"{tbl.schema_name or 'public'}.{tbl.table_name}",

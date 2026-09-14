@@ -110,7 +110,7 @@ function renderLevel1Table(tables, query) {
   let html = '';
   filtered.forEach(t => {
     html += `
-      <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+      <tr style="border-bottom: 1px solid var(--border-color, rgba(0,0,0,0.06));">
         <td style="padding: 12px 14px;">
           <div style="font-weight: 700; color: var(--accent-cyan); font-family: var(--font-mono);">${escapeHtml(t.full_source_table)}</div>
           <div style="font-size: 11px; color: var(--text-secondary);">${t.row_count || 0} rows</div>
@@ -167,7 +167,7 @@ function renderLevel2Table(columns, query) {
     const isObj = c.property_type === 'ObjectProperty';
 
     html += `
-      <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+      <tr style="border-bottom: 1px solid var(--border-color, rgba(0,0,0,0.06));">
         <td style="padding: 12px 14px;"><span style="color: var(--accent-cyan); font-family: var(--font-mono); font-size: 12px; font-weight: 700;">${escapeHtml(c.source_table)}</span></td>
         <td style="padding: 12px 14px;">
           <span style="font-weight: 700; color: var(--text-primary); font-family: var(--font-mono);">${escapeHtml(c.source_column)}</span>${isPk}${isFk}
