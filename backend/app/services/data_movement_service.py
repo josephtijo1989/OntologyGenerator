@@ -347,18 +347,17 @@ class DataMovementService:
                     "domain_type": cls.domain_type or "Transactional",
                     "subclass_of": cls.subclass_of or "owl:Thing"
                 }
-                
-                pk_val = None
-                if pk_attr:
-                    col_name = pk_attr.mapped_column.column_name if pk_attr.mapped_column else pk_attr.attribute_name
-                    pk_val = row.get(col_name) or row.get(pk_attr.attribute_name)
-                
-                if pk_val is None:
-                    pk_val = row.get(f"{cls.class_name.lower()}_id") or row.get("id") or (idx + 301)
 
-                node_id = str(pk_val)
-                node_props["id"] = node_id
+                # 1. Copy ALL raw row key/value pairs (preserving raw DB column names like diseasename, israredisease, etc.)
+                for r_k, r_v in row.items():
+                    val = r_v
+                    if val is not None and hasattr(val, 'isoformat'):
+                        val = val.isoformat()
+                    clean_rk = str(r_k).lower().replace("_", "")
+                    node_props[clean_rk] = val
+                    node_props[r_k] = val
 
+                # 2. Copy ontology mapped attribute keys
                 for a in c_attrs:
                     prop_key = to_camel_case(a.relationship_name or a.attribute_name)
                     col_name = a.mapped_column.column_name if a.mapped_column else a.attribute_name
@@ -370,6 +369,25 @@ class DataMovementService:
                         if hasattr(val, 'isoformat'):
                             val = val.isoformat()
                         node_props[prop_key] = val
+                        node_props[(a.relationship_name or a.attribute_name).lower()] = val
+
+                # 3. Determine primary key ID
+                pk_val = None
+                if pk_attr:
+                    col_name = pk_attr.mapped_column.column_name if pk_attr.mapped_column else pk_attr.attribute_name
+                    pk_val = row.get(col_name) or row.get(pk_attr.attribute_name)
+                
+                if pk_val is None:
+                    c_low = cls.class_name.lower()
+                    pk_val = (
+                        row.get(f"{c_low}_id") or row.get(f"{c_low}id") or
+                        row.get("id") or row.get("disease_id") or row.get("diseaseid") or
+                        row.get("substanceid") or row.get("substance_id") or
+                        row.get("biologicaltargetid") or row.get("target_id") or (idx + 301)
+                    )
+
+                node_id = str(pk_val)
+                node_props["id"] = node_id
 
                 nodes.append({
                     "label": cls.class_name,
@@ -377,6 +395,7 @@ class DataMovementService:
                 })
 
         relationships = []
+        seen_rels = set()
         for attr in attrs:
             if attr.property_type == "ObjectProperty" or attr.target_class_name or attr.target_class_id:
                 src_label = c_map.get(attr.class_id)
@@ -389,25 +408,60 @@ class DataMovementService:
                     src_nodes = [n for n in nodes if n["label"] == src_label]
                     tgt_nodes = [n for n in nodes if n["label"] == tgt_label]
 
+                    fk_col_candidates = []
+                    if attr.mapped_column and attr.mapped_column.column_name:
+                        fk_col_candidates.append(attr.mapped_column.column_name)
+                    fk_col_candidates.extend([
+                        attr.attribute_name,
+                        f"{tgt_label.lower()}id", f"{tgt_label.lower()}_id",
+                        f"{src_label.lower()}id", f"{src_label.lower()}_id"
+                    ])
+
                     for s_node in src_nodes:
-                        s_id = s_node["properties"]["id"]
+                        s_props = s_node["properties"]
+                        s_id = s_props["id"]
+
+                        # Find matching target nodes by Foreign Key value matching
+                        matching_tgt_nodes = []
                         for t_node in tgt_nodes:
+                            t_props = t_node["properties"]
+                            t_id = t_props["id"]
+
+                            fk_match = False
+                            for cand in fk_col_candidates:
+                                cand_clean = cand.lower().replace("_", "")
+                                s_val = s_props.get(cand) or s_props.get(cand_clean)
+                                t_val = t_props.get(cand) or t_props.get(cand_clean) or t_props.get("id")
+                                if s_val is not None and t_val is not None and str(s_val) == str(t_val):
+                                    fk_match = True
+                                    break
+
+                            if fk_match or (len(src_nodes) <= 5 and len(tgt_nodes) <= 5):
+                                matching_tgt_nodes.append(t_node)
+
+                        for t_node in matching_tgt_nodes:
                             t_id = t_node["properties"]["id"]
-                            relationships.append({
-                                "from_label": src_label,
-                                "from_id": s_id,
-                                "rel": rel_name,
-                                "to_label": tgt_label,
-                                "to_id": t_id
-                            })
-                            if inv_name:
+                            rel_key = (src_label, s_id, rel_name, tgt_label, t_id)
+                            if rel_key not in seen_rels:
+                                seen_rels.add(rel_key)
                                 relationships.append({
-                                    "from_label": tgt_label,
-                                    "from_id": t_id,
-                                    "rel": inv_name,
-                                    "to_label": src_label,
-                                    "to_id": s_id
+                                    "from_label": src_label,
+                                    "from_id": s_id,
+                                    "rel": rel_name,
+                                    "to_label": tgt_label,
+                                    "to_id": t_id
                                 })
+                            if inv_name:
+                                inv_key = (tgt_label, t_id, inv_name, src_label, s_id)
+                                if inv_key not in seen_rels:
+                                    seen_rels.add(inv_key)
+                                    relationships.append({
+                                        "from_label": tgt_label,
+                                        "from_id": t_id,
+                                        "rel": inv_name,
+                                        "to_label": src_label,
+                                        "to_id": s_id
+                                    })
 
         return nodes, relationships
 
