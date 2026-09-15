@@ -355,7 +355,8 @@ class OntologyService:
                     if p_type == "ObjectProperty" and target_class_obj and inv_name:
                         existing_inv = self.db.query(OntologyAttribute).filter(
                             OntologyAttribute.class_id == target_class_obj.id,
-                            func.lower(OntologyAttribute.attribute_name) == inv_name.lower()
+                            (func.lower(OntologyAttribute.attribute_name) == inv_name.lower()) |
+                            (func.lower(OntologyAttribute.relationship_name) == inv_name.lower())
                         ).first()
                         if not existing_inv:
                             inv_attr = OntologyAttribute(
